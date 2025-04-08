@@ -15,7 +15,15 @@ module.exports = {
           '@service': './src/service',
           '@state': './src/state',
           '@utils': './src/utils',
+          '@context': './src/context',
         },
+      },
+    ],
+    [
+      'module:react-native-dotenv',
+      {
+        moduleName: '@env',
+        path: '.env',
       },
     ],
   ],

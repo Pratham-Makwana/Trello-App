@@ -6,12 +6,9 @@ import {navigate} from '@utils/NavigationUtils';
 import {Colors} from '@utils/Constant';
 
 const SplashScreen: FC = () => {
-
-
-
   useEffect(() => {
     const intialStartup = () => {
-      navigate('LoginScreen');
+      navigate('OnBoarding');
     };
     const timeOut = setTimeout(intialStartup, 2000);
     return () => clearTimeout(timeOut);

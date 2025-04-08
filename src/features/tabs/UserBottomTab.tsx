@@ -9,6 +9,7 @@ import { Platform, View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Colors, DarkColors} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
+import DropdownPlus from '@components/board/DropdownPlus';
 
 
 const Tab = createBottomTabNavigator();
@@ -47,7 +48,7 @@ const UserBottomTab = () => {
                 paddingHorizontal: 10,
                 marginBottom: Platform.OS == 'ios' ? 5 : 0,
               }}>
-           
+                <DropdownPlus/>
             </View>
           ),
           headerLeft: () => (

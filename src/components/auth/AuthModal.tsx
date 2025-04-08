@@ -4,6 +4,7 @@ import {BottomSheetView} from '@gorhom/bottom-sheet';
 import Icon from '../global/Icon';
 import {Colors, ModalType} from '@utils/Constant';
 import CustomText from '../ui/CustomText';
+import {navigate} from '@utils/NavigationUtils';
 
 const LOGIN_OPTION = [
   {
@@ -27,7 +28,13 @@ const LOGIN_OPTION = [
 const AuthModal: FC<{authType: ModalType | null}> = ({authType}) => {
   return (
     <BottomSheetView style={styles.modalContainer}>
-      <TouchableOpacity style={styles.modalBtn}>
+      <TouchableOpacity
+        style={styles.modalBtn}
+        onPress={
+          authType == ModalType.Login
+            ? () => navigate('LoginScreen')
+            : () => navigate('SignUpScreen')
+        }>
         <Icon
           name="mail-outline"
           size={20}

@@ -12,7 +12,8 @@
       "@navigation/*":["navigation/*"],
       "@components/*":["components/*"],
       "@state/*":["state/*"],
-      "@utils/*":["utils/*"]
+      "@utils/*":["utils/*"],
+      "@context/*":["context/*"],
     }
   }
 }

@@ -1,29 +1,45 @@
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  Image,
   TouchableOpacity,
+  View,
 } from 'react-native';
 import React, {useState} from 'react';
 import {screenHeight, screenWidth} from '@utils/Scaling';
-import CustomText from '@components/ui/CustomText';
-import FormField from '@components/ui/FormField';
 import {Colors, Fonts} from '@utils/Constant';
 import CustomButton from '@components/ui/CustomButton';
-import {RFValue} from 'react-native-responsive-fontsize';
 import {navigate} from '@utils/NavigationUtils';
+import {RFValue} from 'react-native-responsive-fontsize';
+import FormField from '@components/ui/FormField';
+import CustomText from '@components/ui/CustomText';
+// import {createUserWithEmailAndPassword} from 'firebase/auth';
+// import {auth} from '../../config/firebase.ts';
 
-const LoginScreen = () => {
+const SignupScreen = () => {
   const [form, setForm] = useState({
-    email: '',
-    password: '',
+    username: 'test',
+    email: 'test@gmail.com',
+    password: '12345678',
   });
-  const [isSubmitting, setSubmitting] = useState(false);
+  // console.log('==> SignupScreen:form: ', form);
 
-  const handleLogin = () => {};
+  const [isSubmitting, setSubmitting] = useState(false);
+  const handleSignup = async () => {
+    if (form.email && form.password && form.username) {
+      try {
+        setSubmitting(true);
+      // const UserCredential =   await createUserWithEmailAndPassword(auth, form.email, form.password);
+
+      // console.log('==> SignupScreen:handleSignup: ', UserCredential);
+      
+      } catch (e) {
+        console.log('==> SignupScreen:handleSignup: ', e);
+      }
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -37,8 +53,16 @@ const LoginScreen = () => {
             variant="h1"
             fontFamily="Montserrat-Medium"
             style={styles.headerTitle}>
-            LogIn in to Trello
+            SignUp in to Trello
           </CustomText>
+          <FormField
+            title="Username"
+            value={form.username}
+            placeholder="Enter your username"
+            handleChangeText={(e: string) => setForm({...form, username: e})}
+            otherStyles={{marginTop: 28}}
+            keyboardType="default"
+          />
           <FormField
             title="Email"
             value={form.email}
@@ -55,17 +79,17 @@ const LoginScreen = () => {
             otherStyles={{marginTop: 28}}
           />
           <CustomButton
-            title="Log In"
-            handlePress={handleLogin}
+            title="Sign Up"
+            handlePress={handleSignup}
             isLoading={isSubmitting}
             contentContainerStyle={{width: screenWidth * 0.9, marginTop: 28}}
           />
           <View style={styles.footerContainer}>
-            <Text style={styles.footerTitle}>Don't have account? </Text>
+            <Text style={styles.footerTitle}>Already have account? </Text>
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => navigate('SignUpScreen')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
+              onPress={() => navigate('LoginScreen')}>
+              <Text style={styles.footerLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -74,7 +98,7 @@ const LoginScreen = () => {
   );
 };
 
-export default LoginScreen;
+export default SignupScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -84,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mainContainer: {
-    height: screenHeight * 0.75,
+    height: screenHeight * 0.8,
     width: screenWidth,
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -108,13 +132,13 @@ const styles = StyleSheet.create({
   footerTitle: {
     color: Colors.white,
     fontSize: RFValue(14),
-    fontFamily: Fonts.Regular,
+    fontFamily: Fonts.Light,
     fontWeight: '500',
   },
   footerLink: {
     color: Colors.white,
     fontSize: RFValue(16),
-    fontFamily: Fonts.Medium,
+    fontFamily: Fonts.Regular,
     textDecorationLine: 'underline',
     textDecorationColor: Colors.white,
     fontWeight: '600',
