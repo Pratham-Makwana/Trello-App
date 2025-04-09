@@ -14,6 +14,9 @@
       "@state/*":["state/*"],
       "@utils/*":["utils/*"],
       "@context/*":["context/*"],
+      "@config/*" : ["config/*"],
+      "@store/*": ["store/*"],
+      "@firebase/auth": ["./node_modules/@firebase/auth/dist/index.rn.d.ts"]
     }
   }
 }

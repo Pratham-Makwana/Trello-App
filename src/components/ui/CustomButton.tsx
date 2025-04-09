@@ -1,4 +1,10 @@
-import {TouchableOpacity, StyleSheet, ViewStyle, TextStyle} from 'react-native';
+import {
+  TouchableOpacity,
+  StyleSheet,
+  ViewStyle,
+  TextStyle,
+  ActivityIndicator,
+} from 'react-native';
 import React, {FC} from 'react';
 import CustomText from './CustomText';
 import {Colors} from '@utils/Constant';
@@ -18,18 +24,28 @@ const CustomButton: FC<CustomButtonProps> = ({
   textStyles,
   isLoading,
 }) => {
+  console.log('==> CustomButton:isLoading: ', isLoading);
+  
   return (
     <TouchableOpacity
       onPress={handlePress}
       activeOpacity={0.8}
       style={[contentContainerStyle, styles.btn]}
       disabled={isLoading}>
-      <CustomText
-        variant="h3"
-        fontFamily="Montserrat-Regular"
-        style={[textStyles || styles.btnText]}>
-        {title}
-      </CustomText>
+      {isLoading ? (
+        <ActivityIndicator
+          size={'small'}
+          color={Colors.lightprimary}
+          style={{justifyContent: 'center', alignItems: 'center'}}
+        />
+      ) : (
+        <CustomText
+          variant="h3"
+          fontFamily="Montserrat-Regular"
+          style={[textStyles || styles.btnText]}>
+          {title}
+        </CustomText>
+      )}
     </TouchableOpacity>
   );
 };

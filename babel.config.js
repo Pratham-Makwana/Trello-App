@@ -16,6 +16,8 @@ module.exports = {
           '@state': './src/state',
           '@utils': './src/utils',
           '@context': './src/context',
+          '@config' : './src/config',
+          '@store': './src/store',
         },
       },
     ],

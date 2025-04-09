@@ -15,8 +15,7 @@ import {navigate} from '@utils/NavigationUtils';
 import {RFValue} from 'react-native-responsive-fontsize';
 import FormField from '@components/ui/FormField';
 import CustomText from '@components/ui/CustomText';
-// import {createUserWithEmailAndPassword} from 'firebase/auth';
-// import {auth} from '../../config/firebase.ts';
+import {createUser} from '@config/firebase';
 
 const SignupScreen = () => {
   const [form, setForm] = useState({
@@ -24,19 +23,21 @@ const SignupScreen = () => {
     email: 'test@gmail.com',
     password: '12345678',
   });
-  // console.log('==> SignupScreen:form: ', form);
 
   const [isSubmitting, setSubmitting] = useState(false);
+
   const handleSignup = async () => {
     if (form.email && form.password && form.username) {
       try {
         setSubmitting(true);
-      // const UserCredential =   await createUserWithEmailAndPassword(auth, form.email, form.password);
 
-      // console.log('==> SignupScreen:handleSignup: ', UserCredential);
-      
+        await createUser(form.username, form.email, form.password);
+
+        setSubmitting(false);
       } catch (e) {
         console.log('==> SignupScreen:handleSignup: ', e);
+      } finally {
+        setSubmitting(false);
       }
     }
   };

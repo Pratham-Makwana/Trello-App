@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.0.6",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/blur": "^4.4.1",
     "@react-native-firebase/app": "^21.13.0",
     "@react-native-menu/menu": "^1.2.2",
@@ -21,6 +22,7 @@
     "@react-navigation/native": "^7.1.4",
     "@react-navigation/native-stack": "^7.3.8",
     "@react-navigation/stack": "^7.2.9",
+    "@reduxjs/toolkit": "^2.6.1",
     "firebase": "^11.6.0",
     "jetifier": "^2.0.0",
     "react": "18.3.1",
@@ -30,13 +32,13 @@
     "react-native-ios-context-menu": "^3.1.0",
     "react-native-ios-utilities": "^5.1.2",
     "react-native-linear-gradient": "^2.8.3",
-    "react-native-mmkv": "^2.12.2",
     "react-native-reanimated": "^3.16.5",
     "react-native-responsive-fontsize": "^0.5.1",
     "react-native-safe-area-context": "^5.3.0",
     "react-native-screens": "^4.10.0",
     "react-native-svg": "^15.8.0",
     "react-native-vector-icons": "^10.2.0",
+    "react-redux": "^9.2.0",
     "zeego": "^3.0.6"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import {initializeApp} from 'firebase/app';
+import {getApp, getApps, initializeApp} from 'firebase/app';
 import {
   API_KEY,
   AUTH_DOMAIN,
@@ -7,8 +7,16 @@ import {
   PROJECT_ID,
   STORAGE_BUCKET,
 } from '@env';
-import {getAuth} from 'firebase/auth';
-import {getFirestore, collection} from 'firebase/firestore';
+import {
+  createUserWithEmailAndPassword,
+  initializeAuth,
+  updateProfile,
+  getReactNativePersistence,
+  signInWithEmailAndPassword,
+  getAuth,
+} from 'firebase/auth';
+import {getFirestore, collection, addDoc} from 'firebase/firestore';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -20,12 +28,63 @@ const firebaseConfig = {
   appId: APP_ID,
 };
 
-// Initialize Firebase
+let app;
+let auth: any;
+
+if (!getApps().length) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    });
+  } catch (error) {
+    console.log('Error initializing app: ' + error);
+  }
+} else {
+  app = getApp();
+  auth = getAuth(app);
+}
 const firebaseApp = initializeApp(firebaseConfig);
-export const db = getFirestore(firebaseApp);
-export const auth = getAuth(firebaseApp);
+
+// Initialize Firestore Database
+const db = getFirestore(firebaseApp);
+
+// Export references
+export {auth, db};
 
 // Collection Reference
 export const userRef = collection(db, 'users');
 
-// export default firebaseApp;
+export const createUser = async (
+  username: string,
+  email: string,
+  password: string,
+) => {
+  try {
+    const {user} = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(user, {
+      displayName: username,
+      photoURL: `https://ui-avatars.com/api/?name=${username}`,
+    });
+
+    // console.log(user.displayName);
+    await addDoc(userRef, {
+      uid: user.uid,
+      username: user.displayName,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+    });
+    console.log('User Created Successfully', user);
+  } catch (error) {
+    console.log('==> firebase:createUser: ', error);
+  }
+};
+
+export const LoginUser = async (email: string, password: string) => {
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    console.log('==> firebase:LoginUser: ', error);
+  }
+};

@@ -15,15 +15,29 @@ import {Colors, Fonts} from '@utils/Constant';
 import CustomButton from '@components/ui/CustomButton';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {navigate} from '@utils/NavigationUtils';
+import {LoginUser} from '@config/firebase';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
-    email: '',
-    password: '',
+    email: 'test@gmail.com',
+    password: '12345678',
   });
   const [isSubmitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {};
+  const handleLogin = () => {
+    if (form.email && form.password) {
+      try {
+        setSubmitting(true);
+        LoginUser(form.email, form.password);
+
+        setSubmitting(false);
+      } catch (e) {
+        console.log('==> LoginScreen:handleLogin: ', e);
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
