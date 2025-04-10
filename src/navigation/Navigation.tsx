@@ -1,4 +1,5 @@
-import Icon from '@components/global/Icon';
+import CustomHeaderLeft from '@components/global/CustomHeaderLeft';
+import CustomHeaderRight from '@components/global/CustomHeaderRight';
 import LoginScreen from '@features/auth/LoginScreen';
 import OnBoarding from '@features/auth/OnBoarding';
 import SignUpScreen from '@features/auth/SignUpScreen';
@@ -7,12 +8,14 @@ import BGSelect from '@features/board/BGSelect';
 import CreateBoard from '@features/board/CreateBoard';
 import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
+import {createBoard} from '@config/firebase';
+import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
 import {goBack, navigationRef} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Alert, StyleSheet} from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +48,18 @@ const Navigation = () => {
 // };
 
 const MainStack = () => {
+  const {boardName, selectedWorkSpace, selectedColor} = useBoard();
+
+  const handleCreateBoard = () => {
+    if (boardName.length > 0 && boardName !== '') {
+      createBoard(boardName, selectedColor, selectedWorkSpace);
+      Alert.alert('Board Created Successfully');
+      goBack();
+    } else {
+      Alert.alert('Please Enter a Board Name');
+    }
+  };
+
   return (
     <Stack.Navigator>
       <Stack.Screen
@@ -66,22 +81,16 @@ const MainStack = () => {
             backgroundColor: Colors.grey,
           },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => goBack()}>
-              <Icon
-                name="close"
-                size={26}
-                color={Colors.lightprimary}
-                iconFamily="Ionicons"
-              />
-            </TouchableOpacity>
+            <CustomHeaderLeft
+              iconName="close"
+              iconSize={26}
+              iconFamily="Ionicons"
+              onPress={goBack}
+            />
           ),
 
           headerRight: () => (
-            <View style={styles.btnContainer}>
-              <TouchableOpacity>
-                <Text style={styles.btnText}>Create</Text>
-              </TouchableOpacity>
-            </View>
+            <CustomHeaderRight onPress={handleCreateBoard} title="Create" />
           ),
         }}
       />
@@ -94,14 +103,12 @@ const MainStack = () => {
             backgroundColor: Colors.grey,
           },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => goBack()}>
-              <Icon
-                name="close"
-                size={26}
-                color={Colors.lightprimary}
-                iconFamily="Ionicons"
-              />
-            </TouchableOpacity>
+            <CustomHeaderLeft
+              iconName="close"
+              iconSize={26}
+              iconFamily="Ionicons"
+              onPress={goBack}
+            />
           ),
         }}
       />
@@ -114,14 +121,12 @@ const MainStack = () => {
             backgroundColor: Colors.grey,
           },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => goBack()}>
-              <Icon
-                name="close"
-                size={26}
-                color={Colors.lightprimary}
-                iconFamily="Ionicons"
-              />
-            </TouchableOpacity>
+            <CustomHeaderLeft
+              iconName="close"
+              iconSize={26}
+              iconFamily="Ionicons"
+              onPress={goBack}
+            />
           ),
         }}
       />

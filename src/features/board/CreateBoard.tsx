@@ -1,29 +1,36 @@
 import {
+  Alert,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Colors} from '@utils/Constant';
 import Icon from '@components/global/Icon';
-import {navigate} from '@utils/NavigationUtils';
-import {useColor} from '@context/ColorContext';
+import {goBack, navigate} from '@utils/NavigationUtils';
+import {useBoard} from '@context/BoardContext';
 import LinearGradient from 'react-native-linear-gradient';
 import {screenWidth} from '@utils/Scaling';
+import {useAuthContext} from '@context/UserContext';
+import {createBoard, getAllBoards} from '@config/firebase';
 
 const CreateBoard = () => {
-  const [boardName, setBoardName] = useState('');
-  const {bgColor} = useColor();
+  const {user} = useAuthContext();
+  const {selectedWorkSpace, selectedColor, boardName, setBoardName} =
+    useBoard();
+
   const gradientColors =
-    bgColor.length === 1 ? [bgColor[0], bgColor[0]] : bgColor;
+    selectedColor.length === 1
+      ? [selectedColor[0], selectedColor[0]]
+      : selectedColor;
 
   return (
     <View style={styles.container}>
       <TextInput
         value={boardName}
-        onChangeText={setBoardName}
+        onChangeText={text => setBoardName(text)}
         style={styles.input}
         placeholder="New Board"
         placeholderTextColor={Colors.placeholdertext}
@@ -41,7 +48,7 @@ const CreateBoard = () => {
 
           <View style={styles.secondView}>
             <View style={styles.innerFirstView}>
-              <Text style={styles.lable}>Pratham Makwana's </Text>
+              <Text style={styles.lable}>{user?.displayName}'s </Text>
               <Text style={styles.lable}>workspace</Text>
             </View>
             <View style={styles.iconView}>
@@ -70,7 +77,7 @@ const CreateBoard = () => {
 
           <View style={styles.secondView}>
             <View style={styles.innerFirstView}>
-              <Text style={styles.lable}>Workspace</Text>
+              <Text style={styles.lable}>{selectedWorkSpace}</Text>
             </View>
             <View style={styles.iconView}>
               <Icon
@@ -130,6 +137,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.textgrey,
     backgroundColor: Colors.white,
+    color: Colors.black,
 
     padding: 12,
     paddingHorizontal: 24,

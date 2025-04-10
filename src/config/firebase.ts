@@ -15,7 +15,7 @@ import {
   signInWithEmailAndPassword,
   getAuth,
 } from 'firebase/auth';
-import {getFirestore, collection, addDoc} from 'firebase/firestore';
+import {getFirestore, collection, addDoc, getDocs} from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Your web app's Firebase configuration
@@ -54,6 +54,7 @@ export {auth, db};
 
 // Collection Reference
 export const userRef = collection(db, 'users');
+export const boardRef = collection(db, 'boards');
 
 export const createUser = async (
   username: string,
@@ -86,5 +87,39 @@ export const LoginUser = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
     console.log('==> firebase:LoginUser: ', error);
+  }
+};
+
+export const createBoard = async (
+  boardName: string,
+  selectedColor: string[],
+  workspace: string,
+) => {
+  try {
+    const docRef = await addDoc(boardRef, {
+      title: boardName,
+      background: selectedColor,
+      workspace: workspace,
+      created_at: new Date(),
+      last_edit : new Date(),
+      createdBy: auth.currentUser?.uid,
+    });
+    console.log('Document written with ID: ', docRef);
+  } catch (e) {
+    console.error('Error adding document: ', e);
+  }
+};
+
+export const getAllBoards = async () => {
+  try {
+    const boards = await getDocs(boardRef);
+    const boardList = boards.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    console.log('All Boards: ', boardList);
+    return boardList;
+  } catch (error) {
+    console.log('==> firebase:getAllBoards: ', error);
   }
 };

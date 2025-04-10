@@ -4,7 +4,7 @@ import {screenWidth} from '@utils/Scaling';
 import LinearGradient from 'react-native-linear-gradient';
 import {Colors} from '@utils/Constant';
 import {navigate} from '@utils/NavigationUtils';
-import {useColor} from '@context/ColorContext';
+import {useBoard} from '@context/BoardContext';
 
 type RootStackParamList = {
   CreateBoard: {bg?: string[]};
@@ -29,7 +29,7 @@ const COLORS = [
 export const DEFAULT_COLOR = COLORS[0];
 
 const BGSelect = () => {
-  const {bgColor, setSelectedColor} = useColor();
+  const {selectedColor, setSelectedColor} = useBoard();
   //   const [selectedColor, setSelectedColor] = useState<string[]>(DEFAULT_COLOR);
 
   const changeColor = (color: string[]) => {
@@ -50,7 +50,7 @@ const BGSelect = () => {
             key={index}
             style={[
               styles.btnContainer,
-              {borderWidth: bgColor === color ? 2 : 0},
+              {borderWidth: selectedColor === color ? 2 : 0},
             ]}
             onPress={() => changeColor(color)}>
             <LinearGradient

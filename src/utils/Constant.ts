@@ -1,3 +1,4 @@
+import {Timestamp} from 'firebase/firestore';
 import {useColorScheme} from 'react-native';
 
 export enum DarkColors {
@@ -42,4 +43,20 @@ export const useGlobalColorScheme = () => {
 export enum ModalType {
   Login = 'login',
   SignUp = 'signup',
+}
+
+export enum VisibilityType {
+  Private = 'private',
+  WorkSpace = 'workspace',
+  Public = 'public',
+}
+
+export interface Board {
+  id: string;
+  createdBy: string;
+  title: string;
+  created_at: Timestamp;
+  background: string[];
+  last_edit: Timestamp | null;
+  workspace: string;
 }

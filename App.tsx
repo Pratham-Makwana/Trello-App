@@ -1,5 +1,5 @@
 import Navigation from '@navigation/Navigation';
-import {ColorProvider} from './src/context/ColorContext';
+import {BoardProvider} from './src/context/BoardContext';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {AuthProvider} from '@context/UserContext';
 
@@ -7,9 +7,9 @@ function App(): React.JSX.Element {
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <AuthProvider>
-        <ColorProvider>
+        <BoardProvider>
           <Navigation />
-        </ColorProvider>
+        </BoardProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

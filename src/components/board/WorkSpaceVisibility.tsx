@@ -4,6 +4,7 @@ import {Colors} from '@utils/Constant';
 import Icon from '@components/global/Icon';
 import {screenWidth} from '@utils/Scaling';
 
+type WorkspaceType = 'public' | 'private' | 'Workspace';
 interface WorkSpaceVisibilityProps {
   title: string;
   subTitle: string;
@@ -14,6 +15,8 @@ interface WorkSpaceVisibilityProps {
     | 'MaterialCommunityIcons'
     | 'FontAwesome';
   size: number;
+  setSelected: () => void;
+  selected: string;
 }
 
 const WorkSpaceVisibility: FC<WorkSpaceVisibilityProps> = ({
@@ -22,13 +25,14 @@ const WorkSpaceVisibility: FC<WorkSpaceVisibilityProps> = ({
   size,
   subTitle,
   title,
+  setSelected,
+  selected,
 }) => {
-  const [selected, setSelected] = useState(true);
   return (
     <TouchableOpacity
       style={styles.touchContainer}
       activeOpacity={0.9}
-      onPress={() => {}}>
+      onPress={() => setSelected()}>
       <View style={styles.iconLeft}>
         <Icon
           name={iconName}
@@ -46,7 +50,7 @@ const WorkSpaceVisibility: FC<WorkSpaceVisibilityProps> = ({
           <Text style={styles.subTitle}>{subTitle}</Text>
         </View>
       </View>
-      {selected && (
+      {selected === title && (
         <View style={styles.selectedIcon}>
           <Icon
             name="check"
@@ -71,7 +75,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.textgrey,
-
   },
 
   iconLeft: {
