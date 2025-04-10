@@ -8,6 +8,8 @@ import BGSelect from '@features/board/BGSelect';
 import CreateBoard from '@features/board/CreateBoard';
 import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
+import CustomHeader from '@components/global/CustomHeader';
+import BoardCard from '@features/board/boardcard/BoardCard';
 import {createBoard} from '@config/firebase';
 import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
@@ -128,6 +130,16 @@ const MainStack = () => {
               onPress={goBack}
             />
           ),
+        }}
+      />
+
+      <Stack.Screen
+        name="BoardCard"
+        component={BoardCard}
+        options={{
+          headerShown : false,
+          headerTransparent : true,
+          // header: () => <CustomHeader />,
         }}
       />
     </Stack.Navigator>

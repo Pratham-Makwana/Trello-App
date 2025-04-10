@@ -24,13 +24,11 @@ const LoginScreen = () => {
   });
   const [isSubmitting, setSubmitting] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (form.email && form.password) {
       try {
         setSubmitting(true);
-        LoginUser(form.email, form.password);
-
-        setSubmitting(false);
+        await LoginUser(form.email, form.password);
       } catch (e) {
         console.log('==> LoginScreen:handleLogin: ', e);
       } finally {

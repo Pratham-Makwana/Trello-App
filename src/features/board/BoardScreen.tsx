@@ -12,6 +12,7 @@ import {Board, Colors, DarkColors} from '@utils/Constant';
 import {DefaultTheme, useFocusEffect} from '@react-navigation/native';
 import {auth, getAllBoards} from '@config/firebase';
 import LinearGradient from 'react-native-linear-gradient';
+import {navigate} from '@utils/NavigationUtils';
 
 const BoardScreen = () => {
   const [boards, setBoards] = useState<Board[] | any>([]);
@@ -40,7 +41,12 @@ const BoardScreen = () => {
         ? [item.background[0], item.background[0]]
         : item.background;
     return (
-      <TouchableOpacity style={[styles.boardList]} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.boardList]}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigate('BoardCard', {boardDetails: item})
+        }>
         <LinearGradient colors={gradientColors} style={styles.colorBlock} />
         <Text style={styles.titleText}>{item.title}</Text>
       </TouchableOpacity>

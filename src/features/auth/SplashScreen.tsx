@@ -11,7 +11,6 @@ import {useAuthContext} from '@context/UserContext';
 
 const SplashScreen: FC = () => {
   const {setUser, user} = useAuthContext();
-  console.log('==> SplashScreen:user: ', user);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
@@ -34,6 +33,7 @@ const SplashScreen: FC = () => {
   useEffect(() => {
     const intialStartup = () => {
       if (user) {
+        console.log('==> SplashScreen:user: ', user);
         console.log('==> MainStack Screen Board Screen');
         resetAndNavigate('MainStack', {screen: 'board'});
         return;

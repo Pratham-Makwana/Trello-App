@@ -101,10 +101,10 @@ export const createBoard = async (
       background: selectedColor,
       workspace: workspace,
       created_at: new Date(),
-      last_edit : new Date(),
+      last_edit: new Date(),
       createdBy: auth.currentUser?.uid,
     });
-    console.log('Document written with ID: ', docRef);
+    // console.log('Document written with ID: ', docRef);
   } catch (e) {
     console.error('Error adding document: ', e);
   }
@@ -121,5 +121,13 @@ export const getAllBoards = async () => {
     return boardList;
   } catch (error) {
     console.log('==> firebase:getAllBoards: ', error);
+  }
+};
+
+export const SignOut = async () => {
+  try {
+    await auth.signOut();
+  } catch (error) {
+    console.log('==> firebase:logout: ', error);
   }
 };

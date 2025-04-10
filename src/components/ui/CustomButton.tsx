@@ -24,8 +24,6 @@ const CustomButton: FC<CustomButtonProps> = ({
   textStyles,
   isLoading,
 }) => {
-  console.log('==> CustomButton:isLoading: ', isLoading);
-  
   return (
     <TouchableOpacity
       onPress={handlePress}
