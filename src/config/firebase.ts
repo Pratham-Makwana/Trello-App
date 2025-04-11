@@ -25,6 +25,7 @@ import {
   query,
   where,
   setDoc,
+  orderBy,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -65,6 +66,7 @@ export {auth, db};
 // Collection Reference
 export const userRef = collection(db, 'users');
 export const boardRef = collection(db, 'boards');
+export const listRef = collection(db, 'lists');
 
 export const createUser = async (
   username: string,
@@ -75,7 +77,8 @@ export const createUser = async (
     const {user} = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(user, {
       displayName: username,
-      photoURL: `https://ui-avatars.com/api/?name=${username}`,
+      // photoURL: `https://ui-avatars.com/api/?name=${username}`,
+      photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
     });
 
     // console.log(user.displayName);
@@ -149,14 +152,31 @@ export const createBoard = async (
   }
 };
 
-export const getAllBoards = async () => {
+// ============== Get All Board ==============================
+// export const getAllBoards = async () => {
+//   try {
+//     const boards = await getDocs(boardRef);
+//     const boardList = boards.docs.map(doc => ({
+//       id: doc.id,
+//       ...doc.data(),
+//     }));
+//     return boardList;
+//   } catch (error) {
+//     console.log('==> firebase:getAllBoards: ', error);
+//   }
+// };
+
+// ========= Get All Board Which Created By The Current LogIn User ===============
+export const getAllBoards = async (userId: string) => {
   try {
-    const boards = await getDocs(boardRef);
+    const q = query(boardRef, where('createdBy', '==', userId));
+    const boards = await getDocs(q);
     const boardList = boards.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
-    console.log('All Boards: ', boardList);
+    console.log('==> boardList', boardList);
+
     return boardList;
   } catch (error) {
     console.log('==> firebase:getAllBoards: ', error);
@@ -208,117 +228,62 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
   }
 };
 
-// Function to fetch board data by user ID and workspace filter
-// export const getBoardInfo = async (boardId: string, userId: string) => {
-//   console.log('==> firebase:getBoardInfo: ', boardId, userId);
+export const getBoardLists = async (boardId: string) => {
+  console.log('==>getBoardLists ', boardId);
 
-//   const boardDocRef = await doc(db, 'boards', boardId);
-//   // const boardData = await getDoc(doc(boardRef, boardId));
-//   // console.log("boardData", boardData.id);
-//   // try {
-//   //   const boardDocSnap = await getDoc(boardDocRef);
+  try {
+    const q = query(
+      listRef,
+      where('board_id', '==', boardId),
+      orderBy('position'),
+    );
 
-//   //   if (boardDocSnap.exists()) {
-//   //     const boardData = boardDocSnap.data();
-//   //     console.log('==>boardData', boardData);
+    const querySnapshot = await getDocs(q);
 
-//   //     // Optional: check if this board belongs to the user
-//   //     if (boardData.createdBy == userId) {
-//   //       return boardData;
-//   //     } else {
-//   //       console.log('Board does not belong to this user.');
-//   //       return [];
-//   //     }
-//   //   } else {
-//   //     console.log('No such document!');
-//   //     return [];
-//   //   }
-//   // } catch (error) {
-//   //   console.error('Error getting document:', error);
-//   //   return [];
-//   // }
+    const lists = querySnapshot.docs.map(doc => ({
+      // id: doc.id,
+      ...doc.data(),
+    }));
 
-//   // Reference to the 'boards' collection
-//   // const boardRef1 = collection(db, 'boards', boardId);
-//   // console.log('==> boardRef1: ', boardRef1);
+    console.log('==> lists', lists);
 
-//   // Create the query with conditions
-//   const q = query(
-//     boardDocRef,
-//     where('createdBy', '==', userId),
-//     // where('id', '==', boardId),
-//     where('workspace', 'in', ['Public', 'Workspace']),
-//   );
+    return lists || [];
+  } catch (error) {
+    console.error('Error fetching board List: ', error);
+    return [];
+  }
+};
 
-//   // Fetch the data from Firestore
-//   try {
-//     // const querySnapshot = await getDocs(q);
-//     // console.log('==> firebase:getBoardInfo: ', querySnapshot.docs);
-//     // // // If we find any matching board(s), process them
-//     // if (!querySnapshot.empty) {
-//     //   querySnapshot.forEach(doc => {
-//     //   console.log("==> doc", doc);
-//     //     console.log(doc.id, ' => ', doc.data());
-//     //   });
-//     // } else {
-//     //   console.log('No matching boards found.');
-//     // }
-//   } catch (error) {
-//     console.error('Error fetching board data: ', error);
-//   }
-// };
+export const addBoardList = async (
+  boardId: string,
+  title: string,
+  position = 0,
+) => {
+  console.log('==>', boardId, title, position);
 
-// Example usage: Fetch board for user with ID 'vRgqBAJ2nXdL8b8fiPmlqVOg6al2' and board ID '3nIgiXsRohfCyLx4BSnX'
-// getBoardInfo('vRgqBAJ2nXdL8b8fiPmlqVOg6al2', '3nIgiXsRohfCyLx4BSnX');
+  try {
+    const listDocRef = doc(listRef);
+    // const listDocRef = await addDoc(listRef, {
+    //   board_id: boardId,
+    //   title,
+    //   position,
+    //   created_at: new Date(),
+    // });
 
-// export const getBoardInfo = async (boardId: string) => {
-//   console.log('==> firebase:getBoardInfo: ', boardId);
+    const newListDoc = {
+      list_id: listDocRef.id,
+      board_id: boardId,
+      title,
+      position,
+      created_at: new Date(),
+      last_edit: new Date(),
+    };
 
-//   // try {
-//   //   const board = await getDoc(doc(boardRef, boardId));
-//   //   if (!board.exists()) {
-//   //     console.log('No such document!');
-//   //     return [];
-//   //   }
-//   //   const boardData = board.data();
-//   //   console.log('Board Info: ', board.data());
-//   // } catch (error) {
-//   //   console.log('==> firebase:getAllBoards: ', error);
-//   // }
-//   try {
-//     // Create a query that checks the boardId, userId, and workspace
-//     const q = query(
-//       boardRef,
-//       where('id', '==', boardId),
-//       // where('createdBy', '==', auth.currentUser?.uid),
-//       // where('workspace', 'in', ['Public', 'Workspace']),
-//     );
+    await setDoc(listDocRef, newListDoc);
+    console.log('==> newListDoc ', newListDoc);
 
-//     // Execute the query
-//     const querySnapshot = await getDocs(q);
-//     console.log('==> firebase:getBoardInfo: ', querySnapshot.docs);
-
-//     if (querySnapshot.empty) {
-//       console.log('No matching board found!');
-//       return null;
-//     }
-
-//     // Assuming there's only one result since boardId is unique
-//     const boardData = querySnapshot.docs[0].data();
-
-//     // Optionally, fetch the user information if needed
-//     const userRef = doc(db, 'users', userId);
-//     const userSnap = await getDoc(userRef);
-
-//     let userData = null;
-//     if (userSnap.exists()) {
-//       userData = userSnap.data();
-//     }
-
-//     // Combine board data with user first name (if needed)
-//     return {...boardData, user: {first_name: userData?.first_name}};
-//   } catch (error) {
-//     console.error('Error getting board info:', error);
-//     return null;
-//   }
-// };
+    return newListDoc || {};
+  } catch (error) {
+    console.error('Error adding board List: ', error);
+  }
+};

@@ -1,9 +1,16 @@
-import {StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableOpacityProps,
+  ViewStyle,
+} from 'react-native';
 import React, {FC} from 'react';
 import Icon from './Icon';
 import {Colors} from '@utils/Constant';
 
 interface CustomHeaderLeftProps {
+  btnStyle?: ViewStyle;
   onPress: () => void;
   iconName: string;
   iconSize: number;
@@ -20,6 +27,7 @@ const CustomHeaderLeft: FC<CustomHeaderLeftProps> = ({
   iconSize,
   iconColor = Colors.lightprimary,
   onPress,
+  btnStyle,
 }) => {
   return (
     <TouchableOpacity onPress={onPress}>

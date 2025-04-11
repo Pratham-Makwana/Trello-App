@@ -4,7 +4,7 @@ import {BlurView} from '@react-native-community/blur';
 import {screenWidth} from '@utils/Scaling';
 import {Colors} from '@utils/Constant';
 import Icon from './Icon';
-import {goBack} from '@utils/NavigationUtils';
+import {goBack, navigate} from '@utils/NavigationUtils';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAuthContext} from '@context/UserContext';
 
@@ -52,7 +52,9 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title}) => {
             color={Colors.black}
           />
         </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigate('BoardMenu')}>
           <Icon
             name="dots-horizontal"
             iconFamily="MaterialCommunityIcons"

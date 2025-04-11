@@ -60,3 +60,16 @@ export interface Board {
   last_edit: Timestamp | null;
   workspace: string;
 }
+
+export interface TaskList {
+  list_id: string;
+  board_id: string;
+  title: string;
+  position: number;
+  created_at: Date;
+  last_edit: Date;
+}
+
+export interface FakeTaskList {
+  list_id?: string;
+}

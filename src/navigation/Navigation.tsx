@@ -8,23 +8,71 @@ import BGSelect from '@features/board/BGSelect';
 import CreateBoard from '@features/board/CreateBoard';
 import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
-import CustomHeader from '@components/global/CustomHeaderIOS';
 import BoardCard from '@features/board/boardcard/BoardCard';
-import {createBoard} from '@config/firebase';
+import BoardMenu from '@features/board/boardmenu/BoardMenu';
+import {auth, createBoard} from '@config/firebase';
 import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
-import {goBack, navigationRef} from '@utils/NavigationUtils';
+import {
+  goBack,
+  navigate,
+  navigationRef,
+  resetAndNavigate,
+} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
 import {Alert, Platform, StyleSheet} from 'react-native';
-import NewCard from '@features/board/NewCard';
+import {useEffect} from 'react';
+import {useAuthContext} from '@context/UserContext';
+import {onAuthStateChanged} from 'firebase/auth';
+import {webClientId} from '@env';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 
 const Stack = createNativeStackNavigator();
 
 const Navigation = () => {
+  const {setUser, user} = useAuthContext();
+  // console.log('==> Navigation', user);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      if (user) {
+        console.log('==> user', user);
+
+        setUser(user);
+
+        resetAndNavigate('MainStack', {screen: 'board'});
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // useEffect(() => {
+  //   const intialStartup = () => {
+  //     GoogleSignin.configure({
+  //       webClientId: webClientId,
+  //     });
+  //     // if (user) {
+  //     //   console.log('==> SplashScreen:user: ', user);
+  //     //   console.log('==> MainStack Screen Board Screen');
+  //     //   resetAndNavigate('MainStack', {screen: 'board'});
+  //     // } else {
+  //     //   console.log('else', user);
+
+  //     //   console.log('==> OnBoarding Screen');
+  //     //   navigate('OnBoarding');
+  //     // }
+  //   };
+  //   const timeOut = setTimeout(intialStartup, 2000);
+  //   return () => clearTimeout(timeOut);
+  // }, [user, setUser]);
+
   return (
     <NavigationContainer ref={navigationRef}>
+      {/* {
+        user ? <MainStack /> : <AuthStack /> 
+      } */}
       <Stack.Navigator>
         <Stack.Screen
           name="AuthStack"
@@ -45,10 +93,6 @@ const Navigation = () => {
     </NavigationContainer>
   );
 };
-
-// const ModalStack = () => {
-//   return <Stack.Navigator></Stack.Navigator>;
-// };
 
 const MainStack = () => {
   const {boardName, selectedWorkSpace, selectedColor} = useBoard();
@@ -143,8 +187,23 @@ const MainStack = () => {
           // header: () => <CustomHeader />,
         }}
       />
-    
-    
+      <Stack.Screen
+        name="BoardMenu"
+        component={BoardMenu}
+        options={{
+          title: 'Board Menu',
+          presentation: Platform.OS == 'ios' ? 'modal' : 'card',
+          headerLeft: () =>
+            Platform.OS == 'ios' && (
+              <CustomHeaderLeft
+                iconName="close"
+                iconSize={26}
+                iconFamily="Ionicons"
+                onPress={goBack}
+              />
+            ),
+        }}
+      />
     </Stack.Navigator>
   );
 };

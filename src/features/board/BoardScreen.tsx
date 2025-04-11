@@ -7,23 +7,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useEffect, useState} from 'react';
-import {Board, Colors, DarkColors} from '@utils/Constant';
-import {
-  DefaultTheme,
-  useFocusEffect,
-  useNavigation,
-} from '@react-navigation/native';
-import {auth, getAllBoards} from '@config/firebase';
+import React, {useCallback, useState} from 'react';
+import {Board, Colors} from '@utils/Constant';
+import {DefaultTheme, useFocusEffect} from '@react-navigation/native';
+import {getAllBoards} from '@config/firebase';
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
+import Icon from '@components/global/Icon';
+import {useAuthContext} from '@context/UserContext';
 
 const BoardScreen = () => {
   const [boards, setBoards] = useState<Board[] | any>([]);
   const [refreshing, setRefreshing] = useState(false);
-
-  // const loginUser = auth;
-  // console.log('==> BoardScreen:loginUser: ', loginUser);
+  const {user} = useAuthContext();
 
   useFocusEffect(
     useCallback(() => {
@@ -33,7 +29,7 @@ const BoardScreen = () => {
 
   const fetchBoards = async () => {
     try {
-      const allBoard = await getAllBoards();
+      const allBoard = await getAllBoards(user?.uid);
       setBoards(allBoard);
     } catch (error) {
       console.error('Error fetching boards:', error);
@@ -55,6 +51,23 @@ const BoardScreen = () => {
       </TouchableOpacity>
     );
   };
+
+  const ListHeader = () => (
+    <View>
+      <View style={styles.listHeader}>
+        <Text style={styles.titleHeaderText}>YOUR WORKSPACES</Text>
+      </View>
+      <View style={styles.workspaceContent}>
+        <Icon
+          name="person-outline"
+          iconFamily="MaterialIcons"
+          size={24}
+          color={Colors.darkprimary}
+        />
+        <Text style={styles.userTitle}>{user?.displayName}'s workspace</Text>
+      </View>
+    </View>
+  );
   return (
     <View style={styles.boardContainer}>
       <StatusBar backgroundColor={DefaultTheme.colors.text} />
@@ -65,6 +78,7 @@ const BoardScreen = () => {
         data={boards}
         renderItem={ListItem}
         keyExtractor={item => item.id}
+        ListHeaderComponent={() => <ListHeader />}
         ItemSeparatorComponent={() => (
           <View
             style={{
@@ -115,5 +129,27 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 16,
     color: Colors.black,
+  },
+  listHeader: {
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  titleHeaderText: {
+    color: Colors.darkprimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  workspaceContent: {
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    gap: 5,
+    alignItems: 'center',
+  },
+  userTitle: {
+    color: Colors.darkprimary,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

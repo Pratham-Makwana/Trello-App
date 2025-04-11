@@ -7,30 +7,12 @@ import {Colors} from '@utils/Constant';
 import {onAuthStateChanged} from 'firebase/auth';
 import {auth} from '@config/firebase';
 import {useAuthContext} from '@context/UserContext';
-// import {authStorage} from '@state/storage';
+
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {webClientId} from '@env';
 
 const SplashScreen: FC = () => {
-  const {setUser, user} = useAuthContext();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user) {
-        // const serializedUser = {
-        //   uid: user.uid,
-        //   email: user.email,
-        //   displayName: user.displayName,
-        //   photoURL: user.photoURL,
-        // };
-        setUser(user);
-        // authStorage.set('authUser', JSON.stringify(user));
-
-        resetAndNavigate('MainStack', {screen: 'board'});
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  const {user} = useAuthContext();
 
   useEffect(() => {
     const intialStartup = () => {
@@ -38,8 +20,7 @@ const SplashScreen: FC = () => {
         webClientId: webClientId,
       });
       if (user) {
-        console.log('==> SplashScreen:user: ', user);
-        console.log('==> MainStack Screen Board Screen');
+        console.log('==> User Exists');
         resetAndNavigate('MainStack', {screen: 'board'});
       } else {
         console.log('==> OnBoarding Screen');
@@ -49,6 +30,7 @@ const SplashScreen: FC = () => {
     const timeOut = setTimeout(intialStartup, 2000);
     return () => clearTimeout(timeOut);
   }, [user]);
+
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor={Colors.lightprimary} />

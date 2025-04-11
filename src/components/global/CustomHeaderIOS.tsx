@@ -4,7 +4,7 @@ import {BlurView} from '@react-native-community/blur';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from './Icon';
 import {Colors} from '@utils/Constant';
-import {goBack} from '@utils/NavigationUtils';
+import {goBack, navigate} from '@utils/NavigationUtils';
 import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderIOSProps {
@@ -13,8 +13,8 @@ interface CustomHeaderIOSProps {
 const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title}) => {
   const {top} = useSafeAreaInsets();
   const {user} = useAuthContext();
-  console.log('==> CustomHeader:currentUser: ', user?.displayName);
-  console.log('==> CustomHeader:title: ', title);
+  // console.log('==> CustomHeader:currentUser: ', user?.displayName);
+  // console.log('==> CustomHeader:title: ', title);
 
   return (
     <View style={[styles.blurContainer, {paddingTop: top}]}>
@@ -61,7 +61,7 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title}) => {
               color={Colors.white}
             />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => navigate('BoardMenu')}>
             <Icon
               name="dots-horizontal"
               iconFamily="MaterialCommunityIcons"
