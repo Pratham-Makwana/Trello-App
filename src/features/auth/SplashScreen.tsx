@@ -8,6 +8,8 @@ import {onAuthStateChanged} from 'firebase/auth';
 import {auth} from '@config/firebase';
 import {useAuthContext} from '@context/UserContext';
 // import {authStorage} from '@state/storage';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {webClientId} from '@env';
 
 const SplashScreen: FC = () => {
   const {setUser, user} = useAuthContext();
@@ -32,11 +34,13 @@ const SplashScreen: FC = () => {
 
   useEffect(() => {
     const intialStartup = () => {
+      GoogleSignin.configure({
+        webClientId: webClientId,
+      });
       if (user) {
         console.log('==> SplashScreen:user: ', user);
         console.log('==> MainStack Screen Board Screen');
         resetAndNavigate('MainStack', {screen: 'board'});
-        return;
       } else {
         console.log('==> OnBoarding Screen');
         navigate('OnBoarding');

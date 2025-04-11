@@ -7,10 +7,10 @@ import {Colors} from '@utils/Constant';
 import {goBack} from '@utils/NavigationUtils';
 import {useAuthContext} from '@context/UserContext';
 
-interface CustomHeaderProps {
+interface CustomHeaderIOSProps {
   title: string;
 }
-const CustomHeader: FC<CustomHeaderProps> = ({title}) => {
+const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title}) => {
   const {top} = useSafeAreaInsets();
   const {user} = useAuthContext();
   console.log('==> CustomHeader:currentUser: ', user?.displayName);
@@ -123,4 +123,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomHeader;
+export default CustomHeaderIOS;

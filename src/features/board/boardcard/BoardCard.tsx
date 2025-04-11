@@ -1,26 +1,52 @@
-import {StyleSheet, Text, View} from 'react-native';
-import React from 'react';
-import {useRoute} from '@react-navigation/native';
-import CustomHeader from '@components/global/CustomHeader';
-import {useHeaderHeight} from '@react-navigation/elements';
+import {Platform, SafeAreaView, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {useIsFocused, useRoute} from '@react-navigation/native';
+
 import {Board} from '@utils/Constant';
+import CustomHeaderIOS from '@components/global/CustomHeaderIOS';
+import CustomHeaderAndroid from '@components/global/CustomHeaderAndroid';
+import {getBoardInfo} from '@config/firebase';
+import {useAuthContext} from '@context/UserContext';
+import LinearGradient from 'react-native-linear-gradient';
+import BoardCardArea from './BoardCardArea';
+import CustomModal from '@components/global/CustomModal';
 
 const BoardCard = () => {
   const route = useRoute();
   const {boardDetails} = route.params as {boardDetails: Board};
-  console.log('==> BoardCard:item: ', boardDetails);
-  //   console.log('==> BoardCard:currentUser: ', currentUser);
+  const [loading, setLoading] = useState(false);
+  const [board, setBoard] = useState<Board | any>();
+  const {user} = useAuthContext();
+  const isFocused = useIsFocused();
+  console.log('==> BoardCard:item: ', board);
+  const gradientColors =
+    boardDetails?.background.length === 1
+      ? [boardDetails?.background[0], boardDetails?.background[0]]
+      : boardDetails?.background;
+  console.log('==>', gradientColors);
 
-  const headerHeight = useHeaderHeight();
+  useEffect(() => {
+    if (!boardDetails.id) return;
+    loadBoardInfo();
+  }, [boardDetails.id]);
+
+  const loadBoardInfo = async () => {
+    setLoading(true);
+    if (!boardDetails.id) return;
+    const data = await getBoardInfo(boardDetails.id, user?.uid);
+    setBoard(data);
+    setLoading(false);
+  };
 
   return (
-    <>
-      <CustomHeader title={boardDetails.title} />
-
-      <View style={[{paddingTop: headerHeight}]}>
-        <Text>Helllo</Text>
-      </View>
-    </>
+    <LinearGradient colors={gradientColors} style={{flex: 1}}>
+      {Platform.OS === 'ios' && <CustomHeaderIOS title={boardDetails.title} />}
+      {Platform.OS === 'android' && (
+        <CustomHeaderAndroid title={boardDetails.title} />
+      )}
+      {loading && <CustomModal loading={isFocused && loading} />}
+      {board && <BoardCardArea />}
+    </LinearGradient>
   );
 };
 

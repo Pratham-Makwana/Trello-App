@@ -5,27 +5,54 @@ import Icon from '../global/Icon';
 import {Colors, ModalType} from '@utils/Constant';
 import CustomText from '../ui/CustomText';
 import {navigate} from '@utils/NavigationUtils';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 
 const LOGIN_OPTION = [
   {
-    type: 'Continue With Google',
+    type: 'Google',
     icon: require('@assets/images/login/google.png'),
   },
   {
-    type: 'Continue With apple',
+    type: 'apple',
     icon: require('@assets/images/login/apple.png'),
   },
   {
-    type: 'Continue With microsoft',
+    type: 'microsoft',
     icon: require('@assets/images/login/microsoft.png'),
   },
   {
-    type: 'Continue With slack',
+    type: 'slack',
     icon: require('@assets/images/login/slack.png'),
   },
 ];
 
 const AuthModal: FC<{authType: ModalType | null}> = ({authType}) => {
+
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      console.log('userinfo', userInfo);
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error) {
+        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+          console.log(error);
+        } else if (error.code === statusCodes.IN_PROGRESS) {
+          console.log(error);
+        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+          console.log(error);
+        } else {
+          console.log('An unknown error occurred:', error);
+        }
+      } else {
+        console.log('An unexpected error occurred:', error);
+      }
+    }
+  };
   return (
     <BottomSheetView style={styles.modalContainer}>
       <TouchableOpacity
@@ -52,13 +79,14 @@ const AuthModal: FC<{authType: ModalType | null}> = ({authType}) => {
         <TouchableOpacity
           key={index}
           style={styles.modalBtn}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+          onPress={() => item.type === 'Google' && handleGoogleLogin()}>
           <Image source={item.icon} style={styles.imgBtn} />
           <CustomText
             fontFamily="Montserrat-Medium"
             variant="h6"
             style={styles.btnText}>
-            {item.type}
+            Continue With {item.type}
           </CustomText>
         </TouchableOpacity>
       ))}

@@ -8,7 +8,7 @@ import BGSelect from '@features/board/BGSelect';
 import CreateBoard from '@features/board/CreateBoard';
 import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
-import CustomHeader from '@components/global/CustomHeader';
+import CustomHeader from '@components/global/CustomHeaderIOS';
 import BoardCard from '@features/board/boardcard/BoardCard';
 import {createBoard} from '@config/firebase';
 import {useBoard} from '@context/BoardContext';
@@ -17,7 +17,8 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
 import {goBack, navigationRef} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
-import {Alert, StyleSheet} from 'react-native';
+import {Alert, Platform, StyleSheet} from 'react-native';
+import NewCard from '@features/board/NewCard';
 
 const Stack = createNativeStackNavigator();
 
@@ -137,11 +138,13 @@ const MainStack = () => {
         name="BoardCard"
         component={BoardCard}
         options={{
-          headerShown : false,
-          headerTransparent : true,
+          headerShown: false,
+          headerTransparent: true,
           // header: () => <CustomHeader />,
         }}
       />
+    
+    
     </Stack.Navigator>
   );
 };

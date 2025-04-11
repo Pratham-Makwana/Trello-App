@@ -16,7 +16,7 @@
 		2EA9944049B08C1CEA9D21F1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		2FA9B67D62DA4D2B95E7E8E8 /* Montserrat-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8D0BE5D708594D29AE5F34E1 /* Montserrat-SemiBold.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		88FB301C2DA53C08007FCB8F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 88FB301B2DA53C08007FCB8F /* GoogleService-Info.plist */; };
+		88A4F8392DA7E018006C466A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 88A4F8382DA7E018006C466A /* GoogleService-Info.plist */; };
 		A8919A262DCD4248AB1D5FC6 /* Montserrat-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 86758B7B4DD442F8BBCBBC11 /* Montserrat-Regular.ttf */; };
 		AF5763BB6D4A4637AFCDAFD0 /* Montserrat-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 135FFD32A2F64CF595B0BBC2 /* Montserrat-Black.ttf */; };
 		B501CE29ED8F4B01849890D4 /* Montserrat-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CC46DA1D3C454A318E14F9FF /* Montserrat-Light.ttf */; };
@@ -55,7 +55,7 @@
 		6D3BF1E900FE40FE9D99EAEC /* Montserrat-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Montserrat-Medium.ttf"; path = "../src/assets/fonts/Montserrat-Medium.ttf"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Trello/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		86758B7B4DD442F8BBCBBC11 /* Montserrat-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Montserrat-Regular.ttf"; path = "../src/assets/fonts/Montserrat-Regular.ttf"; sourceTree = "<group>"; };
-		88FB301B2DA53C08007FCB8F /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		88A4F8382DA7E018006C466A /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "../../../Downloads/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-Trello-TrelloTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Trello-TrelloTests.release.xcconfig"; path = "Target Support Files/Pods-Trello-TrelloTests/Pods-Trello-TrelloTests.release.xcconfig"; sourceTree = "<group>"; };
 		8D0BE5D708594D29AE5F34E1 /* Montserrat-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Montserrat-SemiBold.ttf"; path = "../src/assets/fonts/Montserrat-SemiBold.ttf"; sourceTree = "<group>"; };
 		97C41F5C551DB85F4BBC3FAE /* libPods-Trello.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Trello.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -104,7 +104,7 @@
 		13B07FAE1A68108700A75B9A /* Trello */ = {
 			isa = PBXGroup;
 			children = (
-				88FB301B2DA53C08007FCB8F /* GoogleService-Info.plist */,
+				88A4F8382DA7E018006C466A /* GoogleService-Info.plist */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -285,7 +285,7 @@
 				0AC80EA877C446A78930A96D /* Montserrat-Bold.ttf in Resources */,
 				B501CE29ED8F4B01849890D4 /* Montserrat-Light.ttf in Resources */,
 				ED67B31ED0924B6AA1B6E47E /* Montserrat-Medium.ttf in Resources */,
-				88FB301C2DA53C08007FCB8F /* GoogleService-Info.plist in Resources */,
+				88A4F8392DA7E018006C466A /* GoogleService-Info.plist in Resources */,
 				A8919A262DCD4248AB1D5FC6 /* Montserrat-Regular.ttf in Resources */,
 				2FA9B67D62DA4D2B95E7E8E8 /* Montserrat-SemiBold.ttf in Resources */,
 			);
