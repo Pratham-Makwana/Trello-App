@@ -63,15 +63,6 @@ export interface Board {
   workspace: string;
 }
 
-// {"background": ["#4158D0", "#C850C0", "#FFCC70"],
-//  "boardId": "NLpFmcaQAzwb1fl4fBDB",
-//  "createdBy": "KE7W04yKrpO3MIBkveSdwRyIlmw2",
-//  "created_at": {"nanoseconds": 366000000,
-//  "seconds": 1744614035},
-// "id": "NLpFmcaQAzwb1fl4fBDB",
-//  "last_edit": {"nanoseconds": 366000000, "seconds": 1744614035},
-//  "title": "Test User Todo", "workspace": "Workspace"}
-
 export interface TaskList {
   list_id: string;
   board_id: string;
@@ -89,4 +80,17 @@ export interface User {
   email: string;
   username: string;
   photoURL: string;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  done: boolean;
+  imageUrl: string | null;
+  position: number;
+  board_id: string;
+  list_id: string;
+  createdAt: Date;
+  index?: number;
 }

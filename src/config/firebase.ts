@@ -31,7 +31,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import {Board} from '@utils/Constant';
+import {Board, TaskItem} from '@utils/Constant';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -158,7 +158,7 @@ export const createBoard = async (
   }
 };
 
-export const getAllBoards = async (userId: string) => {
+export const getBoards = async (userId: string) => {
   try {
     const q = query(userBoardRef, where('userId', '==', userId));
     const joinDocs = await getDocs(q);
@@ -368,6 +368,7 @@ export const addCardList = async (
       position,
       imageUrl,
       done,
+      description: '',
       createdAt: Timestamp.now(),
     };
 
@@ -396,5 +397,21 @@ export const getListCard = async (listId: string) => {
   } catch (error) {
     console.log('Error getting list card', error);
     return [];
+  }
+};
+
+export const updateCart = async (task: TaskItem) => {
+
+
+  try {
+    const cardDocRef = doc(cardRef, task?.id);
+    await updateDoc(cardDocRef, {
+      title: task?.title,
+      description: task?.description,
+      done: task?.done,
+      position : task?.index
+    });
+  } catch (error) {
+    console.log('Error Updating card', error);
   }
 };

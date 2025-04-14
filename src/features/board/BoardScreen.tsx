@@ -10,7 +10,7 @@ import {
 import React, {useCallback, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
 import {DefaultTheme, useFocusEffect} from '@react-navigation/native';
-import {getAllBoards} from '@config/firebase';
+import {getBoards} from '@config/firebase';
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
 import Icon from '@components/global/Icon';
@@ -32,7 +32,7 @@ const BoardScreen = () => {
   const fetchBoards = async () => {
     try {
       setIsLoading(true);
-      const allBoard = await getAllBoards(user?.uid);
+      const allBoard = await getBoards(user?.uid);
       setBoards(allBoard);
       setIsLoading(false);
     } catch (error) {

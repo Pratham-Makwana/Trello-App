@@ -6,9 +6,14 @@ import {
   View,
 } from 'react-native';
 import React, {FC, useEffect, useState} from 'react';
-import {Colors, FakeTaskList, TaskList} from '@utils/Constant';
+import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Icon from '@components/global/Icon';
-import {addCardList, getListCard} from '@config/firebase';
+import {addCardList, getListCard, updateCart} from '@config/firebase';
+import DraggableFlatList, {
+  DragEndParams,
+} from 'react-native-draggable-flatlist';
+import ListItem from '@components/board/card/ListItem';
+import {screenWidth} from '@utils/Scaling';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -28,20 +33,34 @@ const ListCard: FC<CardListProps> = ({taskList}) => {
     setTasks(data);
   };
 
+  const onTaskCardDrop = (params: DragEndParams<TaskItem>) => {
+    console.log('==> onTaskCardDrop Params', params);
+    const newData = params.data.map((item: any, index: number) => {
+      return {...item, index};
+    });
+    setTasks(newData);
+    console.log('newData', newData);
+    newData.map(async item => {
+      await updateCart(item);
+    });
+  };
+
   const onCardAdd = async () => {
-    await addCardList(
+    const data = await addCardList(
       taskList?.list_id,
       taskList?.board_id,
-      listTitle,
+      newTask,
       tasks.length,
     );
     setAdding(false);
+    setTasks([...tasks, data]);
     setNewTask('');
   };
 
   return (
     <View style={styles.cardContainer}>
       <View style={styles.card}>
+        {/* List Header */}
         <View style={styles.header}>
           <Text style={styles.listTitle}>{listTitle}</Text>
           <TouchableOpacity>
@@ -53,6 +72,19 @@ const ListCard: FC<CardListProps> = ({taskList}) => {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Render Card Tasks */}
+        <DraggableFlatList
+          data={tasks}
+          renderItem={ListItem}
+          keyExtractor={item => item.id}
+          onDragEnd={onTaskCardDrop}
+          containerStyle={{
+            paddingBottom: 4,
+            maxHeight: '80%',
+          }}
+          contentContainerStyle={{gap: 4}}
+        />
 
         {adding && (
           <TextInput
@@ -129,7 +161,7 @@ export default ListCard;
 const styles = StyleSheet.create({
   cardContainer: {
     paddingTop: 20,
-    paddingHorizontal: 30,
+    paddingHorizontal: 20,
     maxHeight: '88%',
   },
 
