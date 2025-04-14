@@ -1,43 +1,104 @@
-import {Image, StyleSheet, Text, View} from 'react-native';
-import React from 'react';
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import {useAuthContext} from '@context/UserContext';
 import Icon from '@components/global/Icon';
-import {Colors} from '@utils/Constant';
-import {screenWidth} from '@utils/Scaling';
-import {SvgXml} from 'react-native-svg';
+import {Board, Colors, User} from '@utils/Constant';
+
+import {RouteProp, useRoute} from '@react-navigation/native';
+import {
+  deleteBoard,
+  getBoardInfo,
+  getBoardMembers,
+  updateBoardInfo,
+} from '@config/firebase';
+import UserList from '@components/board/UserList';
+import { resetAndNavigate } from '@utils/NavigationUtils';
 
 const BoardMenu = () => {
+  const route =
+    useRoute<RouteProp<{BoardMenu: {boardId: string; board: Board}}>>();
+  const {boardId, board} = route.params;
+  const [boardData, setBoardData] = useState<Board | any>();
+  const [member, setMember] = useState<User | any>();
   const {user} = useAuthContext();
 
-  // const avatarUrl = 'https://ui-avatars.com/api/?name=test&format=png';
-  const avatarUrl = 'https://ui-avatars.com/api/?name=test';
+  useEffect(() => {
+    if (!boardId) return;
+    loadBoardInfo();
+  }, []);
+
+  const loadBoardInfo = async () => {
+    const data = await getBoardInfo(boardId, user?.uid);
+    setBoardData(data);
+
+    const member = await getBoardMembers(boardId);
+    // console.log('==> memebers', member);
+    setMember(member);
+  };
+
+  const onDeleteBoard = async () => {
+    await deleteBoard(boardId);
+    resetAndNavigate('MainStack', {screen : 'board'})
+  };
+
+  const onUpdateBoard = async () => {
+    // console.log('==> UpdateBoard');
+    const updatedBoardData = await updateBoardInfo(boardData);
+    setBoardData(updatedBoardData);
+  };
+
   return (
-    <View style={styles.mainContainer}>
-      <View style={styles.memeberContainer}>
-        <View style={styles.memeberContent}>
+    <View>
+      <View style={styles.container}>
+        <Text style={styles.label}>Board Name</Text>
+        <TextInput
+          value={boardData?.title}
+          onChangeText={text => setBoardData({...boardData, title: text})}
+          style={{fontSize: 16, color: Colors.fontDark}}
+          returnKeyType="done"
+          enterKeyHint="done"
+          onEndEditing={onUpdateBoard}
+        />
+      </View>
+      {/* Memebers */}
+      <View style={styles.container}>
+        <View style={styles.rowGap}>
           <Icon
             name="person-outline"
-            iconFamily="MaterialIcons"
-            size={24}
-            color={Colors.darkprimary}
+            iconFamily="Ionicons"
+            size={18}
+            color={Colors.fontDark}
           />
-          <Text style={styles.text}>Memebers</Text>
+          <Text
+            style={{fontSize: 16, fontWeight: 'bold', color: Colors.fontDark}}>
+            Memebers
+          </Text>
         </View>
+
+        <FlatList
+          data={member}
+          keyExtractor={item => item.uid}
+          renderItem={({item}) => <UserList member={item} />}
+          contentContainerStyle={{gap: 8}}
+          style={{marginVertical: 12}}
+        />
+
+        <TouchableOpacity style={styles.inviteBtn}>
+          <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
+        </TouchableOpacity>
       </View>
-      <View style={styles.subContainer}>
-        <View style={styles.imageContainer}>
-          <SvgXml xml={avatarUrl} width={40} height={40} />
-          <Image
-            source={{uri: user?.photoURL}}
-            style={styles.image}
-            resizeMode="cover"
-            onError={e => {
-              console.log('Image load error:', e.nativeEvent.error);
-            }}
-          />
-        </View>
-        <Text style={styles.text}>{user?.displayName}</Text>
-      </View>
+
+      <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteBoard}>
+        <Text style={styles.deleteBtnText}>Close Board</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -45,43 +106,38 @@ const BoardMenu = () => {
 export default BoardMenu;
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  container: {
     backgroundColor: '#fff',
-    marginVertical: 50,
-    height: screenWidth * 0.25,
+    padding: 8,
+    paddingHorizontal: 16,
+    marginVertical: 16,
   },
-  memeberContainer: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.textgrey,
-    paddingBottom: 5,
-    paddingTop: 5,
-    paddingHorizontal: 15,
+  label: {
+    color: Colors.textgrey,
+    fontSize: 12,
+    marginBottom: 5,
   },
-  memeberContent: {
+  rowGap: {
     flexDirection: 'row',
+    gap: 16,
+  },
+  inviteBtn: {
+    backgroundColor: Colors.lightprimary,
+    padding: 8,
+    marginLeft: 32,
+    marginRight: 16,
+    marginTop: 8,
+    borderRadius: 6,
     alignItems: 'center',
-    gap: 20,
   },
-  text: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.black,
-  },
-  subContainer: {
-    flexDirection: 'row',
+  deleteBtn: {
+    backgroundColor: '#fff',
+    padding: 8,
+    marginHorizontal: 16,
+    borderRadius: 6,
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 13,
-    marginTop: 10,
   },
-  imageContainer: {
-    height: 40,
-    width: 40,
-  },
-  image: {
-    height: '100%',
-    width: '100%',
-    resizeMode: 'contain',
-    borderRadius: 50,
+  deleteBtnText: {
+    color: '#B22222',
   },
 });

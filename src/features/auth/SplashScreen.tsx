@@ -23,7 +23,7 @@ const SplashScreen: FC = () => {
         console.log('==> User Exists');
         resetAndNavigate('MainStack', {screen: 'board'});
       } else {
-        console.log('==> OnBoarding Screen');
+        // console.log('==> OnBoarding Screen');
         navigate('OnBoarding');
       }
     };

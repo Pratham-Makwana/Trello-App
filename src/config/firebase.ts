@@ -26,8 +26,12 @@ import {
   where,
   setDoc,
   orderBy,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import {Board} from '@utils/Constant';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -67,6 +71,8 @@ export {auth, db};
 export const userRef = collection(db, 'users');
 export const boardRef = collection(db, 'boards');
 export const listRef = collection(db, 'lists');
+export const cardRef = collection(db, 'cards');
+export const userBoardRef = collection(db, 'user_boards');
 
 export const createUser = async (
   username: string,
@@ -98,7 +104,7 @@ export const createUser = async (
     //   displayName: user.displayName,
     //   photoURL: user.photoURL,
     // });
-    console.log('User Created Successfully', user);
+    // console.log('User Created Successfully', user);
   } catch (error) {
     console.log('==> firebase:createUser: ', error);
   }
@@ -138,53 +144,61 @@ export const createBoard = async (
       createdBy: auth.currentUser?.uid,
     };
     await setDoc(docRef, boardData);
-    // const docRef = await addDoc(boardRef, {
-    //   title: boardName,
-    //   background: selectedColor,
-    //   workspace: workspace,
-    //   created_at: new Date(),
-    //   last_edit: new Date(),
-    //   createdBy: auth.currentUser?.uid,
-    // });
-    // console.log('Document written with ID: ', docRef);
+
+    const joinId = `${auth.currentUser?.uid}_${docRef.id}`;
+    await setDoc(doc(userBoardRef, joinId), {
+      userId: auth.currentUser?.uid,
+      boardId: docRef.id,
+      addedAt: new Date(),
+    });
+
+    // console.log('Board and user_board entry created');
   } catch (e) {
     console.error('Error adding document: ', e);
   }
 };
 
-// ============== Get All Board ==============================
-// export const getAllBoards = async () => {
+export const getAllBoards = async (userId: string) => {
+  try {
+    const q = query(userBoardRef, where('userId', '==', userId));
+    const joinDocs = await getDocs(q);
+
+    // console.log('==> joinDocs', joinDocs);
+    const boardIds = joinDocs.docs.map(doc => doc.data().boardId);
+
+    const boardDocs = await Promise.all(
+      boardIds.map(boardId => getDoc(doc(boardRef, boardId))),
+    );
+
+    const boardList = boardDocs
+      .filter(doc => doc.exists())
+      .map(doc => ({id: doc.id, ...doc.data()}));
+
+    // console.log('==> boardList', boardList);
+    return boardList;
+  } catch (error) {
+    console.log('==> firebase:getAllBoards:', error);
+  }
+};
+
+// ========= Get All Board Which Created By The Current LogIn User ===============
+// export const getAllBoards = async (userId: string) => {
 //   try {
-//     const boards = await getDocs(boardRef);
+//     const q = query(boardRef, where('createdBy', '==', userId));
+//     const boards = await getDocs(q);
 //     const boardList = boards.docs.map(doc => ({
 //       id: doc.id,
 //       ...doc.data(),
 //     }));
+//     console.log('==> boardList', boardList);
+
 //     return boardList;
 //   } catch (error) {
 //     console.log('==> firebase:getAllBoards: ', error);
 //   }
 // };
 
-// ========= Get All Board Which Created By The Current LogIn User ===============
-export const getAllBoards = async (userId: string) => {
-  try {
-    const q = query(boardRef, where('createdBy', '==', userId));
-    const boards = await getDocs(q);
-    const boardList = boards.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    console.log('==> boardList', boardList);
-
-    return boardList;
-  } catch (error) {
-    console.log('==> firebase:getAllBoards: ', error);
-  }
-};
-
 export const getBoardInfo = async (boardId: string, userId: string) => {
-  console.log('==> firebase:getBoardInfo: ', boardId, userId);
   try {
     const boardQuery = query(
       boardRef,
@@ -200,7 +214,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
       return [];
     }
     const boardData = boardSnapshot.docs[0].data();
-    console.log('==> boardData', boardData);
+    // console.log('==> boardData', boardData);
 
     // Fetch user data from the users collection
     const userDocRef = doc(userRef, userId);
@@ -219,7 +233,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
         email: userData?.email,
       },
     };
-    console.log('==> boardInfo', boardInfo);
+    // console.log('==> boardInfo', boardInfo);
 
     return boardInfo;
   } catch (error) {
@@ -227,9 +241,57 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
     return [];
   }
 };
+export const updateBoardInfo = async (board: Board) => {
+  // console.log(board);
 
+  try {
+    const docRef = doc(boardRef, board.boardId);
+    await updateDoc(docRef, {
+      title: board?.title,
+    });
+
+    const updatedBoard = await getDoc(docRef);
+
+    console.log('==> Updated Board', updatedBoard.data());
+    return updatedBoard.data();
+  } catch (error) {
+    console.log('Error updateBoard: ', error);
+  }
+};
+
+export const deleteBoard = async (boardId: string) => {
+  try {
+    const boardDocRef = doc(boardRef, boardId);
+    await deleteDoc(boardDocRef);
+    console.log('Board deleted successfully');
+  } catch (error) {
+    console.log('Error deleting board:', error);
+  }
+};
+
+export const getBoardMembers = async (boardId: string) => {
+  try {
+    const q = query(userBoardRef, where('boardId', '==', boardId));
+    const joinDocs = await getDocs(q);
+
+    const userIds = joinDocs.docs.map(doc => doc.data().userId);
+
+    const userDocs = await Promise.all(
+      userIds.map(userId => getDoc(doc(userRef, userId))),
+    );
+    const members = userDocs
+      .filter(doc => doc.exists())
+      .map(doc => ({...doc.data()}));
+
+    return members;
+  } catch (error) {
+    console.error('Error fetching board members:', error);
+    return [];
+  }
+};
+//  =================== Board List ==========================
 export const getBoardLists = async (boardId: string) => {
-  console.log('==>getBoardLists ', boardId);
+  // console.log('==>getBoardLists ', boardId);
 
   try {
     const q = query(
@@ -245,7 +307,7 @@ export const getBoardLists = async (boardId: string) => {
       ...doc.data(),
     }));
 
-    console.log('==> lists', lists);
+    // console.log('==> lists', lists);
 
     return lists || [];
   } catch (error) {
@@ -284,6 +346,55 @@ export const addBoardList = async (
 
     return newListDoc || {};
   } catch (error) {
-    console.error('Error adding board List: ', error);
+    console.log('Error adding board List: ', error);
+  }
+};
+
+//  ==================== Board Card List =========================
+
+export const addCardList = async (
+  listId: string,
+  boardId: string,
+  title: string,
+  position: number = 0,
+  imageUrl: string | null = null,
+  done: boolean = false,
+) => {
+  try {
+    const newCard = {
+      board_id: boardId,
+      list_id: listId,
+      title,
+      position,
+      imageUrl,
+      done,
+      createdAt: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(cardRef, newCard);
+    const newCardData = {id: docRef.id, ...newCard};
+    return newCardData;
+  } catch (error) {
+    console.log('Error adding card:', error);
+  }
+};
+
+export const getListCard = async (listId: string) => {
+  try {
+    const q = query(
+      cardRef,
+      where('list_id', '==', listId),
+      where('done', '==', false),
+      orderBy('position'),
+    );
+
+    const snapshot = await getDocs(q);
+
+    const cards = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+
+    return cards;
+  } catch (error) {
+    console.log('Error getting list card', error);
+    return [];
   }
 };

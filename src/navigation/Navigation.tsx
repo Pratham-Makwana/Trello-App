@@ -17,7 +17,6 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
 import {
   goBack,
-  navigate,
   navigationRef,
   resetAndNavigate,
 } from '@utils/NavigationUtils';
@@ -95,11 +94,12 @@ const Navigation = () => {
 };
 
 const MainStack = () => {
-  const {boardName, selectedWorkSpace, selectedColor} = useBoard();
+  const {boardName, selectedWorkSpace, selectedColor, setBoardName} = useBoard();
 
   const handleCreateBoard = () => {
     if (boardName.length > 0 && boardName !== '') {
       createBoard(boardName, selectedColor, selectedWorkSpace);
+      setBoardName('')
       Alert.alert('Board Created Successfully');
       goBack();
     } else {

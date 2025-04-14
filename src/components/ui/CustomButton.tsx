@@ -8,6 +8,7 @@ import {
 import React, {FC} from 'react';
 import CustomText from './CustomText';
 import {Colors} from '@utils/Constant';
+import CustomModal from '@components/global/CustomModal';
 
 interface CustomButtonProps {
   title: string;
@@ -31,11 +32,7 @@ const CustomButton: FC<CustomButtonProps> = ({
       style={[contentContainerStyle, styles.btn]}
       disabled={isLoading}>
       {isLoading ? (
-        <ActivityIndicator
-          size={'small'}
-          color={Colors.lightprimary}
-          style={{justifyContent: 'center', alignItems: 'center'}}
-        />
+        <CustomModal loading={isLoading} />
       ) : (
         <CustomText
           variant="h3"

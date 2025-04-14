@@ -23,6 +23,7 @@ export enum Colors {
   textgrey = '#A6A3AF',
   grey = '#F2F2F7',
   placeholdertext = '#8C95A6',
+  fontDark = '#292929',
 }
 
 export enum Fonts {
@@ -53,6 +54,7 @@ export enum VisibilityType {
 
 export interface Board {
   id: string;
+  boardId: string;
   createdBy: string;
   title: string;
   created_at: Timestamp;
@@ -60,6 +62,15 @@ export interface Board {
   last_edit: Timestamp | null;
   workspace: string;
 }
+
+// {"background": ["#4158D0", "#C850C0", "#FFCC70"],
+//  "boardId": "NLpFmcaQAzwb1fl4fBDB",
+//  "createdBy": "KE7W04yKrpO3MIBkveSdwRyIlmw2",
+//  "created_at": {"nanoseconds": 366000000,
+//  "seconds": 1744614035},
+// "id": "NLpFmcaQAzwb1fl4fBDB",
+//  "last_edit": {"nanoseconds": 366000000, "seconds": 1744614035},
+//  "title": "Test User Todo", "workspace": "Workspace"}
 
 export interface TaskList {
   list_id: string;
@@ -72,4 +83,10 @@ export interface TaskList {
 
 export interface FakeTaskList {
   list_id?: string;
+}
+export interface User {
+  uid: string;
+  email: string;
+  username: string;
+  photoURL: string;
 }

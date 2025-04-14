@@ -2,7 +2,7 @@ import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
 import React, {FC} from 'react';
 import {BlurView} from '@react-native-community/blur';
 import {screenWidth} from '@utils/Scaling';
-import {Colors} from '@utils/Constant';
+import {Board, Colors} from '@utils/Constant';
 import Icon from './Icon';
 import {goBack, navigate} from '@utils/NavigationUtils';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -10,11 +10,16 @@ import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderAndroidProps {
   title: string;
+  boardId?: string;
+  board : Board
 }
-const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title}) => {
+const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
+  title,
+  boardId,
+  board
+}) => {
   const {user} = useAuthContext();
-  // console.log('==> CustomHeader:currentUser: ', user?.displayName);
-  // console.log('==> CustomHeader:title: ', title);
+
   return (
     <View style={styles.mainContainer}>
       <View style={styles.icon}>
@@ -54,7 +59,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title}) => {
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => navigate('BoardMenu')}>
+          onPress={() => navigate('BoardMenu', {boardId})}>
           <Icon
             name="dots-horizontal"
             iconFamily="MaterialCommunityIcons"

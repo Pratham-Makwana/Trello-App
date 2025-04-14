@@ -3,18 +3,19 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {BlurView} from '@react-native-community/blur';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from './Icon';
-import {Colors} from '@utils/Constant';
+import {Board, Colors} from '@utils/Constant';
 import {goBack, navigate} from '@utils/NavigationUtils';
 import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderIOSProps {
   title: string;
+  boardId?: string;
+  board: Board;
 }
-const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title}) => {
+const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, boardId, board}) => {
   const {top} = useSafeAreaInsets();
   const {user} = useAuthContext();
-  // console.log('==> CustomHeader:currentUser: ', user?.displayName);
-  // console.log('==> CustomHeader:title: ', title);
+  
 
   return (
     <View style={[styles.blurContainer, {paddingTop: top}]}>
@@ -61,7 +62,9 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title}) => {
               color={Colors.white}
             />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => navigate('BoardMenu')}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigate('BoardMenu', {boardId})}>
             <Icon
               name="dots-horizontal"
               iconFamily="MaterialCommunityIcons"

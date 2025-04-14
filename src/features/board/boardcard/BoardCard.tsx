@@ -1,7 +1,6 @@
-import {Platform, SafeAreaView, StyleSheet, Text, View} from 'react-native';
+import {Platform, StyleSheet, Text, View} from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useIsFocused, useRoute} from '@react-navigation/native';
-
 import {Board} from '@utils/Constant';
 import CustomHeaderIOS from '@components/global/CustomHeaderIOS';
 import CustomHeaderAndroid from '@components/global/CustomHeaderAndroid';
@@ -10,7 +9,6 @@ import {useAuthContext} from '@context/UserContext';
 import LinearGradient from 'react-native-linear-gradient';
 import BoardCardArea from './BoardCardArea';
 import CustomModal from '@components/global/CustomModal';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 const BoardCard = () => {
   const route = useRoute();
@@ -19,12 +17,11 @@ const BoardCard = () => {
   const [board, setBoard] = useState<Board | any>();
   const {user} = useAuthContext();
   const isFocused = useIsFocused();
-  // console.log('==> BoardCard:item: ', board);
+
   const gradientColors =
     boardDetails?.background.length === 1
       ? [boardDetails?.background[0], boardDetails?.background[0]]
       : boardDetails?.background;
-  // console.log('==>', gradientColors);
 
   useEffect(() => {
     if (!boardDetails.id) return;
@@ -40,9 +37,19 @@ const BoardCard = () => {
   };
   return (
     <LinearGradient colors={gradientColors} style={{flex: 1}}>
-      {Platform.OS === 'ios' && <CustomHeaderIOS title={boardDetails.title} />}
+      {Platform.OS === 'ios' && (
+        <CustomHeaderIOS
+          title={boardDetails.title}
+          board={board}
+          boardId={boardDetails?.boardId}
+        />
+      )}
       {Platform.OS === 'android' && (
-        <CustomHeaderAndroid title={boardDetails.title} />
+        <CustomHeaderAndroid
+          title={boardDetails.title}
+          board={board}
+          boardId={boardDetails?.boardId}
+        />
       )}
       {loading && <CustomModal loading={isFocused && loading} />}
       {board && <BoardCardArea board={board} />}

@@ -1,8 +1,12 @@
 import {DEFAULT_COLOR} from '@features/board/BGSelect';
+import {Board} from '@utils/Constant';
 import {createContext, useContext, useState} from 'react';
 
 type WorkspaceType = 'Public' | 'Private' | 'Workspace';
+
 interface BoardContextType {
+  title: any;
+  setTitle: (title: any) => void;
   boardName: string;
   setBoardName: (name: string) => void;
   selectedColor: string[];
@@ -26,6 +30,8 @@ export const BoardProvider = ({children}: {children: React.ReactNode}) => {
   const [selectedWorkSpace, setSelectedWorkSpace] =
     useState<WorkspaceType>('Workspace');
   const [boardName, setBoardName] = useState<string>('');
+  const [title, setTitle] = useState('');
+
   const onChangeBoardName = (name: string) => {
     setBoardName(name);
   };
@@ -35,6 +41,9 @@ export const BoardProvider = ({children}: {children: React.ReactNode}) => {
   };
   const onChangeSelectedColor = (color: string[]) => {
     setSelectedColor(color);
+  };
+  const onChangeTitle = (title: string) => {
+    setTitle(title);
   };
 
   return (
@@ -46,6 +55,8 @@ export const BoardProvider = ({children}: {children: React.ReactNode}) => {
         setSelectedWorkSpace: onChangeWorkSpace,
         boardName,
         setBoardName: onChangeBoardName,
+        title,
+        setTitle: onChangeTitle,
       }}>
       {children}
     </BoardContext.Provider>

@@ -11,7 +11,8 @@ import ListTitleInput from '../list/ListTitleInput';
 import {useSharedValue} from 'react-native-reanimated';
 import {addBoardList, getBoardLists} from '@config/firebase';
 import CustomText from '@components/ui/CustomText';
-import CardList from '../list/CardList';
+import ListCard from '../list/ListCard';
+
 
 interface BoardCardAreaProps {
   board: Board | any;
@@ -35,8 +36,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     const newList = await addBoardList(board?.boardId, title);
     taskList.pop();
 
-    // Add our fake item to the end of the list
-
     newList && setTaskList([...taskList, newList, {list_id: undefined}]);
   };
 
@@ -51,7 +50,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     setTaskList([...lists, {id: undefined}]);
   };
 
-  console.log('==> TaskList', taskList);
+  // console.log('==> TaskList', taskList);
 
   return (
     <SafeAreaView style={{flex: 1}} edges={['bottom']}>
@@ -72,7 +71,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
         }) => {
           return (
             <>
-              {item.list_id && <CardList taskList={item} />}
+              {item.list_id && <ListCard taskList={item} />}
               {item.list_id === undefined && (
                 <View key={index} style={styles.listView}>
                   {!active && (
@@ -119,7 +118,7 @@ const styles = StyleSheet.create({
   },
   listAddBtn: {
     backgroundColor: '#00000047',
-    height: 44,
+    height: 40,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
