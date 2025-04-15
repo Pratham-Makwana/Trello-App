@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   StyleSheet,
@@ -20,7 +21,8 @@ import {
   updateBoardInfo,
 } from '@config/firebase';
 import UserList from '@components/board/UserList';
-import { resetAndNavigate } from '@utils/NavigationUtils';
+import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
+import CustomModal from '@components/global/CustomModal';
 
 const BoardMenu = () => {
   const route =
@@ -29,24 +31,27 @@ const BoardMenu = () => {
   const [boardData, setBoardData] = useState<Board | any>();
   const [member, setMember] = useState<User | any>();
   const {user} = useAuthContext();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!boardId) return;
+    // if (!boardId) return;
     loadBoardInfo();
   }, []);
 
   const loadBoardInfo = async () => {
+    setIsLoading(true);
     const data = await getBoardInfo(boardId, user?.uid);
     setBoardData(data);
 
     const member = await getBoardMembers(boardId);
     // console.log('==> memebers', member);
     setMember(member);
+    setIsLoading(false);
   };
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
-    resetAndNavigate('MainStack', {screen : 'board'})
+    resetAndNavigate('MainStack', {screen: 'board'});
   };
 
   const onUpdateBoard = async () => {
@@ -59,14 +64,25 @@ const BoardMenu = () => {
     <View>
       <View style={styles.container}>
         <Text style={styles.label}>Board Name</Text>
-        <TextInput
-          value={boardData?.title}
-          onChangeText={text => setBoardData({...boardData, title: text})}
-          style={{fontSize: 16, color: Colors.fontDark}}
-          returnKeyType="done"
-          enterKeyHint="done"
-          onEndEditing={onUpdateBoard}
-        />
+        {isLoading && (
+          <View
+            style={{
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+            <ActivityIndicator size={'large'} color={Colors.lightprimary} />
+          </View>
+        )}
+        {!isLoading && (
+          <TextInput
+            value={boardData?.title}
+            onChangeText={text => setBoardData({...boardData, title: text})}
+            style={{fontSize: 16, color: Colors.fontDark}}
+            returnKeyType="done"
+            enterKeyHint="done"
+            onEndEditing={onUpdateBoard}
+          />
+        )}
       </View>
       {/* Memebers */}
       <View style={styles.container}>
@@ -82,16 +98,29 @@ const BoardMenu = () => {
             Memebers
           </Text>
         </View>
+        {isLoading && (
+          <View
+            style={{
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingTop: 10,
+            }}>
+            <ActivityIndicator size={'large'} color={Colors.lightprimary} />
+          </View>
+        )}
+        {!isLoading && (
+          <FlatList
+            data={member}
+            keyExtractor={item => item.uid}
+            renderItem={({item}) => <UserList member={item} />}
+            contentContainerStyle={{gap: 8}}
+            style={{marginVertical: 12}}
+          />
+        )}
 
-        <FlatList
-          data={member}
-          keyExtractor={item => item.uid}
-          renderItem={({item}) => <UserList member={item} />}
-          contentContainerStyle={{gap: 8}}
-          style={{marginVertical: 12}}
-        />
-
-        <TouchableOpacity style={styles.inviteBtn}>
+        <TouchableOpacity
+          style={styles.inviteBtn}
+          onPress={() => navigate('Invite')}>
           <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
         </TouchableOpacity>
       </View>

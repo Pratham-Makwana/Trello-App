@@ -1,7 +1,7 @@
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import React, {FC, useEffect, useRef, useState} from 'react';
-import {Board, FakeTaskList, TaskList} from '@utils/Constant';
+import {Board, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Carousel, {
   ICarouselInstance,
   Pagination,
@@ -12,7 +12,6 @@ import {useSharedValue} from 'react-native-reanimated';
 import {addBoardList, getBoardLists} from '@config/firebase';
 import CustomText from '@components/ui/CustomText';
 import ListCard from '../list/ListCard';
-
 
 interface BoardCardAreaProps {
   board: Board | any;
@@ -31,7 +30,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
       animated: true,
     });
   };
-  const onSaveList = async (title: string) => {
+  const onSaveList = async (title: string | any) => {
     setActive(false);
     const newList = await addBoardList(board?.boardId, title);
     taskList.pop();
@@ -50,7 +49,9 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     setTaskList([...lists, {id: undefined}]);
   };
 
-  // console.log('==> TaskList', taskList);
+  const onDeleteBoardList = (id: string | undefined) => {
+    setTaskList(taskList.filter(item => item.list_id != id));
+  };
 
   return (
     <SafeAreaView style={{flex: 1}} edges={['bottom']}>
@@ -71,7 +72,12 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
         }) => {
           return (
             <>
-              {item.list_id && <ListCard taskList={item} />}
+              {item.list_id && (
+                <ListCard
+                  taskList={item}
+                  onDeleteBoardList={() => onDeleteBoardList(item?.list_id)}
+                />
+              )}
               {item.list_id === undefined && (
                 <View key={index} style={styles.listView}>
                   {!active && (

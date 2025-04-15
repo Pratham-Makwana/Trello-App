@@ -8,7 +8,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import TrelloLightLogin from '@assets/images/login/trello.png';
 import TrelloDarkLogin from '@assets/images/login/image.png';
 import {screenHeight} from '@utils/Scaling';
@@ -24,7 +24,8 @@ import CustomeText from '@components/ui/CustomText';
 
 import AuthModal from '@components/auth/AuthModal';
 import {navigate} from '@utils/NavigationUtils';
-
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {webClientId} from '@env';
 const OnBoarding = () => {
   const {top} = useSafeAreaInsets();
   const isDark = useGlobalColorScheme();
@@ -57,6 +58,11 @@ const OnBoarding = () => {
     [],
   );
 
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: webClientId,
+    });
+  }, []);
   return (
     <BottomSheetModalProvider>
       <View style={[styles.container, paddingStyle]}>

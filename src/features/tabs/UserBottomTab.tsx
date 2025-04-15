@@ -5,18 +5,18 @@ import Profile from '@features/profile/Profile';
 import Icon from '@components/global/Icon';
 import Notification from '@features/notification/Notification';
 import CustomText from '@components/ui/CustomText';
-import { Platform, View} from 'react-native';
+import {Platform, View} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {Colors, DarkColors} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
 import DropdownPlus from '@components/board/DropdownPlus';
-
 
 const Tab = createBottomTabNavigator();
 
 const UserBottomTab = () => {
   return (
     <Tab.Navigator
+      initialRouteName="board"
       screenOptions={{
         tabBarActiveTintColor: Colors.lightprimary,
         headerStyle: {
@@ -48,7 +48,7 @@ const UserBottomTab = () => {
                 paddingHorizontal: 10,
                 marginBottom: Platform.OS == 'ios' ? 5 : 0,
               }}>
-                <DropdownPlus/>
+              <DropdownPlus />
             </View>
           ),
           headerLeft: () => (
@@ -56,7 +56,7 @@ const UserBottomTab = () => {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent : 'center',
+                justifyContent: 'center',
                 gap: 5,
                 paddingHorizontal: 10,
                 marginBottom: Platform.OS == 'ios' ? 10 : 0,
@@ -127,5 +127,3 @@ const UserBottomTab = () => {
 };
 
 export default UserBottomTab;
-
-

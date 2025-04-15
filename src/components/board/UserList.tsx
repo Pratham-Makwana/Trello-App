@@ -17,10 +17,12 @@ interface UserListProps {
 const UserList: FC<UserListProps> = ({member, onPress}) => {
   return (
     <TouchableOpacity
+      onPress={() => onPress?.(member)}
       style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
       <Image source={{uri: member.photoURL}} style={{width: 30, height: 30}} />
       <View>
-        <Text style={{fontSize: 16, fontWeight: 'semibold', color : Colors.black}}>
+        <Text
+          style={{fontSize: 16, fontWeight: 'semibold', color: Colors.black}}>
           {member.username}
         </Text>
         <Text style={{color: Colors.fontDark}}>{member.email}</Text>

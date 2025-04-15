@@ -15,91 +15,58 @@ import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
-import {
-  goBack,
-  navigationRef,
-  resetAndNavigate,
-} from '@utils/NavigationUtils';
+import {goBack, navigationRef, resetAndNavigate} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
-import {Alert, Platform, StyleSheet} from 'react-native';
-import {useEffect} from 'react';
+import {Alert, Platform, StyleSheet, View} from 'react-native';
+import {useEffect, useState} from 'react';
 import {useAuthContext} from '@context/UserContext';
 import {onAuthStateChanged} from 'firebase/auth';
 import {webClientId} from '@env';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import Invite from '@components/board/Invite';
+import CustomModal from '@components/global/CustomModal';
 
 const Stack = createNativeStackNavigator();
 
 const Navigation = () => {
   const {setUser, user} = useAuthContext();
-  // console.log('==> Navigation', user);
+  const [initializing, setInitializing] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
       if (user) {
         console.log('==> user', user);
-
         setUser(user);
-
-        resetAndNavigate('MainStack', {screen: 'board'});
+        setInitializing(false);
+      } else {
+        console.log('==> user', user);
+        setInitializing(false);
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // useEffect(() => {
-  //   const intialStartup = () => {
-  //     GoogleSignin.configure({
-  //       webClientId: webClientId,
-  //     });
-  //     // if (user) {
-  //     //   console.log('==> SplashScreen:user: ', user);
-  //     //   console.log('==> MainStack Screen Board Screen');
-  //     //   resetAndNavigate('MainStack', {screen: 'board'});
-  //     // } else {
-  //     //   console.log('else', user);
-
-  //     //   console.log('==> OnBoarding Screen');
-  //     //   navigate('OnBoarding');
-  //     // }
-  //   };
-  //   const timeOut = setTimeout(intialStartup, 2000);
-  //   return () => clearTimeout(timeOut);
-  // }, [user, setUser]);
+  if (initializing) {
+    return <SplashScreen />;
+  }
 
   return (
     <NavigationContainer ref={navigationRef}>
-      {/* {
-        user ? <MainStack /> : <AuthStack /> 
-      } */}
-      <Stack.Navigator>
-        <Stack.Screen
-          name="AuthStack"
-          component={AuthStack}
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="MainStack"
-          component={MainStack}
-          options={{
-            headerShown: false,
-          }}
-        />
-      </Stack.Navigator>
+      {user ? <MainStack /> : <AuthStack />}
+      {/* {initializing ? <SplashStack /> : user ? <MainStack /> : <AuthStack />} */}
     </NavigationContainer>
   );
 };
 
 const MainStack = () => {
-  const {boardName, selectedWorkSpace, selectedColor, setBoardName} = useBoard();
+  const {boardName, selectedWorkSpace, selectedColor, setBoardName} =
+    useBoard();
 
   const handleCreateBoard = () => {
     if (boardName.length > 0 && boardName !== '') {
       createBoard(boardName, selectedColor, selectedWorkSpace);
-      setBoardName('')
+      setBoardName('');
       Alert.alert('Board Created Successfully');
       goBack();
     } else {
@@ -108,7 +75,7 @@ const MainStack = () => {
   };
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator initialRouteName="UserBottomTab">
       <Stack.Screen
         name="UserBottomTab"
         component={UserBottomTab}
@@ -204,20 +171,21 @@ const MainStack = () => {
             ),
         }}
       />
+
+      <Stack.Screen
+        name="Invite"
+        component={Invite}
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack.Navigator>
   );
 };
 
 const AuthStack = () => {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="SplashScreen"
-        component={SplashScreen}
-        options={{
-          headerShown: false,
-        }}
-      />
+    <Stack.Navigator initialRouteName="OnBoarding">
       <Stack.Screen
         name="OnBoarding"
         component={OnBoarding}

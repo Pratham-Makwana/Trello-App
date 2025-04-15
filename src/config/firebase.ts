@@ -29,9 +29,11 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
+  startAt,
+  endAt,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import {Board, TaskItem} from '@utils/Constant';
+import {Board, TaskItem, User} from '@utils/Constant';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -263,6 +265,17 @@ export const deleteBoard = async (boardId: string) => {
   try {
     const boardDocRef = doc(boardRef, boardId);
     await deleteDoc(boardDocRef);
+
+    const userBoardDocRef = query(
+      userBoardRef,
+      where('boardId', '==', boardId),
+    );
+
+    const querySnapshot = await getDocs(userBoardDocRef);
+
+    querySnapshot.forEach(async doc => {
+      await deleteDoc(doc.ref);
+    });
     console.log('Board deleted successfully');
   } catch (error) {
     console.log('Error deleting board:', error);
@@ -287,6 +300,17 @@ export const getBoardMembers = async (boardId: string) => {
   } catch (error) {
     console.error('Error fetching board members:', error);
     return [];
+  }
+};
+
+export const addUserToBoard = async (boardId: string, userId: string) => {
+  try {
+    const docRef = await addDoc(userBoardRef, {
+      boardId: boardId,
+      userId: userId,
+    });
+  } catch (error) {
+    console.error('Error adding User To Board : ', error);
   }
 };
 //  =================== Board List ==========================
@@ -350,6 +374,53 @@ export const addBoardList = async (
   }
 };
 
+export const updateBoardList = async (list: TaskItem, newTitle: string) => {
+  try {
+    const listDoc = doc(listRef, list.list_id);
+    await updateDoc(listDoc, {
+      title: newTitle,
+    });
+  } catch (error) {
+    console.log('Error updating Board List', error);
+  }
+};
+
+export const deleteBoardList = async (listId: string) => {
+  try {
+    const listDoc = doc(listRef, listId);
+    await deleteDoc(listDoc);
+    console.log('==> deleting Board List successfully');
+  } catch (error) {
+    console.log('Error deleting Board List', error);
+  }
+};
+
+export const findUsers = async (search: string) => {
+  try {
+    // const q = query(userRef, where('email', '==', search));
+    const q = query(
+      userRef,
+      orderBy('email'),
+      startAt(search),
+      endAt(search + '\uf8ff'),
+    );
+
+    const snapshot = await getDocs(q);
+    const users = snapshot.docs
+      .map(doc => ({id: doc.id, ...doc.data()}))
+      .filter((user: any) => {
+        const isMatch = user?.email === search || user.email.startsWith(search);
+
+        const isNotCurrentUser = user.email !== auth.currentUser?.email;
+        return isMatch && isNotCurrentUser;
+      });
+    console.log('==> user', users);
+
+    return users || [];
+  } catch (error) {
+    console.log('Error find Users', error);
+  }
+};
 //  ==================== Board Card List =========================
 
 export const addCardList = async (
@@ -401,15 +472,13 @@ export const getListCard = async (listId: string) => {
 };
 
 export const updateCart = async (task: TaskItem) => {
-
-
   try {
     const cardDocRef = doc(cardRef, task?.id);
     await updateDoc(cardDocRef, {
       title: task?.title,
       description: task?.description,
       done: task?.done,
-      position : task?.index
+      position: task?.position,
     });
   } catch (error) {
     console.log('Error Updating card', error);

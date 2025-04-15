@@ -6,12 +6,21 @@ import LottieView from 'lottie-react-native';
 
 interface CustomModalProps {
   loading: boolean;
+  transparent?: boolean;
 }
 
-const CustomModal: FC<CustomModalProps> = ({loading}) => {
+const CustomModal: FC<CustomModalProps> = ({loading, transparent = true}) => {
   return (
-    <Modal animationType="slide" transparent visible={loading}>
-      <View style={styles.overlay}>
+    <Modal animationType="slide" transparent={transparent} visible={loading}>
+      <View
+        style={[
+          styles.overlay,
+          {
+            backgroundColor: transparent
+              ? 'rgba(0, 0, 0, 0.4)'
+              : Colors.lightprimary,
+          },
+        ]}>
         <View style={styles.modalView}>
           <LottieView
             source={require('@assets/animation/loading.json')}
@@ -30,7 +39,8 @@ export default CustomModal;
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    // backgroundColor: Colors.lightprimary,
+    // backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },

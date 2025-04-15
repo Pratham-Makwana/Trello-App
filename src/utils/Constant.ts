@@ -92,5 +92,4 @@ export interface TaskItem {
   board_id: string;
   list_id: string;
   createdAt: Date;
-  index?: number;
 }
