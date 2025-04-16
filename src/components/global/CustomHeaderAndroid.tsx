@@ -1,25 +1,15 @@
 import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
 import React, {FC} from 'react';
-import {BlurView} from '@react-native-community/blur';
 import {screenWidth} from '@utils/Scaling';
 import {Board, Colors} from '@utils/Constant';
 import Icon from './Icon';
 import {goBack, navigate} from '@utils/NavigationUtils';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderAndroidProps {
   title: string;
-  boardId?: string;
-  board : Board
+  board: Board;
 }
-const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
-  title,
-  boardId,
-  board
-}) => {
-  const {user} = useAuthContext();
-
+const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title, board}) => {
   return (
     <View style={styles.mainContainer}>
       <View style={styles.icon}>
@@ -35,7 +25,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
         <View style={styles.contentContainer}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.text}>
-            {user?.displayName || 'Person'}'s Workspace
+            {board?.userInfo?.username || 'Person'}'s Workspace
           </Text>
         </View>
       </View>
@@ -59,7 +49,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => navigate('BoardMenu', {boardId})}>
+          onPress={() => navigate('BoardMenu', {boardId: board?.boardId})}>
           <Icon
             name="dots-horizontal"
             iconFamily="MaterialCommunityIcons"

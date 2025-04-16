@@ -61,6 +61,7 @@ export interface Board {
   background: string[];
   last_edit: Timestamp | null;
   workspace: string;
+  userInfo?: any;
 }
 
 export interface TaskList {
@@ -92,4 +93,12 @@ export interface TaskItem {
   board_id: string;
   list_id: string;
   createdAt: Date;
+}
+
+export interface BoardInvite {
+  boardId: string;
+  invitedBy: string; // user who sent the invite
+  invitedTo: string; // user who received the invite
+  createdAt: Timestamp;
+  status: 'pending' | 'accepted' | 'declined';
 }

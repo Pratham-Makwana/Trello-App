@@ -9,13 +9,12 @@ import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderIOSProps {
   title: string;
-  boardId?: string;
+
   board: Board;
 }
-const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, boardId, board}) => {
+const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board}) => {
   const {top} = useSafeAreaInsets();
   const {user} = useAuthContext();
-  
 
   return (
     <View style={[styles.blurContainer, {paddingTop: top}]}>
@@ -40,7 +39,7 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, boardId, board}) => {
           <View style={styles.contentContainer}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.text}>
-              {user?.displayName || 'Person'}'s Workspace
+              {board?.userInfo?.username || 'Person'}'s Workspace
             </Text>
           </View>
         </View>
@@ -64,7 +63,7 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, boardId, board}) => {
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => navigate('BoardMenu', {boardId})}>
+            onPress={() => navigate('BoardMenu', {boardId: board?.boardId})}>
             <Icon
               name="dots-horizontal"
               iconFamily="MaterialCommunityIcons"

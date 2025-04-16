@@ -8,12 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useAuthContext} from '@context/UserContext';
 import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
-import {RouteProp, useRoute} from '@react-navigation/native';
+import {RouteProp, useFocusEffect, useRoute} from '@react-navigation/native';
 import {
   deleteBoard,
   getBoardInfo,
@@ -34,17 +34,25 @@ const BoardMenu = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // if (!boardId) return;
     loadBoardInfo();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchBoardMemebers();
+    }, []),
+  );
 
   const loadBoardInfo = async () => {
     setIsLoading(true);
     const data = await getBoardInfo(boardId, user?.uid);
     setBoardData(data);
+    setIsLoading(false);
+  };
 
+  const fetchBoardMemebers = async () => {
+    setIsLoading(true);
     const member = await getBoardMembers(boardId);
-    // console.log('==> memebers', member);
     setMember(member);
     setIsLoading(false);
   };
@@ -120,7 +128,7 @@ const BoardMenu = () => {
 
         <TouchableOpacity
           style={styles.inviteBtn}
-          onPress={() => navigate('Invite')}>
+          onPress={() => navigate('Invite', {boardId})}>
           <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
         </TouchableOpacity>
       </View>

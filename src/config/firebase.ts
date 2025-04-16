@@ -75,6 +75,7 @@ export const boardRef = collection(db, 'boards');
 export const listRef = collection(db, 'lists');
 export const cardRef = collection(db, 'cards');
 export const userBoardRef = collection(db, 'user_boards');
+export const boardInvitationRef = collection(db, 'board_invitations');
 
 export const createUser = async (
   username: string,
@@ -176,65 +177,76 @@ export const getBoards = async (userId: string) => {
       .filter(doc => doc.exists())
       .map(doc => ({id: doc.id, ...doc.data()}));
 
-    // console.log('==> boardList', boardList);
+    console.log('==> boardList', boardList);
     return boardList;
   } catch (error) {
     console.log('==> firebase:getAllBoards:', error);
   }
 };
 
-// ========= Get All Board Which Created By The Current LogIn User ===============
-// export const getAllBoards = async (userId: string) => {
-//   try {
-//     const q = query(boardRef, where('createdBy', '==', userId));
-//     const boards = await getDocs(q);
-//     const boardList = boards.docs.map(doc => ({
-//       id: doc.id,
-//       ...doc.data(),
-//     }));
-//     console.log('==> boardList', boardList);
-
-//     return boardList;
-//   } catch (error) {
-//     console.log('==> firebase:getAllBoards: ', error);
-//   }
-// };
-
 export const getBoardInfo = async (boardId: string, userId: string) => {
   try {
-    const boardQuery = query(
-      boardRef,
-      where('createdBy', '==', userId),
+    const userBoardQuery = query(
+      userBoardRef,
       where('boardId', '==', boardId),
+      where('userId', '==', userId),
     );
 
-    const boardSnapshot = await getDocs(boardQuery);
+    const userBoardSnapshot = await getDocs(userBoardQuery);
 
     // Check if board exists for the given boardId and userId
-    if (boardSnapshot.empty) {
+    if (userBoardSnapshot.empty) {
       console.log('No board found for the given boardId and userId');
       return [];
     }
+    const boardQuery = query(boardRef, where('boardId', '==', boardId));
+    const boardSnapshot = await getDocs(boardQuery);
+
+    if (boardSnapshot.empty) {
+      console.log('Board not found');
+      return null;
+    }
+
     const boardData = boardSnapshot.docs[0].data();
     // console.log('==> boardData', boardData);
 
-    // Fetch user data from the users collection
-    const userDocRef = doc(userRef, userId);
-    const userSnapshot = await getDoc(userDocRef);
-    const userData = userSnapshot.data();
+    const creatorId = boardData.createdBy;
+    const creatorDocRef = doc(userRef, creatorId);
+    const creatorSnapshot = await getDoc(creatorDocRef);
 
-    // Check if user exists
-    if (!userSnapshot.exists()) {
-      console.log('User not found');
-      return [];
+    if (!creatorSnapshot.exists()) {
+      console.log('Board creator not found');
+      return null;
     }
+
+    const creatorData = creatorSnapshot.data();
+
     const boardInfo = {
       ...boardData,
       userInfo: {
-        username: userData?.username,
-        email: userData?.email,
+        username: creatorData?.username,
+        email: creatorData?.email,
       },
     };
+    return boardInfo;
+
+    // // Fetch user data from the users collection
+    // const userDocRef = doc(userRef, userId);
+    // const userSnapshot = await getDoc(userDocRef);
+    // const userData = userSnapshot.data();
+
+    // // Check if user exists
+    // if (!userSnapshot.exists()) {
+    //   console.log('User not found');
+    //   return [];
+    // }
+    // const boardInfo = {
+    //   ...boardData,
+    //   userInfo: {
+    //     username: userData?.username,
+    //     email: userData?.email,
+    //   },
+    // };
     // console.log('==> boardInfo', boardInfo);
 
     return boardInfo;
@@ -243,6 +255,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
     return [];
   }
 };
+
 export const updateBoardInfo = async (board: Board) => {
   // console.log(board);
 
@@ -305,7 +318,7 @@ export const getBoardMembers = async (boardId: string) => {
 
 export const addUserToBoard = async (boardId: string, userId: string) => {
   try {
-    const docRef = await addDoc(userBoardRef, {
+    await addDoc(userBoardRef, {
       boardId: boardId,
       userId: userId,
     });
@@ -315,7 +328,7 @@ export const addUserToBoard = async (boardId: string, userId: string) => {
 };
 //  =================== Board List ==========================
 export const getBoardLists = async (boardId: string) => {
-  // console.log('==>getBoardLists ', boardId);
+  console.log('==>getBoardLists ', boardId);
 
   try {
     const q = query(
@@ -335,7 +348,7 @@ export const getBoardLists = async (boardId: string) => {
 
     return lists || [];
   } catch (error) {
-    console.error('Error fetching board List: ', error);
+    console.log('Error fetching board List: ', error);
     return [];
   }
 };
@@ -414,7 +427,7 @@ export const findUsers = async (search: string) => {
         const isNotCurrentUser = user.email !== auth.currentUser?.email;
         return isMatch && isNotCurrentUser;
       });
-    console.log('==> user', users);
+    // console.log('==> user', users);
 
     return users || [];
   } catch (error) {
@@ -483,4 +496,61 @@ export const updateCart = async (task: TaskItem) => {
   } catch (error) {
     console.log('Error Updating card', error);
   }
+};
+
+// ================== Borad Invite ========================
+
+const sendBoardInvite = async (
+  boardId: string,
+  userId: string,
+  invitedBy: string,
+) => {
+  const inviteId = `${boardId}_${userId}`;
+  await setDoc(doc(boardInvitationRef, inviteId), {
+    boardId,
+    invitedTo: userId,
+    invitedBy,
+    status: 'pending',
+    createdAt: new Date(),
+  });
+};
+
+// const onAddUser = async (user: User) => {
+//   try {
+//     await sendBoardInvite(boardId, user?.uid, auth.currentUser?.uid);
+//     goBack(); // maybe show "Invite sent" instead of navigating back
+//   } catch (error) {
+//     console.log('Error sending invite', error);
+//   }
+// };
+
+const getPendingInvites = async (userId: string) => {
+  const invitesQuery = query(
+    collection(db, 'board_invitations'),
+    where('invitedTo', '==', userId),
+    where('status', '==', 'pending'),
+  );
+
+  const invitesSnapshot = await getDocs(invitesQuery);
+  return invitesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+};
+
+const acceptInvite = async (
+  inviteId: string,
+  boardId: string,
+  userId: string,
+) => {
+  // 1. Update invitation status
+  await updateDoc(doc(db, 'board_invitations', inviteId), {
+    status: 'accepted',
+  });
+
+  // 2. Add user to the board
+  await addUserToBoard(boardId, userId);
+};
+
+const declineInvite = async (inviteId: string) => {
+  await updateDoc(doc(db, 'board_invitations', inviteId), {
+    status: 'declined',
+  });
 };

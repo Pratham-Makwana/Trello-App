@@ -17,6 +17,7 @@ const BoardCard = () => {
   const [board, setBoard] = useState<Board | any>();
   const {user} = useAuthContext();
   const isFocused = useIsFocused();
+  console.log('==> BoardDetails', boardDetails);
 
   const gradientColors =
     boardDetails?.background.length === 1
@@ -24,32 +25,22 @@ const BoardCard = () => {
       : boardDetails?.background;
 
   useEffect(() => {
-    if (!boardDetails.id) return;
     loadBoardInfo();
-  }, [boardDetails.id]);
+  }, []);
 
   const loadBoardInfo = async () => {
     setLoading(true);
-    if (!boardDetails.id) return;
-    const data = await getBoardInfo(boardDetails.id, user?.uid);
+    const data = await getBoardInfo(boardDetails?.boardId, user?.uid);
     setBoard(data);
     setLoading(false);
   };
   return (
     <LinearGradient colors={gradientColors} style={{flex: 1}}>
       {Platform.OS === 'ios' && (
-        <CustomHeaderIOS
-          title={boardDetails.title}
-          board={board}
-          boardId={boardDetails?.boardId}
-        />
+        <CustomHeaderIOS title={boardDetails.title} board={board} />
       )}
       {Platform.OS === 'android' && (
-        <CustomHeaderAndroid
-          title={boardDetails.title}
-          board={board}
-          boardId={boardDetails?.boardId}
-        />
+        <CustomHeaderAndroid title={boardDetails.title} board={board} />
       )}
       {loading && <CustomModal loading={isFocused && loading} />}
       {board && <BoardCardArea board={board} />}
