@@ -16,29 +16,38 @@ import {RFValue} from 'react-native-responsive-fontsize';
 import FormField from '@components/ui/FormField';
 import CustomText from '@components/ui/CustomText';
 import {createUser} from '@config/firebase';
+import {validateForm} from '@utils/validation';
 
 const SignupScreen = () => {
   const [form, setForm] = useState({
     username: 'test',
     email: 'test@gmail.com',
-    password: '12345678',
+    password: 'Test1234',
   });
 
   const [isSubmitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({
+    usernameError: '',
+    emailError: '',
+    passwordError: '',
+  });
 
   const handleSignup = async () => {
-    if (form.email && form.password && form.username) {
-      try {
-        setSubmitting(true);
+    const validationErrors = validateForm(form, true);
 
-        await createUser(form.username, form.email, form.password);
+    if (Object.values(validationErrors).some(error => error !== '')) {
+      setErrors(validationErrors);
+      return;
+    }
 
-        setSubmitting(false);
-      } catch (e) {
-        console.log('==> SignupScreen:handleSignup: ', e);
-      } finally {
-        setSubmitting(false);
-      }
+    try {
+      setSubmitting(true);
+      await createUser(form.username, form.email, form.password);
+      setSubmitting(false);
+    } catch (e) {
+      console.log('==> SignupScreen:handleSignup: ', e);
+    } finally {
+      setSubmitting(false);
     }
   };
   return (
@@ -64,6 +73,9 @@ const SignupScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="default"
           />
+          {errors.usernameError && (
+            <Text style={styles.errorText}>{errors.usernameError}</Text>
+          )}
           <FormField
             title="Email"
             value={form.email}
@@ -72,6 +84,9 @@ const SignupScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="email-address"
           />
+          {errors.emailError && (
+            <Text style={styles.errorText}>{errors.emailError}</Text>
+          )}
           <FormField
             title="Password"
             value={form.password}
@@ -79,6 +94,9 @@ const SignupScreen = () => {
             handleChangeText={(e: string) => setForm({...form, password: e})}
             otherStyles={{marginTop: 28}}
           />
+          {errors.passwordError && (
+            <Text style={styles.errorText}>{errors.passwordError}</Text>
+          )}
           <CustomButton
             title="Sign Up"
             handlePress={handleSignup}
@@ -143,5 +161,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     textDecorationColor: Colors.white,
     fontWeight: '600',
+  },
+  errorText: {
+    color: '#8B0000',
+    fontSize: RFValue(12),
+
+    fontWeight: '500',
+    paddingHorizontal: 5,
+    marginTop: 6,
   },
 });

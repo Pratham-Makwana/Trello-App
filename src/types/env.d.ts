@@ -6,4 +6,6 @@ declare module '@env' {
   export const MESSAGING_SENDER_ID: string;
   export const APP_ID: string;
   export const webClientId: string;
+  export const CLOUDINARY_CLOUD_NAME: string;
+  export const CLOUDINARY_UPLOAD_PRESET: string;
 }

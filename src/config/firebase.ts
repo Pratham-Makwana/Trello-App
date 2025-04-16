@@ -1,4 +1,5 @@
 import {getApp, getApps, initializeApp} from 'firebase/app';
+import messaging from '@react-native-firebase/messaging';
 import {
   API_KEY,
   AUTH_DOMAIN,
@@ -6,6 +7,8 @@ import {
   MESSAGING_SENDER_ID,
   PROJECT_ID,
   STORAGE_BUCKET,
+  CLOUDINARY_UPLOAD_PRESET,
+  CLOUDINARY_CLOUD_NAME,
 } from '@env';
 import {
   createUserWithEmailAndPassword,
@@ -34,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {Board, TaskItem, User} from '@utils/Constant';
+import {ref, uploadBytes, getDownloadURL, getStorage} from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -65,6 +69,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 
 // Initialize Firestore Database
 const db = getFirestore(firebaseApp);
+const storage = getStorage(firebaseApp);
 
 // Export references
 export {auth, db};
@@ -86,10 +91,10 @@ export const createUser = async (
     const {user} = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(user, {
       displayName: username,
-      // photoURL: `https://ui-avatars.com/api/?name=${username}`,
       photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
     });
 
+    const token = await messaging().getToken();
     // console.log(user.displayName);
     // Set user data with uid as the document ID
     const userDocRef = doc(userRef, user.uid); // sets doc ID to uid
@@ -98,16 +103,8 @@ export const createUser = async (
       username: user.displayName,
       email: user.email,
       photoURL: user.photoURL,
+      notificationToken: token,
     });
-
-    // await addDoc(userRef, {
-    //   uid: user.uid,
-    //   username: user.displayName,
-    //   email: user.email,
-    //   displayName: user.displayName,
-    //   photoURL: user.photoURL,
-    // });
-    // console.log('User Created Successfully', user);
   } catch (error) {
     console.log('==> firebase:createUser: ', error);
   }
@@ -441,7 +438,7 @@ export const addCardList = async (
   boardId: string,
   title: string,
   position: number = 0,
-  imageUrl: string | null = null,
+  imageUrl: any = null,
   done: boolean = false,
 ) => {
   try {
@@ -553,4 +550,35 @@ const declineInvite = async (inviteId: string) => {
   await updateDoc(doc(db, 'board_invitations', inviteId), {
     status: 'declined',
   });
+};
+
+export const uploadToCloudinary = async (image: {
+  uri: string;
+  type?: string;
+  fileName?: string;
+}): Promise<string> => {
+  const data = new FormData();
+  data.append('file', {
+    uri: image.uri,
+    type: image.type || 'image/jpeg',
+    name: image.fileName || 'upload.jpg',
+  });
+
+  data.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: data,
+    },
+  );
+
+  const result = await res.json();
+
+  if (result.secure_url) {
+    return result.secure_url;
+  } else {
+    throw new Error('Upload failed: ' + JSON.stringify(result));
+  }
 };

@@ -14,7 +14,6 @@ import {useBoard} from '@context/BoardContext';
 import LinearGradient from 'react-native-linear-gradient';
 import {screenWidth} from '@utils/Scaling';
 import {useAuthContext} from '@context/UserContext';
-import {createBoard, getAllBoards} from '@config/firebase';
 
 const CreateBoard = () => {
   const {user} = useAuthContext();
@@ -94,7 +93,7 @@ const CreateBoard = () => {
       <TouchableOpacity
         style={[styles.touchContainer]}
         activeOpacity={0.9}
-        onPress={() => navigate('MainStack', {screen: 'BGSelect'})}>
+        onPress={() => navigate('BGSelect')}>
         <View style={styles.mainView}>
           <View style={styles.textLeft}>
             <Text style={styles.text}>Background</Text>

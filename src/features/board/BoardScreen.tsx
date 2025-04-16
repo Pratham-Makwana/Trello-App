@@ -85,6 +85,14 @@ const BoardScreen = () => {
           renderItem={ListItem}
           keyExtractor={item => item.id}
           ListHeaderComponent={() => <ListHeader />}
+          ListEmptyComponent={() => (
+            <View
+              style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
+              <Text style={{color: Colors.black, fontSize: 18}}>
+                No Board Avaliable
+              </Text>
+            </View>
+          )}
           ItemSeparatorComponent={() => (
             <View
               style={{

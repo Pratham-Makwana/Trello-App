@@ -16,24 +16,35 @@ import CustomButton from '@components/ui/CustomButton';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {navigate} from '@utils/NavigationUtils';
 import {LoginUser} from '@config/firebase';
+import {validateForm} from '@utils/validation';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
     email: 'test@gmail.com',
-    password: '12345678',
+    password: 'Test1234',
   });
   const [isSubmitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({
+    usernameError: '',
+    emailError: '',
+    passwordError: '',
+  });
 
   const handleLogin = async () => {
-    if (form.email && form.password) {
-      try {
-        setSubmitting(true);
-        await LoginUser(form.email, form.password);
-      } catch (e) {
-        console.log('==> LoginScreen:handleLogin: ', e);
-      } finally {
-        setSubmitting(false);
-      }
+    const validationErrors = validateForm(form, false);
+
+    if (Object.values(validationErrors).some(error => error !== '')) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await LoginUser(form.email, form.password);
+    } catch (e) {
+      console.log('==> LoginScreen:handleLogin: ', e);
+    } finally {
+      setSubmitting(false);
     }
   };
   return (
@@ -59,6 +70,9 @@ const LoginScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="email-address"
           />
+          {errors.emailError && (
+            <Text style={styles.errorText}>{errors.emailError}</Text>
+          )}
           <FormField
             title="Password"
             value={form.password}
@@ -66,6 +80,9 @@ const LoginScreen = () => {
             handleChangeText={(e: string) => setForm({...form, password: e})}
             otherStyles={{marginTop: 28}}
           />
+          {errors.passwordError && (
+            <Text style={styles.errorText}>{errors.passwordError}</Text>
+          )}
           <CustomButton
             title="Log In"
             handlePress={handleLogin}
@@ -130,5 +147,11 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     textDecorationColor: Colors.white,
     fontWeight: '600',
+  },
+  errorText: {
+    color: '#8B0000',
+    fontSize: RFValue(12),
+    fontFamily: Fonts.SemiBold,
+    marginTop: 4,
   },
 });

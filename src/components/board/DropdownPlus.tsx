@@ -2,7 +2,7 @@ import {StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import * as DropdownMenu from 'zeego/dropdown-menu';
 import Icon from '@components/global/Icon';
-import { navigate } from '@utils/NavigationUtils';
+import {navigate} from '@utils/NavigationUtils';
 
 const DropdownPlus = () => {
   return (
@@ -14,7 +14,9 @@ const DropdownPlus = () => {
       <DropdownMenu.Content>
         <DropdownMenu.Group>
           {/* board */}
-          <DropdownMenu.Item key="board" onSelect={() => navigate('MainStack' ,{screen:'CreateBoard'})}>
+          <DropdownMenu.Item
+            key="board"
+            onSelect={() => navigate('CreateBoard')}>
             <DropdownMenu.ItemTitle>Create a board</DropdownMenu.ItemTitle>
             <DropdownMenu.ItemIcon
               ios={{
@@ -26,8 +28,7 @@ const DropdownPlus = () => {
           <DropdownMenu.Item key="card">
             <DropdownMenu.ItemTitle>Create a card</DropdownMenu.ItemTitle>
             <DropdownMenu.ItemIcon
-              androidIconName='menu'
-
+              androidIconName="menu"
               ios={{
                 name: 'square.topthird.inset.filled',
                 pointSize: 24,

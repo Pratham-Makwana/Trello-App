@@ -4,8 +4,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  Button,
-  NativeSyntheticEvent,
   ActivityIndicator,
 } from 'react-native';
 import React, {
@@ -24,6 +22,7 @@ import {
   getListCard,
   updateBoardList,
   updateCart,
+  uploadToCloudinary,
 } from '@config/firebase';
 import DraggableFlatList, {
   DragEndParams,
@@ -35,11 +34,12 @@ import {
   BottomSheetModalProvider,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-
 import {DefaultTheme} from '@react-navigation/native';
-import LottieView from 'lottie-react-native';
-import cardLoader from '@assets/animation/cardloader.json';
-import {screenHeight, screenWidth} from '@utils/Scaling';
+import {
+  Asset,
+  ImagePickerResponse,
+  launchImageLibrary,
+} from 'react-native-image-picker';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -72,12 +72,10 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
   };
 
   const onTaskCardDrop = (params: DragEndParams<TaskItem>) => {
-    console.log('==> onTaskCardDrop Params', params);
     const newData = params.data.map((item: any, index: number) => {
       return {...item, position: index};
     });
     setTasks(newData);
-    console.log('newData', newData);
     newData.map(async item => {
       await updateCart(item);
     });
@@ -106,6 +104,49 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
     bottomSheetModalRef.current?.close();
     await deleteBoardList(taskList?.list_id);
     onDeleteBoardList();
+  };
+
+  const onOpenGallery = async () => {
+    await launchImageLibrary(
+      {
+        mediaType: 'photo',
+        selectionLimit: 1,
+        quality: 1,
+      },
+      async (response: ImagePickerResponse) => {
+        if (response.didCancel) {
+          console.log('User cancelled image picker');
+        } else if (response.errorCode) {
+          console.log('ImagePicker Error: ', response.errorMessage);
+        } else {
+          const image = response.assets?.[0];
+
+          if (image?.uri) {
+            try {
+              setLoading(true);
+              const imageUrl = await uploadToCloudinary({
+                uri: image?.uri,
+                type: image?.type,
+                fileName: image?.fileName,
+              });
+
+              // Now add to Firestore
+              const newCard = await addCardList(
+                taskList?.list_id,
+                taskList?.board_id,
+                image?.fileName || image?.type || 'Unknown',
+                tasks.length,
+                imageUrl,
+              );
+              setTasks([...tasks, newCard]);
+              setLoading(false);
+            } catch (error) {
+              console.log('Error uploading or saving:', error);
+            }
+          }
+        }
+      },
+    );
   };
 
   const renderBackdrop = useCallback(
@@ -196,7 +237,7 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
                   />
                   <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
                 </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.8}>
+                <TouchableOpacity activeOpacity={0.8} onPress={onOpenGallery}>
                   <Icon
                     name="image-outline"
                     iconFamily="MaterialCommunityIcons"

@@ -36,7 +36,7 @@ const OnBoarding = () => {
 
   const paddingStyle: ViewStyle = {
     backgroundColor: isDark ? Colors.darkprimary : Colors.lightprimary,
-    paddingTop: Platform.OS === 'ios' ? top + 30 : 30,
+    paddingTop: Platform.OS === 'ios' ? top + 30 : 50,
   };
   const openLink = () => {};
   const openActionSheet = () => {};
