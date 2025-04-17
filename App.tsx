@@ -7,19 +7,24 @@ import {
   requestNotificationPermission,
   setupBackgroundAndForegroundHandlers,
 } from '@config/firebaseNotification';
+import {Provider} from 'react-redux';
+import store from '@store/store';
 
 function App(): React.JSX.Element {
   useEffect(() => {
     requestNotificationPermission();
     setupBackgroundAndForegroundHandlers();
   }, []);
+
   return (
     <GestureHandlerRootView style={{flex: 1}}>
-      <AuthProvider>
-        <BoardProvider>
-          <Navigation />
-        </BoardProvider>
-      </AuthProvider>
+      <Provider store={store}>
+        <AuthProvider>
+          <BoardProvider>
+            <Navigation />
+          </BoardProvider>
+        </AuthProvider>
+      </Provider>
     </GestureHandlerRootView>
   );
 }

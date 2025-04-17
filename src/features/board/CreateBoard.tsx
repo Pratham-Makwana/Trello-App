@@ -13,10 +13,11 @@ import {goBack, navigate} from '@utils/NavigationUtils';
 import {useBoard} from '@context/BoardContext';
 import LinearGradient from 'react-native-linear-gradient';
 import {screenWidth} from '@utils/Scaling';
-import {useAuthContext} from '@context/UserContext';
+import {useUser} from '@hooks/useUser';
 
 const CreateBoard = () => {
-  const {user} = useAuthContext();
+  const {user} = useUser();
+
   const {selectedWorkSpace, selectedColor, boardName, setBoardName} =
     useBoard();
 
@@ -47,7 +48,7 @@ const CreateBoard = () => {
 
           <View style={styles.secondView}>
             <View style={styles.innerFirstView}>
-              <Text style={styles.lable}>{user?.displayName}'s </Text>
+              <Text style={styles.lable}>{user?.username}'s </Text>
               <Text style={styles.lable}>workspace</Text>
             </View>
             <View style={styles.iconView}>

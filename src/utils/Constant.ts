@@ -52,16 +52,30 @@ export enum VisibilityType {
   Public = 'public',
 }
 
+// export interface Board {
+//   id: string;
+//   boardId: string;
+//   createdBy: string;
+//   title: string;
+//   created_at: any;
+//   background: string[];
+//   last_edit: any;
+//   workspace: string;
+//   userInfo?: any;
+// }
+
 export interface Board {
-  id: string;
   boardId: string;
   createdBy: string;
   title: string;
-  created_at: Timestamp;
+  created_at: any;
+  last_edit: any;
   background: string[];
-  last_edit: Timestamp | null;
   workspace: string;
-  userInfo?: any;
+  userInfo?: {
+    email: any;
+    username: any;
+  };
 }
 
 export interface TaskList {

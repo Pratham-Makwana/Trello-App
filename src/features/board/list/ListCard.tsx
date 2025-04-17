@@ -20,6 +20,7 @@ import {
   addCardList,
   deleteBoardList,
   getListCard,
+  listenToListCards,
   updateBoardList,
   updateCart,
   uploadToCloudinary,
@@ -54,22 +55,20 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
   const [loading, setLoading] = useState(false);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
+  const memoizedTasks = useMemo(() => tasks, [tasks]);
 
   useEffect(() => {
-    loadCardList();
-  }, [taskList?.list_id]);
+    const unsubscribe = listenToListCards(taskList.list_id, cards => {
+      console.log('Received cards from Firestore:', cards);
+      setTasks(cards);
+    });
 
-  const loadCardList = async () => {
-    setLoading(true);
-    try {
-      const data = await getListCard(taskList?.list_id);
-      setTasks(data);
-    } catch (error) {
-      console.error('Error loading cards:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   const onTaskCardDrop = (params: DragEndParams<TaskItem>) => {
     const newData = params.data.map((item: any, index: number) => {
@@ -82,14 +81,13 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
   };
 
   const onCardAdd = async () => {
-    const data = await addCardList(
+    setAdding(false);
+    await addCardList(
       taskList?.list_id,
       taskList?.board_id,
       newTask,
       tasks.length,
     );
-    setAdding(false);
-    setTasks([...tasks, data]);
     setNewTask('');
   };
   const onUpdateList = async () => {
@@ -138,7 +136,7 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
                 tasks.length,
                 imageUrl,
               );
-              setTasks([...tasks, newCard]);
+              // setTasks([...tasks, newCard]);
               setLoading(false);
             } catch (error) {
               console.log('Error uploading or saving:', error);
@@ -194,7 +192,7 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
           )}
           {!loading && (
             <DraggableFlatList
-              data={tasks}
+              data={memoizedTasks}
               renderItem={ListItem}
               keyExtractor={item => item.id}
               onDragEnd={onTaskCardDrop}

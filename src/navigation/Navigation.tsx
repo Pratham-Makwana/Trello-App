@@ -25,19 +25,28 @@ import {webClientId} from '@env';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import Invite from '@components/board/Invite';
 import CustomModal from '@components/global/CustomModal';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {useUser} from '@hooks/useUser';
 
 const Stack = createNativeStackNavigator();
 
 const Navigation = () => {
-  const {setUser, user} = useAuthContext();
+  const {user, setUser} = useUser();
   const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, user => {
       if (user) {
-        console.log('==> user', user);
-        setUser(user);
+        const serializedUser = {
+          uid: user.uid,
+          username: user.displayName || null,
+          email: user.email || null,
+          photoURL: user.photoURL || null,
+        };
+        console.log('==> user', serializedUser);
+
+        setUser(serializedUser);
         setInitializing(false);
       } else {
         console.log('==> user', user);
@@ -54,18 +63,18 @@ const Navigation = () => {
   return (
     <NavigationContainer ref={navigationRef}>
       {user ? <MainStack /> : <AuthStack />}
-      {/* {initializing ? <SplashStack /> : user ? <MainStack /> : <AuthStack />} */}
     </NavigationContainer>
   );
 };
 
 const MainStack = () => {
+  const dispatch = useAppDispatch()
   const {boardName, selectedWorkSpace, selectedColor, setBoardName} =
     useBoard();
 
   const handleCreateBoard = () => {
     if (boardName.length > 0 && boardName !== '') {
-      createBoard(boardName, selectedColor, selectedWorkSpace);
+      createBoard(dispatch,boardName, selectedColor, selectedWorkSpace);
       setBoardName('');
       Alert.alert('Board Created Successfully');
       goBack();

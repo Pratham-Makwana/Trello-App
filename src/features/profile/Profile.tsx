@@ -1,14 +1,14 @@
 import {Button, StyleSheet, Text, View} from 'react-native';
 import React from 'react';
 import {SignOut} from '@config/firebase';
-import {useAuthContext} from '@context/UserContext';
+import {useUser} from '@hooks/useUser';
 
 const Profile = () => {
-  const {setUser} = useAuthContext();
+  const {logout} = useUser();
   const handleLogout = async () => {
     try {
       await SignOut();
-      setUser(null);
+      logout();
 
       console.log('User logged out successfully');
     } catch (error) {

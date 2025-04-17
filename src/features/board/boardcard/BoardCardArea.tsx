@@ -9,7 +9,11 @@ import Carousel, {
 import {screenHeight, screenWidth} from '@utils/Scaling';
 import ListTitleInput from '../list/ListTitleInput';
 import {useSharedValue} from 'react-native-reanimated';
-import {addBoardList, getBoardLists} from '@config/firebase';
+import {
+  addBoardList,
+  getBoardLists,
+  listenToBoardLists,
+} from '@config/firebase';
 import CustomText from '@components/ui/CustomText';
 import ListCard from '../list/ListCard';
 
@@ -24,6 +28,21 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     {list_id: undefined},
   ]);
 
+  useEffect(() => {
+    const unsubscribe = listenToBoardLists(board.boardId, lists => {
+      const sortedLists = [...lists].sort((a, b) => a.position - b.position);
+      console.log('==> list', lists);
+
+      setTaskList([...sortedLists, {list_id: undefined}]);
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [board]);
+
   const onPressPagination = (index: number) => {
     ref.current?.scrollTo({
       count: index - progress.value,
@@ -32,10 +51,10 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
   };
   const onSaveList = async (title: string | any) => {
     setActive(false);
-    const newList = await addBoardList(board?.boardId, title);
-    taskList.pop();
+    const newList = await addBoardList(board?.boardId, title, taskList.length);
+    // taskList.pop();
 
-    newList && setTaskList([...taskList, newList, {list_id: undefined}]);
+    // newList && setTaskList([...taskList, newList, {list_id: undefined}]);
   };
 
   useEffect(() => {
@@ -45,7 +64,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
   const loadBoardLists = async () => {
     if (!board) return;
     const lists = await getBoardLists(board?.boardId);
-
     setTaskList([...lists, {id: undefined}]);
   };
 
@@ -54,7 +72,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
   };
 
   return (
-    <SafeAreaView style={{flex: 1}} edges={['bottom']}>
+    <SafeAreaView style={{flex: 1}}>
       <Carousel
         ref={ref}
         height={screenHeight * 0.8}

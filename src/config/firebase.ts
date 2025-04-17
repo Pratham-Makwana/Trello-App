@@ -34,10 +34,12 @@ import {
   Timestamp,
   startAt,
   endAt,
+  onSnapshot,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import {Board, TaskItem, User} from '@utils/Constant';
+import {Board, TaskItem, TaskList, User} from '@utils/Constant';
 import {ref, uploadBytes, getDownloadURL, getStorage} from 'firebase/storage';
+import {addBoard} from '@store/board/boardSlice';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -89,6 +91,7 @@ export const createUser = async (
 ) => {
   try {
     const {user} = await createUserWithEmailAndPassword(auth, email, password);
+
     await updateProfile(user, {
       displayName: username,
       photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
@@ -127,6 +130,7 @@ export const SignOut = async () => {
 };
 
 export const createBoard = async (
+  dispatch: any,
   boardName: string,
   selectedColor: string[],
   workspace: string,
@@ -139,8 +143,8 @@ export const createBoard = async (
       title: boardName,
       background: selectedColor,
       workspace: workspace,
-      created_at: new Date(),
-      last_edit: new Date(),
+      created_at: new Date().toISOString(),
+      last_edit: new Date().toISOString(),
       createdBy: auth.currentUser?.uid,
     };
     await setDoc(docRef, boardData);
@@ -149,8 +153,9 @@ export const createBoard = async (
     await setDoc(doc(userBoardRef, joinId), {
       userId: auth.currentUser?.uid,
       boardId: docRef.id,
-      addedAt: new Date(),
+      addedAt: new Date().toISOString(),
     });
+    dispatch(addBoard(boardData));
 
     // console.log('Board and user_board entry created');
   } catch (e) {
@@ -170,14 +175,30 @@ export const getBoards = async (userId: string) => {
       boardIds.map(boardId => getDoc(doc(boardRef, boardId))),
     );
 
-    const boardList = boardDocs
+    const boardList: Board[] = boardDocs
       .filter(doc => doc.exists())
-      .map(doc => ({id: doc.id, ...doc.data()}));
+      .map(doc => {
+        const data = doc.data();
 
-    console.log('==> boardList', boardList);
+        const createdAt = data.created_at ?? new Date().toISOString();
+        const lastEdit = data.last_edit ?? null;
+
+        return {
+          boardId: data.boardId,
+          createdBy: data.createdBy,
+          title: data.title,
+          created_at: createdAt,
+          last_edit: lastEdit,
+          background: Array.isArray(data.background) ? data.background : [],
+          workspace: data.workspace,
+          userInfo: data.userInfo,
+        } as Board;
+      });
+
     return boardList;
   } catch (error) {
     console.log('==> firebase:getAllBoards:', error);
+    return [];
   }
 };
 
@@ -191,7 +212,6 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
 
     const userBoardSnapshot = await getDocs(userBoardQuery);
 
-    // Check if board exists for the given boardId and userId
     if (userBoardSnapshot.empty) {
       console.log('No board found for the given boardId and userId');
       return [];
@@ -205,7 +225,6 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
     }
 
     const boardData = boardSnapshot.docs[0].data();
-    // console.log('==> boardData', boardData);
 
     const creatorId = boardData.createdBy;
     const creatorDocRef = doc(userRef, creatorId);
@@ -226,36 +245,24 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
       },
     };
     return boardInfo;
-
-    // // Fetch user data from the users collection
-    // const userDocRef = doc(userRef, userId);
-    // const userSnapshot = await getDoc(userDocRef);
-    // const userData = userSnapshot.data();
-
-    // // Check if user exists
-    // if (!userSnapshot.exists()) {
-    //   console.log('User not found');
-    //   return [];
-    // }
-    // const boardInfo = {
-    //   ...boardData,
-    //   userInfo: {
-    //     username: userData?.username,
-    //     email: userData?.email,
-    //   },
-    // };
-    // console.log('==> boardInfo', boardInfo);
-
-    return boardInfo;
   } catch (error) {
     console.error('Error fetching board data: ', error);
     return [];
   }
 };
 
+export const listenToUpdateBoardInfo = (
+  boardId: string,
+  callback: (board: Board) => void,
+) => {
+  const docRef = doc(boardRef, boardId);
+  return onSnapshot(docRef, snapshot => {
+    if (snapshot.exists()) {
+      callback({...snapshot.data()} as Board);
+    }
+  });
+};
 export const updateBoardInfo = async (board: Board) => {
-  // console.log(board);
-
   try {
     const docRef = doc(boardRef, board.boardId);
     await updateDoc(docRef, {
@@ -264,7 +271,6 @@ export const updateBoardInfo = async (board: Board) => {
 
     const updatedBoard = await getDoc(docRef);
 
-    console.log('==> Updated Board', updatedBoard.data());
     return updatedBoard.data();
   } catch (error) {
     console.log('Error updateBoard: ', error);
@@ -323,10 +329,28 @@ export const addUserToBoard = async (boardId: string, userId: string) => {
     console.error('Error adding User To Board : ', error);
   }
 };
+
+//  realtime invite collabration
+export const listenToUserBoards = (
+  userId: string,
+  callback: (boards: Board[]) => void,
+) => {
+  const q = query(userBoardRef, where('userId', '==', userId));
+  return onSnapshot(q, async snapshot => {
+    const boardIds = snapshot.docs.map(doc => doc.data().boardId);
+
+    const boardPromises = boardIds.map(id => getDoc(doc(boardRef, id)));
+    const boardSnapshots = await Promise.all(boardPromises);
+
+    const boards: Board[] = boardSnapshots
+      .filter(doc => doc.exists())
+      .map(doc => ({...(doc.data() as Board)}));
+
+    callback(boards);
+  });
+};
 //  =================== Board List ==========================
 export const getBoardLists = async (boardId: string) => {
-  console.log('==>getBoardLists ', boardId);
-
   try {
     const q = query(
       listRef,
@@ -355,7 +379,7 @@ export const addBoardList = async (
   title: string,
   position = 0,
 ) => {
-  console.log('==>', boardId, title, position);
+  // console.log('==>', boardId, title, position);
 
   try {
     const listDocRef = doc(listRef);
@@ -376,7 +400,7 @@ export const addBoardList = async (
     };
 
     await setDoc(listDocRef, newListDoc);
-    console.log('==> newListDoc ', newListDoc);
+    // console.log('==> newListDoc ', newListDoc);
 
     return newListDoc || {};
   } catch (error) {
@@ -407,7 +431,6 @@ export const deleteBoardList = async (listId: string) => {
 
 export const findUsers = async (search: string) => {
   try {
-    // const q = query(userRef, where('email', '==', search));
     const q = query(
       userRef,
       orderBy('email'),
@@ -424,7 +447,6 @@ export const findUsers = async (search: string) => {
         const isNotCurrentUser = user.email !== auth.currentUser?.email;
         return isMatch && isNotCurrentUser;
       });
-    // console.log('==> user', users);
 
     return users || [];
   } catch (error) {
@@ -492,6 +514,59 @@ export const updateCart = async (task: TaskItem) => {
     });
   } catch (error) {
     console.log('Error Updating card', error);
+  }
+};
+
+export const listenToBoardLists = (
+  boardId: string,
+  callback: (lists: TaskList[]) => void,
+) => {
+  try {
+    const q = query(
+      listRef,
+      where('board_id', '==', boardId),
+      orderBy('position'),
+    );
+
+    const unsubscribe = onSnapshot(q, snapshot => {
+      const lists: TaskList[] = snapshot.docs.map(doc => ({
+        list_id: doc.id,
+        ...doc.data(),
+      })) as TaskList[];
+
+      callback(lists);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.log('Error in listenToBoardLists:', error);
+  }
+};
+
+export const listenToListCards = (
+  listId: string,
+  callback: (cards: TaskItem[]) => void,
+) => {
+  try {
+    const q = query(
+      cardRef,
+      where('list_id', '==', listId),
+      where('done', '==', false),
+      orderBy('position'),
+    );
+
+    const unsubscribe = onSnapshot(q, snapshot => {
+      const cards: TaskItem[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as TaskItem[];
+      cards.sort((a, b) => a.position - b.position);
+      callback(cards);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.log('Error in listenToListCards:', error);
   }
 };
 

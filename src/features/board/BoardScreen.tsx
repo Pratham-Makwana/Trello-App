@@ -7,38 +7,47 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
-import {DefaultTheme, useFocusEffect} from '@react-navigation/native';
-import {getBoards} from '@config/firebase';
+import {
+  DefaultTheme,
+  useFocusEffect,
+  useIsFocused,
+} from '@react-navigation/native';
+import {getBoards, listenToUserBoards} from '@config/firebase';
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
 import Icon from '@components/global/Icon';
-import {useAuthContext} from '@context/UserContext';
 import CustomModal from '@components/global/CustomModal';
+import {useUser} from '@hooks/useUser';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {setBoards} from '@store/board/boardSlice';
 
 const BoardScreen = () => {
-  const [boards, setBoards] = useState<Board[] | any>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const {user} = useAuthContext();
+  const {user} = useUser();
+  const boards = useAppSelector(state => state.board.boards);
+  const dispatch = useAppDispatch();
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchBoards();
-    }, []),
-  );
+  useEffect(() => {
+    const unsubscribe = listenToUserBoards(user!.uid, boards => {
+      dispatch(setBoards(boards));
+    });
 
-  const fetchBoards = async () => {
-    try {
-      setIsLoading(true);
-      const allBoard = await getBoards(user?.uid);
-      setBoards(allBoard);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error fetching boards:', error);
-    }
-  };
+    return () => unsubscribe();
+  }, []);
+
+  // const fetchBoards = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     const allBoard = await getBoards(user!.uid);
+  //     dispatch(setBoards(allBoard));
+  //     setIsLoading(false);
+  //   } catch (error) {
+  //     console.error('Error fetching boards:', error);
+  //   }
+  // };
 
   const ListItem = ({item}: {item: Board}) => {
     const gradientColors =
@@ -68,7 +77,7 @@ const BoardScreen = () => {
           size={24}
           color={Colors.darkprimary}
         />
-        <Text style={styles.userTitle}>{user?.displayName}'s workspace</Text>
+        <Text style={styles.userTitle}>{user?.username}'s workspace</Text>
       </View>
     </View>
   );
@@ -83,7 +92,7 @@ const BoardScreen = () => {
           }
           data={boards}
           renderItem={ListItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.boardId}
           ListHeaderComponent={() => <ListHeader />}
           ListEmptyComponent={() => (
             <View
@@ -103,9 +112,9 @@ const BoardScreen = () => {
               }}
             />
           )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={fetchBoards} />
-          }
+          // refreshControl={
+          //   <RefreshControl refreshing={refreshing} onRefresh={fetchBoards} />
+          // }
         />
       )}
     </View>

@@ -20,8 +20,8 @@ import {validateForm} from '@utils/validation';
 
 const SignupScreen = () => {
   const [form, setForm] = useState({
-    username: 'test',
-    email: 'test@gmail.com',
+    username: 'user',
+    email: 'user@gmail.com',
     password: 'Test1234',
   });
 

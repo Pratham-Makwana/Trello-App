@@ -32,21 +32,7 @@ export const AuthProvider = ({children}: {children: React.ReactNode}) => {
   const logout = () => {
     setUser(null);
   };
-  // //  getCurrentLoggedInUser From the storage
-  // const getCurrentLoggedInUser = async () => {
-  //   try {
-  //     // const authUserString = authStorage.getString('authUser');
-  //     // const currentUser = authUserString ? JSON.parse(authUserString) : null;
-  //     // console.log('==> AuthProvider:getCurrentLoggedInUser: ', currentUser);
 
-  //     // setUser(currentUser);
-  //   } catch (error) {
-  //     console.log('Error getting current user:', error);
-  //   }
-  // };
-  // useEffect(() => {
-  //   getCurrentLoggedInUser();
-  // }, []);
 
   return (
     <AuthContext.Provider

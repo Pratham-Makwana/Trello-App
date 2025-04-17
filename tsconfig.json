@@ -16,6 +16,7 @@
       "@context/*":["context/*"],
       "@config/*" : ["config/*"],
       "@store/*": ["store/*"],
+      "@hooks/*": ["hooks/*"],
       "@firebase/auth": ["./node_modules/@firebase/auth/dist/index.rn.d.ts"]
     }
   }

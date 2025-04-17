@@ -5,16 +5,13 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from './Icon';
 import {Board, Colors} from '@utils/Constant';
 import {goBack, navigate} from '@utils/NavigationUtils';
-import {useAuthContext} from '@context/UserContext';
 
 interface CustomHeaderIOSProps {
   title: string;
-
   board: Board;
 }
 const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board}) => {
   const {top} = useSafeAreaInsets();
-  const {user} = useAuthContext();
 
   return (
     <View style={[styles.blurContainer, {paddingTop: top}]}>

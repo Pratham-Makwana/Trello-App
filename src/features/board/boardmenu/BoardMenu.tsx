@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import React, {useCallback, useEffect, useState} from 'react';
-import {useAuthContext} from '@context/UserContext';
 import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
@@ -18,11 +17,14 @@ import {
   deleteBoard,
   getBoardInfo,
   getBoardMembers,
+  listenToUpdateBoardInfo,
   updateBoardInfo,
 } from '@config/firebase';
 import UserList from '@components/board/UserList';
 import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
-import CustomModal from '@components/global/CustomModal';
+import {useUser} from '@hooks/useUser';
+import {useAppDispatch} from '@store/reduxHook';
+import {closeBoard, updateBoardTitle} from '@store/board/boardSlice';
 
 const BoardMenu = () => {
   const route =
@@ -30,8 +32,10 @@ const BoardMenu = () => {
   const {boardId, board} = route.params;
   const [boardData, setBoardData] = useState<Board | any>();
   const [member, setMember] = useState<User | any>();
-  const {user} = useAuthContext();
+  const dispacth = useAppDispatch();
+  const {user} = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     loadBoardInfo();
@@ -43,9 +47,17 @@ const BoardMenu = () => {
     }, []),
   );
 
+  useEffect(() => {
+    const unsubscribe = listenToUpdateBoardInfo(boardId, updatedBoard => {
+      setBoardData(updatedBoard);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const loadBoardInfo = async () => {
     setIsLoading(true);
-    const data = await getBoardInfo(boardId, user?.uid);
+    const data = await getBoardInfo(boardId, user!.uid);
     setBoardData(data);
     setIsLoading(false);
   };
@@ -59,15 +71,13 @@ const BoardMenu = () => {
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
-    resetAndNavigate('MainStack', {screen: 'board'});
+    dispacth(closeBoard(boardId));
+    resetAndNavigate('UserBottomTab');
   };
 
   const onUpdateBoard = async () => {
-    // console.log('==> UpdateBoard');
-    const updatedBoardData = await updateBoardInfo(boardData);
-    setBoardData(updatedBoardData);
+    await updateBoardInfo(boardData);
   };
-
   return (
     <View>
       <View style={styles.container}>

@@ -56,7 +56,7 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   );
 };
 
-export default ListItem;
+export default  ListItem;
 
 const styles = StyleSheet.create({
   rowItem: {
