@@ -15,17 +15,13 @@ import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
-import {goBack, navigationRef, resetAndNavigate} from '@utils/NavigationUtils';
+import {goBack, navigationRef} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
-import {Alert, Platform, StyleSheet, View} from 'react-native';
+import {Alert, Platform, StyleSheet} from 'react-native';
 import {useEffect, useState} from 'react';
-import {useAuthContext} from '@context/UserContext';
 import {onAuthStateChanged} from 'firebase/auth';
-import {webClientId} from '@env';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import Invite from '@components/board/Invite';
-import CustomModal from '@components/global/CustomModal';
-import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {useAppDispatch} from '@store/reduxHook';
 import {useUser} from '@hooks/useUser';
 
 const Stack = createNativeStackNavigator();
@@ -68,13 +64,13 @@ const Navigation = () => {
 };
 
 const MainStack = () => {
-  const dispatch = useAppDispatch()
+  const dispatch = useAppDispatch();
   const {boardName, selectedWorkSpace, selectedColor, setBoardName} =
     useBoard();
 
   const handleCreateBoard = () => {
     if (boardName.length > 0 && boardName !== '') {
-      createBoard(dispatch,boardName, selectedColor, selectedWorkSpace);
+      createBoard(dispatch, boardName, selectedColor, selectedWorkSpace);
       setBoardName('');
       Alert.alert('Board Created Successfully');
       goBack();

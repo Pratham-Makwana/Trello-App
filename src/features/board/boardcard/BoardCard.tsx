@@ -1,6 +1,6 @@
 import {Platform, StyleSheet, Text, View} from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {useIsFocused, useRoute} from '@react-navigation/native';
+import {useRoute} from '@react-navigation/native';
 import {Board} from '@utils/Constant';
 import CustomHeaderIOS from '@components/global/CustomHeaderIOS';
 import CustomHeaderAndroid from '@components/global/CustomHeaderAndroid';
@@ -51,7 +51,6 @@ const BoardCard = () => {
   const loadBoardInfo = async () => {
     setLoading(true);
     const data = await getBoardInfo(boardDetails?.boardId, user!.uid);
-    console.log('==> boardInfo', data);
 
     setBoard(data);
     setLoading(false);
@@ -68,7 +67,7 @@ const BoardCard = () => {
         />
       )}
       {loading && <CustomModal loading={loading} />}
-      {board && <BoardCardArea board={board} />}
+      {board && <BoardCardArea key={board?.board_id} board={board} />}
     </LinearGradient>
   );
 };

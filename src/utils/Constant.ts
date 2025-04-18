@@ -106,7 +106,7 @@ export interface TaskItem {
   position: number;
   board_id: string;
   list_id: string;
-  createdAt: Date;
+  createdAt: any;
 }
 
 export interface BoardInvite {

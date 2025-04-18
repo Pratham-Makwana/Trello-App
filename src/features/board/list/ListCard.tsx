@@ -20,7 +20,8 @@ import {
   addCardList,
   deleteBoardList,
   getListCard,
-  listenToListCards,
+  listenToCardsList,
+  listenToListInfo,
   updateBoardList,
   updateCart,
   uploadToCloudinary,
@@ -41,32 +42,44 @@ import {
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {setCardList} from '@store/card/cardSlice';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
-  onDeleteBoardList: () => void;
+  showModal: () => void;
 }
-const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
+const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
   const [listTitle, setListTitle] = useState(taskList?.title);
-  let dummyTitle = taskList?.title;
   const [adding, setAdding] = useState(false);
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['70%'], []);
+
   const memoizedTasks = useMemo(() => tasks, [tasks]);
 
   useEffect(() => {
-    const unsubscribe = listenToListCards(taskList.list_id, cards => {
-      console.log('Received cards from Firestore:', cards);
+    if (!taskList?.list_id) return;
+
+    const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
       setTasks(cards);
     });
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribeListTitle = listenToListInfo(
+      taskList.list_id,
+      updatedList => {
+        setListTitle(updatedList.title);
+      },
+    );
+
+    return () => {
+      if (unsubscribeListTitle) unsubscribeListTitle();
     };
   }, []);
 
@@ -90,19 +103,6 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
     );
     setNewTask('');
   };
-  const onUpdateList = async () => {
-    bottomSheetModalRef.current?.close();
-    await updateBoardList(taskList, listTitle);
-  };
-  const onCancleModal = () => {
-    setListTitle(dummyTitle);
-    bottomSheetModalRef.current?.close();
-  };
-  const onDeleteList = async () => {
-    bottomSheetModalRef.current?.close();
-    await deleteBoardList(taskList?.list_id);
-    onDeleteBoardList();
-  };
 
   const onOpenGallery = async () => {
     await launchImageLibrary(
@@ -121,23 +121,19 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
 
           if (image?.uri) {
             try {
-              setLoading(true);
               const imageUrl = await uploadToCloudinary({
                 uri: image?.uri,
                 type: image?.type,
                 fileName: image?.fileName,
               });
 
-              // Now add to Firestore
-              const newCard = await addCardList(
+              await addCardList(
                 taskList?.list_id,
                 taskList?.board_id,
                 image?.fileName || image?.type || 'Unknown',
                 tasks.length,
                 imageUrl,
               );
-              // setTasks([...tasks, newCard]);
-              setLoading(false);
             } catch (error) {
               console.log('Error uploading or saving:', error);
             }
@@ -147,191 +143,114 @@ const ListCard: FC<CardListProps> = ({taskList, onDeleteBoardList}) => {
     );
   };
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={onCancleModal}
-      />
-    ),
-    [],
-  );
-
-  const showModal = () => {
-    bottomSheetModalRef.current?.present();
-  };
   return (
-    <BottomSheetModalProvider>
-      <View style={styles.cardContainer}>
-        <View style={styles.card}>
-          {/* List Header */}
-          <View style={styles.header}>
-            <Text style={styles.listTitle}>{listTitle}</Text>
-            <TouchableOpacity onPress={showModal}>
-              <Icon
-                name="dots-horizontal"
-                iconFamily="MaterialCommunityIcons"
-                size={22}
-                color={Colors.black}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Render Card Tasks */}
-          {loading && (
-            <View
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-              <ActivityIndicator size={'large'} color={Colors.lightprimary} />
-            </View>
-          )}
-          {!loading && (
-            <DraggableFlatList
-              data={memoizedTasks}
-              renderItem={ListItem}
-              keyExtractor={item => item.id}
-              onDragEnd={onTaskCardDrop}
-              containerStyle={{
-                paddingBottom: 4,
-                maxHeight: '80%',
-              }}
-              contentContainerStyle={{gap: 4}}
+    <View style={styles.cardContainer}>
+      <View style={styles.card}>
+        {/* List Header */}
+        <View style={styles.header}>
+          <Text style={styles.listTitle}>{listTitle}</Text>
+          <TouchableOpacity onPress={showModal}>
+            <Icon
+              name="dots-horizontal"
+              iconFamily="MaterialCommunityIcons"
+              size={22}
+              color={Colors.black}
             />
-          )}
+          </TouchableOpacity>
+        </View>
 
-          {adding && (
-            <TextInput
-              style={styles.input}
-              value={newTask}
-              onChangeText={setNewTask}
-              autoCapitalize="none"
-              autoFocus
-            />
-          )}
-
+        {/* Render Card Tasks */}
+        {loading && (
           <View
             style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              paddingHorizontal: 8,
-              marginVertical: 4,
+              justifyContent: 'center',
+              alignItems: 'center',
             }}>
-            {!adding && (
-              <>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={{flexDirection: 'row', alignItems: 'center'}}
-                  onPress={() => setAdding(true)}>
-                  <Icon
-                    name="plus"
-                    iconFamily="MaterialCommunityIcons"
-                    size={16}
-                    color={Colors.fontDark}
-                  />
-                  <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.8} onPress={onOpenGallery}>
-                  <Icon
-                    name="image-outline"
-                    iconFamily="MaterialCommunityIcons"
-                    size={20}
-                    color={Colors.black}
-                  />
-                </TouchableOpacity>
-              </>
-            )}
-            {adding && (
-              <>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setAdding(false);
-                    setNewTask('');
-                  }}>
-                  <Text style={{fontSize: 14, color: Colors.lightprimary}}>
-                    Cancle
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.8} onPress={onCardAdd}>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: Colors.lightprimary,
-                      fontWeight: 'bold',
-                    }}>
-                    Add
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <ActivityIndicator size={'large'} color={Colors.lightprimary} />
           </View>
+        )}
+        {!loading && (
+          <DraggableFlatList
+            data={memoizedTasks}
+            renderItem={ListItem}
+            keyExtractor={item => item.id}
+            onDragEnd={onTaskCardDrop}
+            containerStyle={{
+              paddingBottom: 4,
+              maxHeight: '80%',
+            }}
+            contentContainerStyle={{gap: 4}}
+          />
+        )}
+
+        {adding && (
+          <TextInput
+            style={styles.input}
+            value={newTask}
+            onChangeText={setNewTask}
+            autoCapitalize="none"
+            autoFocus
+          />
+        )}
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+            marginVertical: 4,
+          }}>
+          {!adding && (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                onPress={() => setAdding(true)}>
+                <Icon
+                  name="plus"
+                  iconFamily="MaterialCommunityIcons"
+                  size={16}
+                  color={Colors.fontDark}
+                />
+                <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.8} onPress={onOpenGallery}>
+                <Icon
+                  name="image-outline"
+                  iconFamily="MaterialCommunityIcons"
+                  size={20}
+                  color={Colors.black}
+                />
+              </TouchableOpacity>
+            </>
+          )}
+          {adding && (
+            <>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => {
+                  setAdding(false);
+                  setNewTask('');
+                }}>
+                <Text style={{fontSize: 14, color: Colors.lightprimary}}>
+                  Cancle
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.8} onPress={onCardAdd}>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: Colors.lightprimary,
+                    fontWeight: 'bold',
+                  }}>
+                  Add
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
-      <BottomSheetModal
-        ref={bottomSheetModalRef}
-        index={0}
-        snapPoints={snapPoints}
-        handleComponent={null}
-        backdropComponent={renderBackdrop}
-        handleStyle={{
-          backgroundColor: DefaultTheme.colors.background,
-          borderRadius: 12,
-        }}
-        enableOverDrag={false}
-        enablePanDownToClose>
-        <BottomSheetView style={styles.container}>
-          <View
-            style={{
-              paddingTop: 10,
-              alignItems: 'center',
-              paddingBottom: 16,
-            }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={onCancleModal}
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: '#B4B4B4',
-                borderRadius: 50,
-                padding: 5,
-              }}>
-              <Icon name="close" iconFamily="Ionicons" size={22} />
-            </TouchableOpacity>
-          </View>
-
-          <View
-            style={{
-              backgroundColor: '#fff',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              marginBottom: 16,
-            }}>
-            <Text
-              style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
-              list name
-            </Text>
-            <TextInput
-              style={{fontSize: 16, color: Colors.fontDark}}
-              returnKeyType="done"
-              enterKeyHint="done"
-              onEndEditing={onUpdateList}
-              value={listTitle}
-              onChangeText={e => setListTitle(e)}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteList}>
-            <Text style={styles.deleteBtnText}>Close Board</Text>
-          </TouchableOpacity>
-        </BottomSheetView>
-      </BottomSheetModal>
-    </BottomSheetModalProvider>
+    </View>
   );
 };
 

@@ -37,7 +37,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import {Board, TaskItem, TaskList, User} from '@utils/Constant';
+import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
 import {ref, uploadBytes, getDownloadURL, getStorage} from 'firebase/storage';
 import {addBoard} from '@store/board/boardSlice';
 
@@ -395,8 +395,8 @@ export const addBoardList = async (
       board_id: boardId,
       title,
       position,
-      created_at: new Date(),
-      last_edit: new Date(),
+      created_at: new Date().toISOString(),
+      last_edit: new Date().toISOString(),
     };
 
     await setDoc(listDocRef, newListDoc);
@@ -408,7 +408,10 @@ export const addBoardList = async (
   }
 };
 
-export const updateBoardList = async (list: TaskItem, newTitle: string) => {
+export const updateBoardList = async (
+  list: TaskItem | FakeTaskList,
+  newTitle: string,
+) => {
   try {
     const listDoc = doc(listRef, list.list_id);
     await updateDoc(listDoc, {
@@ -418,12 +421,58 @@ export const updateBoardList = async (list: TaskItem, newTitle: string) => {
     console.log('Error updating Board List', error);
   }
 };
+// A single list document updation
+export const listenToListInfo = (
+  listId: string,
+  callback: (updatedList: any) => void,
+) => {
+  const docRef = doc(listRef, listId);
+  return onSnapshot(docRef, snapshot => {
+    if (snapshot.exists()) {
+      callback({...snapshot.data()});
+    }
+  });
+};
 
+// multiple card list
+export const listenToBoardLists = (
+  boardId: string,
+  callback: (lists: TaskList[]) => void,
+) => {
+  try {
+    const q = query(
+      listRef,
+      where('board_id', '==', boardId),
+      orderBy('position'),
+    );
+
+    const unsubscribe = onSnapshot(q, snapshot => {
+      const lists: TaskList[] = snapshot.docs.map(doc => ({
+        list_id: doc.id,
+        ...doc.data(),
+      })) as TaskList[];
+
+      callback(lists);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.log('Error in listenToBoardLists:', error);
+  }
+};
 export const deleteBoardList = async (listId: string) => {
   try {
+    const cardQuery = query(cardRef, where('list_id', '==', listId));
+    const cardSnapshot = await getDocs(cardQuery);
+
+    const deleteCardPromises = cardSnapshot.docs.map(docSnap =>
+      deleteDoc(doc(cardRef, docSnap.id)),
+    );
+    await Promise.all(deleteCardPromises);
+
     const listDoc = doc(listRef, listId);
     await deleteDoc(listDoc);
-    console.log('==> deleting Board List successfully');
+    console.log('==> deleting Board List & card successfully');
   } catch (error) {
     console.log('Error deleting Board List', error);
   }
@@ -472,7 +521,7 @@ export const addCardList = async (
       imageUrl,
       done,
       description: '',
-      createdAt: Timestamp.now(),
+      createdAt: new Date().toISOString(),
     };
 
     const docRef = await addDoc(cardRef, newCard);
@@ -517,33 +566,18 @@ export const updateCart = async (task: TaskItem) => {
   }
 };
 
-export const listenToBoardLists = (
-  boardId: string,
-  callback: (lists: TaskList[]) => void,
-) => {
+export const deleteCard = async (id: string) => {
   try {
-    const q = query(
-      listRef,
-      where('board_id', '==', boardId),
-      orderBy('position'),
-    );
-
-    const unsubscribe = onSnapshot(q, snapshot => {
-      const lists: TaskList[] = snapshot.docs.map(doc => ({
-        list_id: doc.id,
-        ...doc.data(),
-      })) as TaskList[];
-
-      callback(lists);
-    });
-
-    return unsubscribe;
+    const cardDoc = doc(cardRef, id);
+    await deleteDoc(cardDoc);
+    console.log(`Card with id ${id} deleted successfully.`);
   } catch (error) {
-    console.log('Error in listenToBoardLists:', error);
+    console.error('Error deleting card:', error);
+    throw error;
   }
 };
 
-export const listenToListCards = (
+export const listenToCardsList = (
   listId: string,
   callback: (cards: TaskItem[]) => void,
 ) => {
@@ -583,7 +617,7 @@ const sendBoardInvite = async (
     invitedTo: userId,
     invitedBy,
     status: 'pending',
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   });
 };
 

@@ -9,6 +9,7 @@ import {
 } from '@config/firebaseNotification';
 import {Provider} from 'react-redux';
 import store from '@store/store';
+import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 
 function App(): React.JSX.Element {
   useEffect(() => {
@@ -20,9 +21,11 @@ function App(): React.JSX.Element {
     <GestureHandlerRootView style={{flex: 1}}>
       <Provider store={store}>
         <AuthProvider>
-          <BoardProvider>
-            <Navigation />
-          </BoardProvider>
+          <BottomSheetModalProvider>
+            <BoardProvider>
+              <Navigation />
+            </BoardProvider>
+          </BottomSheetModalProvider>
         </AuthProvider>
       </Provider>
     </GestureHandlerRootView>
