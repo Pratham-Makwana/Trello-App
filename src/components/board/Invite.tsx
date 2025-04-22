@@ -28,10 +28,40 @@ const Invite = () => {
     setSearchUser(users);
   };
 
-  const onAddUser = async (user: User) => {
+  const sendNotificationToOtherUser = async (notificationToken: string) => {
     try {
-      await addUserToBoard(boardId, user?.uid);
-      goBack();
+      const response = await fetch(
+        'http://192.168.200.98:5000/api/notification/send-token',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            notificationToken,
+            title: '🚨 Emergency Alert',
+            body: 'Your contact might be in danger!',
+          }),
+        },
+      );
+
+      const result = await response.json();
+      console.log('Notification result:', result);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+    }
+  };
+
+  const onAddUser = async (user: User) => {
+    console.log(user);
+    try {
+      if (user?.notificationToken) {
+        sendNotificationToOtherUser(user.notificationToken);
+      } else {
+        console.error('Notification token is undefined');
+      }
+      // await addUserToBoard(boardId, user?.uid);
+      // goBack();
     } catch (error) {
       console.log('Error On Add User', error);
     }

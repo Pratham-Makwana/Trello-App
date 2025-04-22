@@ -380,17 +380,8 @@ export const addBoardList = async (
   title: string,
   position = 0,
 ) => {
-  // console.log('==>', boardId, title, position);
-
   try {
     const listDocRef = doc(listRef);
-    // const listDocRef = await addDoc(listRef, {
-    //   board_id: boardId,
-    //   title,
-    //   position,
-    //   created_at: new Date(),
-    // });
-
     const newListDoc = {
       list_id: listDocRef.id,
       board_id: boardId,
@@ -401,7 +392,6 @@ export const addBoardList = async (
     };
 
     await setDoc(listDocRef, newListDoc);
-    // console.log('==> newListDoc ', newListDoc);
 
     return newListDoc || {};
   } catch (error) {
@@ -461,22 +451,62 @@ export const listenToBoardLists = (
     console.log('Error in listenToBoardLists:', error);
   }
 };
+
+// export const deleteBoardList = async (
+//   listId: string,
+//   boardId: string,
+//   listPosition: number,
+// ) => {
+//   try {
+//     const cardQuery = query(cardRef, where('list_id', '==', listId));
+//     const cardSnapshot = await getDocs(cardQuery);
+
+//     const deleteCardPromises = cardSnapshot.docs.map(docSnap =>
+//       deleteDoc(doc(cardRef, docSnap.id)),
+//     );
+//     await Promise.all(deleteCardPromises);
+
+//     const listQuery = query(
+//       listRef,
+//       where('board_id', '==', boardId),
+//       where('position', '>', listPosition),
+//     );
+
+//     const listSnapshot = await getDocs(listQuery);
+//     const batch = writeBatch(db);
+
+//     listSnapshot.forEach(docSnap => {
+//       const listRefToUpdate = doc(listRef, docSnap.id);
+//       const listData = docSnap.data();
+//       batch.update(listRefToUpdate, {position: listData.position - 1});
+//     });
+
+//     await batch.commit();
+
+//     const listDoc = doc(listRef, listId);
+//     await deleteDoc(listDoc);
+//     console.log('==> deleting Board List & card successfully');
+//   } catch (error) {
+//     console.log('Error deleting Board List', error);
+//   }
+// };
+
 export const deleteBoardList = async (
   listId: string,
   boardId: string,
   listPosition: number,
 ) => {
   try {
-    const cardQuery = query(cardRef, where('list_id', '==', listId));
-    const cardSnapshot = await getDocs(cardQuery);
+    const cardsRef = collection(db, 'lists', listId, 'cards');
+    const cardSnapshot = await getDocs(cardsRef);
 
     const deleteCardPromises = cardSnapshot.docs.map(docSnap =>
-      deleteDoc(doc(cardRef, docSnap.id)),
+      deleteDoc(doc(cardsRef, docSnap.id)),
     );
     await Promise.all(deleteCardPromises);
 
     const listQuery = query(
-      listRef,
+      collection(db, 'lists'),
       where('board_id', '==', boardId),
       where('position', '>', listPosition),
     );
@@ -485,18 +515,19 @@ export const deleteBoardList = async (
     const batch = writeBatch(db);
 
     listSnapshot.forEach(docSnap => {
-      const listRefToUpdate = doc(listRef, docSnap.id);
+      const listRefToUpdate = doc(db, 'lists', docSnap.id);
       const listData = docSnap.data();
       batch.update(listRefToUpdate, {position: listData.position - 1});
     });
 
     await batch.commit();
 
-    const listDoc = doc(listRef, listId);
-    await deleteDoc(listDoc);
-    console.log('==> deleting Board List & card successfully');
+    const listDocRef = doc(db, 'lists', listId);
+    await deleteDoc(listDocRef);
+
+    console.log('✅ Deleted board list and all its cards successfully');
   } catch (error) {
-    console.log('Error deleting Board List', error);
+    console.error('❌ Error deleting board list:', error);
   }
 };
 
@@ -535,6 +566,8 @@ export const addCardList = async (
   done: boolean = false,
 ) => {
   try {
+    const cardRef = collection(db, 'lists', listId, 'cards');
+
     const newCard = {
       board_id: boardId,
       list_id: listId,
@@ -547,36 +580,22 @@ export const addCardList = async (
     };
 
     const docRef = await addDoc(cardRef, newCard);
-    const newCardData = {id: docRef.id, ...newCard};
-    return newCardData;
+    return {id: docRef.id, ...newCard};
   } catch (error) {
     console.log('Error adding card:', error);
-  }
-};
-
-export const getListCard = async (listId: string) => {
-  try {
-    const q = query(
-      cardRef,
-      where('list_id', '==', listId),
-      where('done', '==', false),
-      orderBy('position'),
-    );
-
-    const snapshot = await getDocs(q);
-
-    const cards = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-
-    return cards;
-  } catch (error) {
-    console.log('Error getting list card', error);
-    return [];
+    return null;
   }
 };
 
 export const updateCart = async (task: TaskItem) => {
   try {
-    const cardDocRef = doc(cardRef, task?.id);
+    if (!task?.id || !task?.list_id) {
+      console.error('Invalid task: missing id or list_id');
+      return;
+    }
+
+    const cardDocRef = doc(db, 'lists', task.list_id, 'cards', task.id);
+
     await updateDoc(cardDocRef, {
       title: task?.title,
       description: task?.description,
@@ -591,29 +610,38 @@ export const updateCart = async (task: TaskItem) => {
 export const deleteCard = async (item: TaskItem) => {
   try {
     const deletedCardPosition = item?.position;
-    console.log('==> deletedCardPosition', deletedCardPosition);
-
     const deletedCardListId = item?.list_id;
-    console.log('==> deletedCardListId', deletedCardListId);
 
-    const q = query(
-      cardRef,
-      where('list_id', '==', deletedCardListId),
-      where('position', '>', deletedCardPosition),
-    );
+    if (!deletedCardListId || item?.id === undefined) {
+      console.error('Missing list_id or card id');
+      return;
+    }
+
+    const cardsRef = collection(db, 'lists', deletedCardListId, 'cards');
+
+    const q = query(cardsRef, where('position', '>', deletedCardPosition));
+
     const snapshot = await getDocs(q);
     const batch = writeBatch(db);
 
     snapshot.forEach(docSnap => {
       const cardData = docSnap.data();
-      console.log('==> cardData', cardData);
+      const cardRefToUpdate = doc(
+        db,
+        'lists',
+        deletedCardListId,
+        'cards',
+        docSnap.id,
+      );
 
-      const cardRefToUpdate = doc(cardRef, docSnap.id);
-      batch.update(cardRefToUpdate, {position: cardData.position - 1});
+      batch.update(cardRefToUpdate, {
+        position: cardData.position - 1,
+      });
     });
+
     await batch.commit();
 
-    const cardDoc = doc(cardRef, item?.id);
+    const cardDoc = doc(db, 'lists', deletedCardListId, 'cards', item.id);
     await deleteDoc(cardDoc);
   } catch (error) {
     console.error('Error deleting card:', error);
@@ -626,13 +654,9 @@ export const listenToCardsList = (
   callback: (cards: TaskItem[]) => void,
 ) => {
   try {
-    console.log('==> listId', listId);
+    const cardRef = collection(db, 'lists', listId, 'cards');
 
-    const q = query(
-      cardRef,
-      where('list_id', '==', listId),
-      orderBy('position'),
-    );
+    const q = query(cardRef, orderBy('position'));
 
     const unsubscribe = onSnapshot(q, snapshot => {
       const cards: TaskItem[] = snapshot.docs.map(doc => ({
@@ -644,10 +668,26 @@ export const listenToCardsList = (
 
     return unsubscribe;
   } catch (error) {
-    console.log('Error in listenToListCards:', error);
+    console.log('Error in listenToCardsList:', error);
   }
 };
 
+export const getListsByBoardId = async (boardId: string) => {
+  try {
+    const q = query(listRef, where('board_id', '==', boardId));
+
+    const snapshot = await getDocs(q);
+
+    const lists = snapshot.docs.map(doc => ({
+      ...doc.data(),
+    }));
+
+    return lists;
+  } catch (error) {
+    console.error('Error fetching lists for board:', error);
+    return [];
+  }
+};
 // ================== Borad Invite ========================
 
 const sendBoardInvite = async (

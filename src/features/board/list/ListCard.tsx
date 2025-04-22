@@ -68,7 +68,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
 
   const onTaskCardDrop = async (params: DragEndParams<TaskItem>) => {
     const newData = params.data.map((item: any, index: number) => {
-      return {...item, position: index};
+      return {...item, position: index + 1};
     });
     setTasks(newData);
     // newData.map(async item => {

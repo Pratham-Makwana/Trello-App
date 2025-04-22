@@ -95,6 +95,7 @@ export interface User {
   email: string;
   username: string;
   photoURL: string;
+  notificationToken?: string;
 }
 
 export interface TaskItem {

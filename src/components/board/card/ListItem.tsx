@@ -1,4 +1,11 @@
-import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {RenderItemParams} from 'react-native-draggable-flatlist';
 import {Colors, TaskItem} from '@utils/Constant';
@@ -13,8 +20,20 @@ import {
 import {DefaultTheme} from '@react-navigation/native';
 import {TextInput} from 'react-native-gesture-handler';
 import {RFValue} from 'react-native-responsive-fontsize';
-import {deleteCard, updateCart} from '@config/firebase';
+import {db, deleteCard, getListsByBoardId, updateCart} from '@config/firebase';
 import CheckBox from '@react-native-community/checkbox';
+import {useAppSelector} from '@store/reduxHook';
+import MoveList from './MoveList';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -26,11 +45,29 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const bottomSheetModalCardRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
   const [isDone, setIsDone] = useState(item.done);
+  const [BoardList, setBoardList] = useState<any[]>([]);
+  const [selectedList, setSelectedList] = useState<any | null>(null);
+  const [availablePositions, setAvailablePositions] = useState<number[]>([]);
+  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+
+  const currentBoard = useAppSelector(state =>
+    state.board.boards.find(b => b.boardId === item.board_id),
+  );
+
   useEffect(() => {
     setIsDone(item.done);
     setCardDescription(item.description);
     setCardTitle(item.title);
   }, [item]);
+
+  const loadGetListsByBoardId = async () => {
+    try {
+      const data = await getListsByBoardId(item.board_id);
+      setBoardList(data);
+    } catch (error) {
+      console.error('Error fetching lists for board:', error);
+    }
+  };
 
   const onDeleteBoardCard = async (item: TaskItem) => {
     try {
@@ -103,12 +140,109 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
     }
   };
 
+  const showCardModal = async () => {
+    await loadGetListsByBoardId();
+    runOnJS(() => {
+      bottomSheetModalCardRef.current?.present();
+    })();
+  };
+  const showModal = async () => {
+    runOnJS(() => {
+      bottomSheetModalRef.current?.present();
+    })();
+  };
+
+  const onSelectList = async (list: any) => {
+    setSelectedList(list);
+
+    const cardsRef = collection(db, 'lists', list.list_id, 'cards');
+    const snapshot = await getDocs(query(cardsRef, orderBy('position')));
+
+    const cardCount = snapshot.docs.length;
+
+    let positions: number[];
+
+    // If moving within same list
+    if (list.list_id === item.list_id) {
+      // Include all positions including current card's
+      positions = Array.from({length: cardCount}, (_, i) => i + 1);
+      setSelectedPosition(item.position); // Default to current
+    } else {
+      // Moving to a different list
+      positions = Array.from({length: cardCount + 1}, (_, i) => i + 1);
+      setSelectedPosition(cardCount + 1); // Default to last
+    }
+
+    setAvailablePositions(positions);
+  };
+
+  const onMoveCard = async () => {
+    if (!selectedList) return;
+
+    const targetPosition = selectedPosition ?? availablePositions.at(-1) ?? 1;
+    const oldListId = item.list_id;
+    const newListId = selectedList.list_id;
+
+    // Prevent useless move
+    if (oldListId === newListId && item.position === targetPosition) {
+      console.log('Skipping: same position and list');
+      return;
+    }
+
+    try {
+      // 1. Remove from old list
+      const oldListRef = collection(db, 'lists', oldListId, 'cards');
+      const snapshotOld = await getDocs(
+        query(oldListRef, where('position', '>', item.position)),
+      );
+
+      const batch = writeBatch(db);
+      snapshotOld.forEach(docSnap => {
+        batch.update(doc(oldListRef, docSnap.id), {
+          position: docSnap.data().position - 1,
+        });
+      });
+
+      await batch.commit();
+      await deleteDoc(doc(oldListRef, item.id));
+
+      // 2. Add to new list
+      const newListRef = collection(db, 'lists', newListId, 'cards');
+      const snapshotNew = await getDocs(
+        query(newListRef, where('position', '>=', targetPosition)),
+      );
+
+      const batch2 = writeBatch(db);
+      snapshotNew.forEach(docSnap => {
+        batch2.update(doc(newListRef, docSnap.id), {
+          position: docSnap.data().position + 1,
+        });
+      });
+
+      const newCard = {
+        ...item,
+        list_id: newListId,
+        position: targetPosition,
+        createdAt: new Date().toISOString(),
+      };
+
+      const newCardRef = doc(newListRef, item.id);
+      batch2.set(newCardRef, newCard);
+
+      await batch2.commit();
+
+      bottomSheetModalCardRef.current?.close();
+      setSelectedList(null);
+      setSelectedPosition(null);
+    } catch (err) {
+      console.error('Error moving card:', err);
+    }
+  };
+
   return (
     <>
       <AnimatedTouchable
-        onPress={() => {
-          bottomSheetModalCardRef.current?.present();
-        }}
+        onPress={showModal}
         activeOpacity={1}
         onLongPress={drag}
         disabled={isActive}
@@ -129,12 +263,23 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 flexDirection: 'row',
                 alignItems: 'center',
                 paddingTop: 5,
+                gap: 10,
               }}>
+              <CheckBox
+                value={isDone}
+                onValueChange={onCheckDone}
+                tintColors={{
+                  true: '#4CAF50',
+                  false: '#aaa',
+                }}
+                boxType="circle"
+                style={styles.checkbox}
+              />
               <Text style={{flex: 1, color: Colors.black}}>{item.title}</Text>
               <TouchableOpacity
-                onPress={() =>
-                  navigate('ListCardDetails', {cardDetails: item})
-                }>
+                onPress={() => {
+                  bottomSheetModalCardRef.current?.present();
+                }}>
                 <Icon
                   name="resize-outline"
                   iconFamily="Ionicons"
@@ -167,8 +312,7 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 {item.title}
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => bottomSheetModalRef.current?.present()}>
+            <TouchableOpacity onPress={showCardModal}>
               <Icon
                 name="resize-outline"
                 iconFamily="Ionicons"
@@ -296,6 +440,104 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
           </View>
         </BottomSheetView>
       </BottomSheetModal>
+
+      <BottomSheetModal
+        ref={bottomSheetModalCardRef}
+        index={0}
+        snapPoints={snapPoints}
+        handleComponent={null}
+        backdropComponent={renderBackdrop}
+        handleStyle={{
+          backgroundColor: DefaultTheme.colors.background,
+          borderRadius: 12,
+        }}
+        enableOverDrag={false}
+        enablePanDownToClose>
+        <BottomSheetView>
+          <FlatList
+            keyExtractor={item => item.list_id}
+            data={BoardList}
+            ListHeaderComponent={() => (
+              <View
+                style={{
+                  backgroundColor: '#fff',
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 16,
+                }}>
+                <Text style={{color: Colors.black}}>{currentBoard?.title}</Text>
+                <TouchableOpacity
+                  disabled={
+                    !selectedList ||
+                    selectedPosition === null ||
+                    (selectedList.list_id === item.list_id &&
+                      selectedPosition === item.position)
+                  }
+                  onPress={onMoveCard}>
+                  <Text
+                    style={{
+                      color:
+                        !selectedList ||
+                        selectedPosition === null ||
+                        (selectedList.list_id === item.list_id &&
+                          selectedPosition === item.position)
+                          ? Colors.textgrey
+                          : Colors.lightprimary,
+                    }}>
+                    Move
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            contentContainerStyle={{marginVertical: 20}}
+            renderItem={({item}) => (
+              <MoveList
+                item={item}
+                key={item.id}
+                isSelected={item.list_id === selectedList?.list_id}
+                onSelectList={onSelectList}
+              />
+            )}
+          />
+          {selectedList && (
+            <View style={{paddingHorizontal: 16}}>
+              <Text style={{marginBottom: 8, color: Colors.black}}>
+                Select Position
+              </Text>
+              <FlatList
+                horizontal
+                data={availablePositions}
+                keyExtractor={item => item.toString()}
+                renderItem={({item: pos}) => (
+                  <TouchableOpacity
+                    onPress={() => setSelectedPosition(pos)}
+                    style={{
+                      backgroundColor:
+                        selectedPosition === pos ? Colors.lightprimary : '#eee',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      marginRight: 8,
+                      borderRadius: 4,
+                    }}>
+                    <Text
+                      style={{
+                        color:
+                          selectedPosition === pos
+                            ? Colors.white
+                            : Colors.fontDark,
+                      }}>
+                      {pos}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+        </BottomSheetView>
+      </BottomSheetModal>
     </>
   );
 };
@@ -369,6 +611,6 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12, // visually round (Android needs help here)
+    borderRadius: 12,
   },
 });
