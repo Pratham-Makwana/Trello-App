@@ -14,6 +14,7 @@ import {DefaultTheme} from '@react-navigation/native';
 import {TextInput} from 'react-native-gesture-handler';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {deleteCard, updateCart} from '@config/firebase';
+import CheckBox from '@react-native-community/checkbox';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -22,9 +23,11 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const [cardDescription, setCardDescription] = useState(item.description);
   const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const bottomSheetModalCardRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
-
+  const [isDone, setIsDone] = useState(item.done);
   useEffect(() => {
+    setIsDone(item.done);
     setCardDescription(item.description);
     setCardTitle(item.title);
   }, [item]);
@@ -87,10 +90,25 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
       bottomSheetModalRef.current?.close();
     })();
   };
+  const onCheckDone = async (newValue: boolean) => {
+    setIsDone(newValue);
+    try {
+      const updatedCard = {
+        ...item,
+        done: newValue,
+      };
+      await updateCart(updatedCard);
+    } catch (error) {
+      console.log('Error updating card:', error);
+    }
+  };
 
   return (
     <>
       <AnimatedTouchable
+        onPress={() => {
+          bottomSheetModalCardRef.current?.present();
+        }}
         activeOpacity={1}
         onLongPress={drag}
         disabled={isActive}
@@ -130,8 +148,24 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
 
         {!item?.imageUrl && (
           <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-            <View>
-              <Text style={{color: Colors.fontDark}}>{item.title}</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+              <CheckBox
+                value={isDone}
+                onValueChange={onCheckDone}
+                tintColors={{
+                  true: '#4CAF50',
+                  false: '#aaa',
+                }}
+                boxType="circle"
+                style={styles.checkbox}
+              />
+              <Text
+                style={{
+                  color: isDone ? Colors.fontDark : Colors.black,
+                  textDecorationLine: isDone ? 'line-through' : 'none',
+                }}>
+                {item.title}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => bottomSheetModalRef.current?.present()}>
@@ -331,5 +365,10 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     color: '#B22222',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12, // visually round (Android needs help here)
   },
 });
