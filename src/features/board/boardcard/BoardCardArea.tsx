@@ -53,8 +53,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
 
   useEffect(() => {
     const unsubscribe = listenToBoardLists(board.boardId, lists => {
-      const sortedLists = [...lists].sort((a, b) => a.position - b.position);
-      setTaskList([...sortedLists, {list_id: undefined}]);
+      setTaskList([...lists, {list_id: undefined}]);
     });
 
     return () => {
@@ -86,7 +85,13 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
   };
 
   const onDeleteBoardList = async () => {
-    await deleteBoardList(selectedList!.list_id);
+    console.log('==> selectedList', selectedList);
+
+    await deleteBoardList(
+      selectedList!.list_id,
+      selectedList!.board_id,
+      selectedList!.position,
+    );
     setTaskList(taskList.filter(item => item.list_id != selectedList!.list_id));
     bottomSheetModalRef.current?.close();
   };

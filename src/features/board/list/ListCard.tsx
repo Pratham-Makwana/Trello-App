@@ -6,23 +6,13 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import React, {
-  FC,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, {FC, useEffect, useMemo, useState} from 'react';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Icon from '@components/global/Icon';
 import {
   addCardList,
-  deleteBoardList,
-  getListCard,
   listenToCardsList,
   listenToListInfo,
-  updateBoardList,
   updateCart,
   uploadToCloudinary,
 } from '@config/firebase';
@@ -30,20 +20,11 @@ import DraggableFlatList, {
   DragEndParams,
 } from 'react-native-draggable-flatlist';
 import ListItem from '@components/board/card/ListItem';
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetModalProvider,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
 import {DefaultTheme} from '@react-navigation/native';
 import {
-  Asset,
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
-import {useAppDispatch, useAppSelector} from '@store/reduxHook';
-import {setCardList} from '@store/card/cardSlice';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -62,6 +43,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
     if (!taskList?.list_id) return;
 
     const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
+      console.log('==> cards', cards);
       setTasks(cards);
     });
 
@@ -83,14 +65,20 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
     };
   }, []);
 
-  const onTaskCardDrop = (params: DragEndParams<TaskItem>) => {
+  const onTaskCardDrop = async (params: DragEndParams<TaskItem>) => {
     const newData = params.data.map((item: any, index: number) => {
       return {...item, position: index};
     });
     setTasks(newData);
-    newData.map(async item => {
-      await updateCart(item);
-    });
+    // newData.map(async item => {
+    //   await updateCart(item);
+    // });
+    try {
+      const updatePromises = newData.map(item => updateCart(item));
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.log('Error updating card positions:', err);
+    }
   };
 
   const onCardAdd = async () => {

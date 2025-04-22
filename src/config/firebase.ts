@@ -35,6 +35,7 @@ import {
   startAt,
   endAt,
   onSnapshot,
+  writeBatch,
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
@@ -460,7 +461,11 @@ export const listenToBoardLists = (
     console.log('Error in listenToBoardLists:', error);
   }
 };
-export const deleteBoardList = async (listId: string) => {
+export const deleteBoardList = async (
+  listId: string,
+  boardId: string,
+  listPosition: number,
+) => {
   try {
     const cardQuery = query(cardRef, where('list_id', '==', listId));
     const cardSnapshot = await getDocs(cardQuery);
@@ -469,6 +474,23 @@ export const deleteBoardList = async (listId: string) => {
       deleteDoc(doc(cardRef, docSnap.id)),
     );
     await Promise.all(deleteCardPromises);
+
+    const listQuery = query(
+      listRef,
+      where('board_id', '==', boardId),
+      where('position', '>', listPosition),
+    );
+
+    const listSnapshot = await getDocs(listQuery);
+    const batch = writeBatch(db);
+
+    listSnapshot.forEach(docSnap => {
+      const listRefToUpdate = doc(listRef, docSnap.id);
+      const listData = docSnap.data();
+      batch.update(listRefToUpdate, {position: listData.position - 1});
+    });
+
+    await batch.commit();
 
     const listDoc = doc(listRef, listId);
     await deleteDoc(listDoc);
@@ -566,11 +588,33 @@ export const updateCart = async (task: TaskItem) => {
   }
 };
 
-export const deleteCard = async (id: string) => {
+export const deleteCard = async (item: TaskItem) => {
   try {
-    const cardDoc = doc(cardRef, id);
+    const deletedCardPosition = item?.position;
+    console.log('==> deletedCardPosition', deletedCardPosition);
+
+    const deletedCardListId = item?.list_id;
+    console.log('==> deletedCardListId', deletedCardListId);
+
+    const q = query(
+      cardRef,
+      where('list_id', '==', deletedCardListId),
+      where('position', '>', deletedCardPosition),
+    );
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+
+    snapshot.forEach(docSnap => {
+      const cardData = docSnap.data();
+      console.log('==> cardData', cardData);
+
+      const cardRefToUpdate = doc(cardRef, docSnap.id);
+      batch.update(cardRefToUpdate, {position: cardData.position - 1});
+    });
+    await batch.commit();
+
+    const cardDoc = doc(cardRef, item?.id);
     await deleteDoc(cardDoc);
-    console.log(`Card with id ${id} deleted successfully.`);
   } catch (error) {
     console.error('Error deleting card:', error);
     throw error;
@@ -585,7 +629,6 @@ export const listenToCardsList = (
     const q = query(
       cardRef,
       where('list_id', '==', listId),
-      where('done', '==', false),
       orderBy('position'),
     );
 
@@ -594,7 +637,6 @@ export const listenToCardsList = (
         id: doc.id,
         ...doc.data(),
       })) as TaskItem[];
-      cards.sort((a, b) => a.position - b.position);
       callback(cards);
     });
 

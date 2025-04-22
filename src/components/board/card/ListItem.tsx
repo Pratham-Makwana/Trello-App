@@ -2,7 +2,7 @@ import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {RenderItemParams} from 'react-native-draggable-flatlist';
 import {Colors, TaskItem} from '@utils/Constant';
-import Animated from 'react-native-reanimated';
+import Animated, {runOnJS} from 'react-native-reanimated';
 import Icon from '@components/global/Icon';
 import {navigate} from '@utils/NavigationUtils';
 import {
@@ -13,7 +13,7 @@ import {
 import {DefaultTheme} from '@react-navigation/native';
 import {TextInput} from 'react-native-gesture-handler';
 import {RFValue} from 'react-native-responsive-fontsize';
-import {deleteBoardList, deleteCard, updateCart} from '@config/firebase';
+import {deleteCard, updateCart} from '@config/firebase';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -23,14 +23,13 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
-  console.log('==> item', item);
 
-  const onDeleteBoardCard = async () => {
-    console.log('==> called');
-
+  const onDeleteBoardCard = async (item: TaskItem) => {
     try {
-      await deleteCard(item?.id);
-      bottomSheetModalRef.current?.close();
+      await deleteCard(item);
+      runOnJS(() => {
+        bottomSheetModalRef.current?.close();
+      })();
     } catch (error) {
       console.log('Error deleting card:', error);
     }
@@ -50,15 +49,15 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   );
 
   const onUpdateCardTitle = async () => {
-    console.log('==> called');
-
     try {
       const updatedCard = {
         ...item,
         title: cardTitle,
       };
       await updateCart(updatedCard);
-      bottomSheetModalRef.current?.close();
+      runOnJS(() => {
+        bottomSheetModalRef.current?.close();
+      })();
     } catch (error) {
       console.log('Error deleting card:', error);
     }
@@ -71,18 +70,19 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
       };
 
       await updateCart(updatedCard);
-      bottomSheetModalRef.current?.close();
+      runOnJS(() => {
+        bottomSheetModalRef.current?.close();
+      })();
     } catch (error) {
       console.log('Error deleting card:', error);
     }
   };
   const onCancleModal = () => {
-    bottomSheetModalRef.current?.close();
+    runOnJS(() => {
+      bottomSheetModalRef.current?.close();
+    })();
   };
 
-  const showModal = () => {
-    bottomSheetModalRef.current?.present();
-  };
   return (
     <>
       <AnimatedTouchable
@@ -251,7 +251,7 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
 
             <TouchableOpacity
               style={styles.deleteBtn}
-              onPress={onDeleteBoardCard}>
+              onPress={() => onDeleteBoardCard(item)}>
               <Text style={styles.deleteBtnText}>Close Card</Text>
             </TouchableOpacity>
           </View>
