@@ -626,6 +626,8 @@ export const listenToCardsList = (
   callback: (cards: TaskItem[]) => void,
 ) => {
   try {
+    console.log('==> listId', listId);
+
     const q = query(
       cardRef,
       where('list_id', '==', listId),

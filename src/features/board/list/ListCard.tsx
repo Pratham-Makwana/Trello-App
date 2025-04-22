@@ -25,6 +25,8 @@ import {
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {setCardList} from '@store/card/cardSlice';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -36,7 +38,6 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
   const memoizedTasks = useMemo(() => tasks, [tasks]);
 
   useEffect(() => {

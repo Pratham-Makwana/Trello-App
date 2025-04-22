@@ -1,5 +1,5 @@
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {RenderItemParams} from 'react-native-draggable-flatlist';
 import {Colors, TaskItem} from '@utils/Constant';
 import Animated, {runOnJS} from 'react-native-reanimated';
@@ -23,6 +23,11 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
+
+  useEffect(() => {
+    setCardDescription(item.description);
+    setCardTitle(item.title);
+  }, [item]);
 
   const onDeleteBoardCard = async (item: TaskItem) => {
     try {

@@ -11,6 +11,7 @@ import CustomModal from '@components/global/CustomModal';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {updateBoardTitle} from '@store/board/boardSlice';
+import {goBack, resetAndNavigate} from '@utils/NavigationUtils';
 
 const BoardCard = () => {
   const route = useRoute();
@@ -23,6 +24,10 @@ const BoardCard = () => {
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === boardDetails.boardId),
   );
+
+  useEffect(() => {
+    if (!currentBoard) resetAndNavigate('UserBottomTab');
+  }, [currentBoard]);
 
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
@@ -51,7 +56,6 @@ const BoardCard = () => {
   const loadBoardInfo = async () => {
     setLoading(true);
     const data = await getBoardInfo(boardDetails?.boardId, user!.uid);
-
     setBoard(data);
     setLoading(false);
   };
