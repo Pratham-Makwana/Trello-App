@@ -1,33 +1,50 @@
 import messaging from '@react-native-firebase/messaging';
 
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
-
-export const requestNotificationPermission = async () => {
+export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    if (enabled) {
-      console.log('✅ iOS notification permission granted:', authStatus);
-    } else {
-      console.log('❌ iOS notification permission denied');
-    }
+    console.log(
+      enabled
+        ? '✅ iOS notification permission granted'
+        : '❌ iOS notification permission denied'
+    );
+    return enabled;
   } else if (Platform.OS === 'android') {
     const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
     );
 
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      console.log('✅ Android (13+) notification permission granted');
-    } else {
-      console.log('❌ Android (13+) notification permission denied');
-    }
+    console.log(
+      granted === PermissionsAndroid.RESULTS.GRANTED
+        ? '✅ Android (13+) notification permission granted'
+        : '❌ Android (13+) notification permission denied'
+    );
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
+
+  return false;
 };
 
-
+export const hasNotificationPermission = async () => {
+  if (Platform.OS === 'ios') {
+    const authStatus = await messaging().hasPermission();
+    return (
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL
+    );
+  } else if (Platform.OS === 'android') {
+    const result = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+    );
+    return result;
+  }
+  return false;
+};
 
 export const setupBackgroundAndForegroundHandlers = () => {
   // Foreground handler
@@ -58,4 +75,43 @@ export const setupBackgroundAndForegroundHandlers = () => {
         );
       }
     });
+};
+
+
+export const sendNotificationToOtherUser = async (
+  notificationToken: string,
+  title: string,
+  body: string,
+) => {
+  try {
+    const isPermissionGranted = await hasNotificationPermission();
+
+    if (!isPermissionGranted) {
+      Alert.alert(
+        'Permission Required',
+        'Please enable notifications to send alerts.',
+        [{text: 'OK'}],
+      );
+      return;
+    }
+    const response = await fetch(
+      'http://192.168.200.98:5000/api/notification/send-token',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notificationToken,
+          title,
+          body,
+        }),
+      },
+    );
+
+    const result = await response.json();
+    console.log('Notification result:', result);
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
 };

@@ -32,8 +32,6 @@ const BoardScreen = () => {
 
   useEffect(() => {
     const unsubscribe = listenToUserBoards(user!.uid, boards => {
-      console.log('==> boards', boards);
-      // if(boards.)
       dispatch(setBoards(boards));
     });
 

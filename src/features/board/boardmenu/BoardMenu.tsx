@@ -138,7 +138,9 @@ const BoardMenu = () => {
 
         <TouchableOpacity
           style={styles.inviteBtn}
-          onPress={() => navigate('Invite', {boardId})}>
+          onPress={() =>
+            navigate('Invite', {boardId, title: boardData?.title})
+          }>
           <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
         </TouchableOpacity>
       </View>

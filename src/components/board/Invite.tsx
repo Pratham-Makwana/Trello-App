@@ -1,7 +1,7 @@
-import {FlatList, StyleSheet, Text, View} from 'react-native';
-import React, {useState} from 'react';
+import {Alert, FlatList, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
 import CustomSearchBar from './CustomSearchBar';
-import {addUserToBoard, findUsers} from '@config/firebase';
+import {addUserToBoard, findUsers, sendBoardInvite} from '@config/firebase';
 import UserList from './UserList';
 import LottieView from 'lottie-react-native';
 import notFound from '@assets/animation/notfound.json';
@@ -9,16 +9,24 @@ import {screenWidth} from '@utils/Scaling';
 import {RouteProp, useRoute} from '@react-navigation/native';
 import {goBack} from '@utils/NavigationUtils';
 import {User} from '@utils/Constant';
+import messaging from '@react-native-firebase/messaging';
+import PushNotification from 'react-native-push-notification';
+import {
+  hasNotificationPermission,
+  sendNotificationToOtherUser,
+} from '@config/firebaseNotification';
+import {useAppSelector} from '@store/reduxHook';
 
 const Invite = () => {
-  const route = useRoute<RouteProp<{Invite: {boardId: string}}>>();
-  const {boardId} = route.params;
+  const route =
+    useRoute<RouteProp<{Invite: {boardId: string; title: string}}>>();
+  const {boardId, title} = route.params;
+  const currentUser = useAppSelector(state => state.user.currentUser);
 
   const [search, setSearch] = useState('');
 
   const [isSearch, setIsSearch] = useState(false);
   const [searchUser, setSearchUser] = useState<any>([]);
-
   const onClear = () => {
     setSearch('');
     setSearchUser([]);
@@ -28,40 +36,19 @@ const Invite = () => {
     setSearchUser(users);
   };
 
-  const sendNotificationToOtherUser = async (notificationToken: string) => {
-    try {
-      const response = await fetch(
-        'http://192.168.200.98:5000/api/notification/send-token',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            notificationToken,
-            title: '🚨 Emergency Alert',
-            body: 'Your contact might be in danger!',
-          }),
-        },
-      );
-
-      const result = await response.json();
-      console.log('Notification result:', result);
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-  };
-
   const onAddUser = async (user: User) => {
-    console.log(user);
     try {
       if (user?.notificationToken) {
-        sendNotificationToOtherUser(user.notificationToken);
+        sendNotificationToOtherUser(
+          user.notificationToken,
+          '📩 Board Invitation',
+          `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
+        );
+        await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
+        goBack();
       } else {
         console.error('Notification token is undefined');
       }
-      // await addUserToBoard(boardId, user?.uid);
-      // goBack();
     } catch (error) {
       console.log('Error On Add User', error);
     }
@@ -109,3 +96,6 @@ const Invite = () => {
 export default Invite;
 
 const styles = StyleSheet.create({});
+
+// B5OrKfLq0YUhqeL0ejJiXEnB6fM2 other user
+// sb1xCz7yEaZNp9WKm4JgFnIKTRm1 current user

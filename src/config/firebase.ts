@@ -116,7 +116,15 @@ export const createUser = async (
 
 export const LoginUser = async (email: string, password: string) => {
   try {
-    await signInWithEmailAndPassword(auth, email, password);
+    const {user} = await signInWithEmailAndPassword(auth, email, password);
+
+    const token = await messaging().getToken();
+    console.log('==> token', token);
+
+    const userDocRef = doc(userRef, user.uid);
+    await updateDoc(userDocRef, {
+      notificationToken: token,
+    });
   } catch (error) {
     console.log('==> firebase:LoginUser: ', error);
   }
@@ -690,7 +698,7 @@ export const getListsByBoardId = async (boardId: string) => {
 };
 // ================== Borad Invite ========================
 
-const sendBoardInvite = async (
+export const sendBoardInvite = async (
   boardId: string,
   userId: string,
   invitedBy: string,
@@ -701,7 +709,6 @@ const sendBoardInvite = async (
     invitedTo: userId,
     invitedBy,
     status: 'pending',
-    createdAt: new Date().toISOString(),
   });
 };
 
@@ -714,35 +721,75 @@ const sendBoardInvite = async (
 //   }
 // };
 
-const getPendingInvites = async (userId: string) => {
+// export const getPendingInvites = async (userId: string) => {
+//   const invitesQuery = query(
+//     collection(db, 'board_invitations'),
+//     where('invitedTo', '==', userId),
+//     where('status', '==', 'pending'),
+//   );
+
+//   const invitesSnapshot = await getDocs(invitesQuery);
+//   return invitesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+// };
+
+export const listenToPendingInvites = (
+  userId: string,
+  onUpdate: (invites: any[]) => void,
+) => {
   const invitesQuery = query(
     collection(db, 'board_invitations'),
     where('invitedTo', '==', userId),
     where('status', '==', 'pending'),
   );
 
-  const invitesSnapshot = await getDocs(invitesQuery);
-  return invitesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+  const unsubscribe = onSnapshot(invitesQuery, async snapshot => {
+    const invitePromises = snapshot.docs.map(async docSnap => {
+      const data = docSnap.data();
+      const inviteId = docSnap.id;
+
+      const [boardSnap, userSnap] = await Promise.all([
+        getDoc(doc(db, 'boards', data.boardId)),
+        getDoc(doc(db, 'users', data.invitedBy)),
+      ]);
+
+      const boardData = boardSnap.exists() ? boardSnap.data() : null;
+      const invitedByData = userSnap.exists() ? userSnap.data() : null;
+
+      return {
+        id: inviteId,
+        ...data,
+        boardName: boardData?.title || 'Unknown Board',
+        invitedByUserInfo: invitedByData || 'Unknown User',
+      };
+    });
+
+    const enrichedInvites = await Promise.all(invitePromises);
+    onUpdate(enrichedInvites);
+  });
+
+  return unsubscribe;
 };
 
-const acceptInvite = async (
+export const acceptInvite = async (
   inviteId: string,
   boardId: string,
   userId: string,
 ) => {
-  // 1. Update invitation status
   await updateDoc(doc(db, 'board_invitations', inviteId), {
     status: 'accepted',
   });
 
-  // 2. Add user to the board
   await addUserToBoard(boardId, userId);
+
+  await deleteDoc(doc(db, 'board_invitations', inviteId));
 };
 
-const declineInvite = async (inviteId: string) => {
+export const declineInvite = async (inviteId: string) => {
   await updateDoc(doc(db, 'board_invitations', inviteId), {
     status: 'declined',
   });
+
+  await deleteDoc(doc(db, 'board_invitations', inviteId));
 };
 
 export const uploadToCloudinary = async (image: {
