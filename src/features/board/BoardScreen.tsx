@@ -84,7 +84,7 @@ const BoardScreen = () => {
   return (
     <View style={styles.boardContainer}>
       <StatusBar backgroundColor={DefaultTheme.colors.text} />
-      {isLoading && <CustomModal loading={isLoading} />}
+      {isLoading && <CustomModal loading={isLoading} transparent={false} />}
       {!isLoading && (
         <FlatList
           contentContainerStyle={

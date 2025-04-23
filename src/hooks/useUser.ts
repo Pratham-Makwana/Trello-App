@@ -7,7 +7,7 @@ export const useUser = () => {
 
   return {
     user,
-    setUser: (userData: User) => dispatch(setUser(userData)),
+    setUser: (userData: User | any) => dispatch(setUser(userData)),
     logout: () => dispatch(logOut()),
   };
 };

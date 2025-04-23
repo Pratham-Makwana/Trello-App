@@ -11,18 +11,18 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     console.log(
       enabled
         ? '✅ iOS notification permission granted'
-        : '❌ iOS notification permission denied'
+        : '❌ iOS notification permission denied',
     );
     return enabled;
   } else if (Platform.OS === 'android') {
     const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
     );
 
     console.log(
       granted === PermissionsAndroid.RESULTS.GRANTED
         ? '✅ Android (13+) notification permission granted'
-        : '❌ Android (13+) notification permission denied'
+        : '❌ Android (13+) notification permission denied',
     );
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
@@ -77,7 +77,6 @@ export const setupBackgroundAndForegroundHandlers = () => {
     });
 };
 
-
 export const sendNotificationToOtherUser = async (
   notificationToken: string,
   title: string,
@@ -108,9 +107,6 @@ export const sendNotificationToOtherUser = async (
         }),
       },
     );
-
-    const result = await response.json();
-    console.log('Notification result:', result);
   } catch (error) {
     console.error('Error sending notification:', error);
   }

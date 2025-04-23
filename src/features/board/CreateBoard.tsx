@@ -1,5 +1,4 @@
 import {
-  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -9,7 +8,7 @@ import {
 import React, {useEffect, useState} from 'react';
 import {Colors} from '@utils/Constant';
 import Icon from '@components/global/Icon';
-import {goBack, navigate} from '@utils/NavigationUtils';
+import {navigate} from '@utils/NavigationUtils';
 import {useBoard} from '@context/BoardContext';
 import LinearGradient from 'react-native-linear-gradient';
 import {screenWidth} from '@utils/Scaling';

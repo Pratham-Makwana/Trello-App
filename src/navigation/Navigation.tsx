@@ -72,10 +72,7 @@ const MainStack = () => {
     if (boardName.length > 0 && boardName !== '') {
       createBoard(dispatch, boardName, selectedColor, selectedWorkSpace);
       setBoardName('');
-      Alert.alert('Board Created Successfully');
       goBack();
-    } else {
-      Alert.alert('Please Enter a Board Name');
     }
   };
 
@@ -166,12 +163,21 @@ const MainStack = () => {
           title: 'Board Menu',
           presentation: Platform.OS == 'ios' ? 'modal' : 'card',
           headerLeft: () =>
-            Platform.OS == 'ios' && (
+            Platform.OS == 'ios' ? (
               <CustomHeaderLeft
                 iconName="close"
                 iconSize={26}
                 iconFamily="Ionicons"
                 onPress={goBack}
+              />
+            ) : (
+              <CustomHeaderLeft
+                iconName="arrow-back"
+                iconSize={26}
+                iconFamily="Ionicons"
+                onPress={goBack}
+                btnStyle={{marginRight: 10}}
+                iconColor={Colors.black}
               />
             ),
         }}

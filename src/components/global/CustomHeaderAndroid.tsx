@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     // justifyContent: 'space-around',
   },
   icon: {
-    gap: 5,
+    gap: 10,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

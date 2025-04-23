@@ -18,7 +18,7 @@ const UserList: FC<UserListProps> = ({member, onPress, addUser = false}) => {
       <View style={styles.flexRowGap}>
         <Image
           source={{uri: member.photoURL}}
-          style={{width: 30, height: 30}}
+          style={styles.profileImage}
         />
         <View>
           <Text style={styles.text}>{member.username}</Text>
@@ -56,5 +56,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'semibold',
     color: Colors.black,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 40,
+    backgroundColor: '#ccc',
   },
 });

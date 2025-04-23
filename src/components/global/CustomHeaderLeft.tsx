@@ -30,7 +30,7 @@ const CustomHeaderLeft: FC<CustomHeaderLeftProps> = ({
   btnStyle,
 }) => {
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} style={btnStyle}>
       <Icon
         name={iconName}
         size={iconSize}

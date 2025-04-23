@@ -1,7 +1,7 @@
-import {Alert, FlatList, StyleSheet, Text, View} from 'react-native';
-import React, {useEffect, useState} from 'react';
+import {FlatList, StyleSheet, View} from 'react-native';
+import React, {useState} from 'react';
 import CustomSearchBar from './CustomSearchBar';
-import {addUserToBoard, findUsers, sendBoardInvite} from '@config/firebase';
+import {findUsers, sendBoardInvite} from '@config/firebase';
 import UserList from './UserList';
 import LottieView from 'lottie-react-native';
 import notFound from '@assets/animation/notfound.json';
@@ -9,12 +9,8 @@ import {screenWidth} from '@utils/Scaling';
 import {RouteProp, useRoute} from '@react-navigation/native';
 import {goBack} from '@utils/NavigationUtils';
 import {User} from '@utils/Constant';
-import messaging from '@react-native-firebase/messaging';
-import PushNotification from 'react-native-push-notification';
-import {
-  hasNotificationPermission,
-  sendNotificationToOtherUser,
-} from '@config/firebaseNotification';
+import Toast from 'react-native-toast-message';
+import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {useAppSelector} from '@store/reduxHook';
 
 const Invite = () => {
@@ -38,14 +34,23 @@ const Invite = () => {
 
   const onAddUser = async (user: User) => {
     try {
+      Toast.show({
+        type: 'success',
+        text1: 'Invitation Sent 🎉',
+        text2: `Your invitation to join the "${title}" board has been sent.`,
+      });
+
       if (user?.notificationToken) {
         sendNotificationToOtherUser(
           user.notificationToken,
           '📩 Board Invitation',
           `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
         );
+
         await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
-        goBack();
+        setTimeout(() => {
+          goBack();
+        }, 1000);
       } else {
         console.error('Notification token is undefined');
       }
@@ -89,6 +94,7 @@ const Invite = () => {
           style={{marginVertical: 12}}
         />
       </View>
+      <Toast />
     </>
   );
 };

@@ -822,3 +822,11 @@ export const uploadToCloudinary = async (image: {
     throw new Error('Upload failed: ' + JSON.stringify(result));
   }
 };
+
+export const updateUserProfile = async (
+  uid: string,
+  updates: {username?: string; photoURL?: string},
+) => {
+  const userDoc = doc(db, 'users', uid);
+  await updateDoc(userDoc, updates);
+};

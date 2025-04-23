@@ -44,8 +44,6 @@ const Notification = () => {
 
     const subscribe = async () => {
       unsubscribe = listenToPendingInvites(currentUser!.uid, data => {
-        console.log('Pending Invites:', data);
-
         setInvites(data);
         setLoading(false);
       });
