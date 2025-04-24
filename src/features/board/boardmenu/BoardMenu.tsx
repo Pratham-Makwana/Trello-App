@@ -13,13 +13,16 @@ import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
 import {RouteProp, useFocusEffect, useRoute} from '@react-navigation/native';
+// import {getBoardInfo} from '@config/firebase';
+
 import {
-  deleteBoard,
-  getBoardInfo,
-  getBoardMembers,
   listenToUpdateBoardInfo,
   updateBoardInfo,
-} from '@config/firebase';
+  deleteBoard,
+  getBoardMembers,
+  getBoardInfo,
+  leaveBoard,
+} from '@config/firebaseRN';
 import UserList from '@components/board/UserList';
 import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
@@ -58,6 +61,8 @@ const BoardMenu = () => {
   const loadBoardInfo = async () => {
     setIsLoading(true);
     const data = await getBoardInfo(boardId, user!.uid);
+    console.log('==> board data', data);
+
     setBoardData(data);
     setIsLoading(false);
   };
@@ -71,6 +76,12 @@ const BoardMenu = () => {
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
+    dispacth(closeBoard(boardId));
+    resetAndNavigate('UserBottomTab');
+  };
+
+  const onLeaveBoard = async () => {
+    leaveBoard(boardId, user!.uid);
     dispacth(closeBoard(boardId));
     resetAndNavigate('UserBottomTab');
   };
@@ -145,9 +156,16 @@ const BoardMenu = () => {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteBoard}>
-        <Text style={styles.deleteBtnText}>Close Board</Text>
-      </TouchableOpacity>
+      {boardData?.role === 'creator' && (
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteBoard}>
+          <Text style={styles.deleteBtnText}>Close Board</Text>
+        </TouchableOpacity>
+      )}
+      {boardData?.role === 'memeber' && (
+        <TouchableOpacity style={styles.deleteBtn} onPress={onLeaveBoard}>
+          <Text style={styles.deleteBtnText}>Leave Board</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

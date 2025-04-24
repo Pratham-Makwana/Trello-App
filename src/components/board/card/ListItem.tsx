@@ -1,6 +1,8 @@
 import {
+  Alert,
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -8,10 +10,9 @@ import {
 } from 'react-native';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {RenderItemParams} from 'react-native-draggable-flatlist';
-import {Colors, TaskItem} from '@utils/Constant';
+import {Colors, labelColors, TaskItem} from '@utils/Constant';
 import Animated, {runOnJS} from 'react-native-reanimated';
 import Icon from '@components/global/Icon';
-import {navigate} from '@utils/NavigationUtils';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -20,20 +21,19 @@ import {
 import {DefaultTheme} from '@react-navigation/native';
 import {TextInput} from 'react-native-gesture-handler';
 import {RFValue} from 'react-native-responsive-fontsize';
-import {db, deleteCard, getListsByBoardId, updateCart} from '@config/firebase';
+import {
+  updateCart,
+  deleteCard,
+  getListsByBoardId,
+  fetchAvailablePositionsForList,
+  moveCardToList,
+  List,
+} from '@config/firebaseRN';
 import CheckBox from '@react-native-community/checkbox';
 import {useAppSelector} from '@store/reduxHook';
 import MoveList from './MoveList';
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  where,
-  writeBatch,
-} from 'firebase/firestore';
+import DatePicker from 'react-native-date-picker';
+import {format} from 'date-fns';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -43,12 +43,33 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const bottomSheetModalCardRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['70%'], []);
+  const snapPoints = useMemo(() => ['80%'], []);
   const [isDone, setIsDone] = useState(item.done);
   const [BoardList, setBoardList] = useState<any[]>([]);
   const [selectedList, setSelectedList] = useState<any | null>(null);
   const [availablePositions, setAvailablePositions] = useState<number[]>([]);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+  const [date, setDate] = useState(new Date());
+  const [startDate, setStartDate] = useState<Date | ''>(
+    item?.startDate
+      ? new Date(
+          item.startDate.seconds * 1000 + item.startDate.nanoseconds / 1000000,
+        )
+      : '',
+  );
+  const [endDate, setEndDate] = useState<Date | ''>(
+    item?.endDate
+      ? new Date(
+          item?.endDate.seconds * 1000 + item?.endDate.nanoseconds / 1000000,
+        )
+      : '',
+  );
+
+  const [openStartDate, setOpenStartDate] = useState(false);
+  const [openEndDate, setOpenEndDate] = useState(false);
+  const [minimumDate, setMinimumDate] = useState(new Date());
+  const [labelTitle, setLabelTitle] = useState('');
+  const [selectedColor, setSelectedColor] = useState(labelColors[0]);
 
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === item.board_id),
@@ -152,93 +173,58 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
     })();
   };
 
-  const onSelectList = async (list: any) => {
+  const onSelectList = async (list: List) => {
     setSelectedList(list);
-
-    const cardsRef = collection(db, 'lists', list.list_id, 'cards');
-    const snapshot = await getDocs(query(cardsRef, orderBy('position')));
-
-    const cardCount = snapshot.docs.length;
-
-    let positions: number[];
-
-    // If moving within same list
-    if (list.list_id === item.list_id) {
-      // Include all positions including current card's
-      positions = Array.from({length: cardCount}, (_, i) => i + 1);
-      setSelectedPosition(item.position); // Default to current
-    } else {
-      // Moving to a different list
-      positions = Array.from({length: cardCount + 1}, (_, i) => i + 1);
-      setSelectedPosition(cardCount + 1); // Default to last
-    }
-
+    const {positions, defaultPos} = await fetchAvailablePositionsForList(
+      list,
+      item,
+    );
     setAvailablePositions(positions);
+    setSelectedPosition(defaultPos);
   };
 
   const onMoveCard = async () => {
     if (!selectedList) return;
 
-    const targetPosition = selectedPosition ?? availablePositions.at(-1) ?? 1;
-    const oldListId = item.list_id;
-    const newListId = selectedList.list_id;
-
-    // Prevent useless move
-    if (oldListId === newListId && item.position === targetPosition) {
-      console.log('Skipping: same position and list');
-      return;
-    }
-
-    try {
-      // 1. Remove from old list
-      const oldListRef = collection(db, 'lists', oldListId, 'cards');
-      const snapshotOld = await getDocs(
-        query(oldListRef, where('position', '>', item.position)),
-      );
-
-      const batch = writeBatch(db);
-      snapshotOld.forEach(docSnap => {
-        batch.update(doc(oldListRef, docSnap.id), {
-          position: docSnap.data().position - 1,
-        });
-      });
-
-      await batch.commit();
-      await deleteDoc(doc(oldListRef, item.id));
-
-      // 2. Add to new list
-      const newListRef = collection(db, 'lists', newListId, 'cards');
-      const snapshotNew = await getDocs(
-        query(newListRef, where('position', '>=', targetPosition)),
-      );
-
-      const batch2 = writeBatch(db);
-      snapshotNew.forEach(docSnap => {
-        batch2.update(doc(newListRef, docSnap.id), {
-          position: docSnap.data().position + 1,
-        });
-      });
-
-      const newCard = {
-        ...item,
-        list_id: newListId,
-        position: targetPosition,
-        createdAt: new Date().toISOString(),
-      };
-
-      const newCardRef = doc(newListRef, item.id);
-      batch2.set(newCardRef, newCard);
-
-      await batch2.commit();
-
-      bottomSheetModalCardRef.current?.close();
-      setSelectedList(null);
-      setSelectedPosition(null);
-    } catch (err) {
-      console.error('Error moving card:', err);
-    }
+    await moveCardToList({
+      item,
+      selectedList,
+      selectedPosition,
+      availablePositions,
+      onSuccess: () => {
+        bottomSheetModalCardRef.current?.close();
+        setSelectedList(null);
+        setSelectedPosition(null);
+      },
+      onError: err => console.error('Error moving card:', err),
+    });
   };
 
+  const onConfirmDate = async (date: Date, type: 'start' | 'end') => {
+    if (type === 'start') {
+      console.log('Start Date:', date);
+
+      await updateCart({
+        ...item,
+        startDate: date,
+      });
+      setStartDate(date);
+      setOpenStartDate(false);
+    } else {
+      if (startDate && date <= new Date(startDate)) {
+        setOpenEndDate(false);
+        Alert.alert('End Date must be later than Start Date.');
+        return;
+      }
+
+      await updateCart({
+        ...item,
+        endDate: date,
+      });
+      setEndDate(date);
+      setOpenEndDate(false);
+    }
+  };
   return (
     <>
       <AnimatedTouchable
@@ -400,6 +386,8 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 />
               </View>
             )}
+
+            {/* Description Input */}
             <View style={styles.inputRow}>
               <Icon
                 name="description"
@@ -432,6 +420,168 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
               </TouchableOpacity>
             </View>
 
+            {/* Label Title */}
+            <View
+              style={{
+                backgroundColor: '#fff',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                marginBottom: 16,
+              }}>
+              <Text
+                style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
+                Label Title
+              </Text>
+              <TextInput
+                value={labelTitle}
+                onChangeText={setLabelTitle}
+                style={styles.input}
+                placeholder="Label Title"
+                placeholderTextColor={Colors.placeholdertext}
+              />
+            </View>
+
+            {/* Color Picker */}
+            <View
+              style={{
+                backgroundColor: '#fff',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                marginBottom: 16,
+              }}>
+              <Text
+                style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
+                Select Color
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {labelColors.map(color => (
+                  <TouchableOpacity
+                    key={color}
+                    onPress={() => setSelectedColor(color)}
+                    style={{
+                      backgroundColor: color,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      marginRight: 8,
+                      borderWidth: selectedColor === color ? 2 : 0,
+                      borderColor:
+                        selectedColor === color ? '#000' : 'transparent',
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Date Picker for Start and End Date */}
+            <View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#fff',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  marginBottom: 16,
+                }}
+                onPress={() => setOpenStartDate(true)}>
+                <View
+                  style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 12,
+                      marginBottom: 5,
+                    }}>
+                    Start Date
+                  </Text>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 12,
+                      marginBottom: 5,
+                    }}>
+                    {!startDate
+                      ? 'Start Date Not Selected'
+                      : format(new Date(startDate), 'dd MMM yyyy')}
+                    {/* {startDate === null ||
+                    startDate === undefined ||
+                    startDate === ''
+                      ? 'Start Date Not Selected'
+                      : format(
+                          new Date(
+                            typeof startDate === 'string'
+                              ? startDate
+                              : startDate.toISOString(),
+                          ),
+                          'dd MMM yyyy',
+                        )} */}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <DatePicker
+                title="Select Start Date"
+                mode="date"
+                modal
+                minimumDate={minimumDate}
+                open={openStartDate}
+                date={startDate || date}
+                onConfirm={date => onConfirmDate(date, 'start')}
+                onCancel={() => setOpenStartDate(false)}
+              />
+
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#fff',
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  marginBottom: 16,
+                }}
+                onPress={() => setOpenEndDate(true)}>
+                <View
+                  style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 12,
+                      marginBottom: 5,
+                    }}>
+                    End Date
+                  </Text>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 12,
+                      marginBottom: 5,
+                    }}>
+                    {!endDate
+                      ? 'endDate Date Not Selected'
+                      : format(new Date(endDate), 'dd MMM yyyy')}
+                    {/* {endDate === null || endDate === undefined || endDate === ''
+                      ? 'Start Date Not Selected'
+                      : format(
+                          new Date(
+                            typeof endDate === 'string'
+                              ? endDate
+                              : endDate.toISOString(),
+                          ),
+                          'dd MMM yyyy',
+                        )} */}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <DatePicker
+                title="Select End Date"
+                mode="date"
+                modal
+                minimumDate={minimumDate}
+                open={openEndDate}
+                date={endDate || date}
+                onConfirm={date => onConfirmDate(date, 'end')}
+                onCancel={() => setOpenEndDate(false)}
+              />
+            </View>
+
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => onDeleteBoardCard(item)}>
@@ -458,17 +608,8 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
             keyExtractor={item => item.list_id}
             data={BoardList}
             ListHeaderComponent={() => (
-              <View
-                style={{
-                  backgroundColor: '#fff',
-                  paddingVertical: 8,
-                  paddingHorizontal: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 16,
-                }}>
-                <Text style={{color: Colors.black}}>{currentBoard?.title}</Text>
+              <View style={styles.headerContainer}>
+                <Text style={styles.boardTitle}>{currentBoard?.title}</Text>
                 <TouchableOpacity
                   disabled={
                     !selectedList ||
@@ -476,17 +617,24 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                     (selectedList.list_id === item.list_id &&
                       selectedPosition === item.position)
                   }
-                  onPress={onMoveCard}>
+                  onPress={onMoveCard}
+                  style={[
+                    styles.moveButton,
+                    (!selectedList ||
+                      selectedPosition === null ||
+                      (selectedList.list_id === item.list_id &&
+                        selectedPosition === item.position)) &&
+                      styles.moveButtonDisabled,
+                  ]}>
                   <Text
-                    style={{
-                      color:
-                        !selectedList ||
+                    style={[
+                      styles.moveButtonText,
+                      (!selectedList ||
                         selectedPosition === null ||
                         (selectedList.list_id === item.list_id &&
-                          selectedPosition === item.position)
-                          ? Colors.textgrey
-                          : Colors.lightprimary,
-                    }}>
+                          selectedPosition === item.position)) &&
+                        styles.moveButtonTextDisabled,
+                    ]}>
                     Move
                   </Text>
                 </TouchableOpacity>
@@ -503,10 +651,8 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
             )}
           />
           {selectedList && (
-            <View style={{paddingHorizontal: 16}}>
-              <Text style={{marginBottom: 8, color: Colors.black}}>
-                Select Position
-              </Text>
+            <View style={styles.positionContainer}>
+              <Text style={styles.positionLabel}>Select Position</Text>
               <FlatList
                 horizontal
                 data={availablePositions}
@@ -514,21 +660,15 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 renderItem={({item: pos}) => (
                   <TouchableOpacity
                     onPress={() => setSelectedPosition(pos)}
-                    style={{
-                      backgroundColor:
-                        selectedPosition === pos ? Colors.lightprimary : '#eee',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      marginRight: 8,
-                      borderRadius: 4,
-                    }}>
+                    style={[
+                      styles.positionButton,
+                      selectedPosition === pos && styles.positionButtonSelected,
+                    ]}>
                     <Text
-                      style={{
-                        color:
-                          selectedPosition === pos
-                            ? Colors.white
-                            : Colors.fontDark,
-                      }}>
+                      style={[
+                        styles.positionText,
+                        selectedPosition === pos && styles.positionTextSelected,
+                      ]}>
                       {pos}
                     </Text>
                   </TouchableOpacity>
@@ -612,5 +752,65 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
+  },
+
+  headerContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderColor: '#eee',
+  },
+  boardTitle: {
+    color: '#000',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  moveButton: {
+    backgroundColor: Colors.lightprimary,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+  moveButtonDisabled: {
+    backgroundColor: '#E0E0E0',
+  },
+  moveButtonText: {
+    color: Colors.white,
+    fontWeight: '500',
+  },
+  moveButtonTextDisabled: {
+    color: Colors.textgrey,
+  },
+  positionContainer: {
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  positionLabel: {
+    marginBottom: 8,
+    color: Colors.black,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  positionButton: {
+    backgroundColor: '#eee',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 6,
+  },
+  positionButtonSelected: {
+    backgroundColor: Colors.lightprimary,
+  },
+  positionText: {
+    color: Colors.fontDark,
+  },
+  positionTextSelected: {
+    color: Colors.white,
+    fontWeight: '600',
   },
 });

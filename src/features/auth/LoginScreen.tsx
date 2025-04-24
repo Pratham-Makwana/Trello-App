@@ -15,8 +15,11 @@ import {Colors, Fonts} from '@utils/Constant';
 import CustomButton from '@components/ui/CustomButton';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {navigate} from '@utils/NavigationUtils';
-import {LoginUser} from '@config/firebase';
+// import {LoginUser} from '@config/firebase';
 import {validateForm} from '@utils/validation';
+import Toast from 'react-native-toast-message';
+import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
+import {loginUser} from '@config/firebaseRN';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
@@ -31,18 +34,23 @@ const LoginScreen = () => {
   });
 
   const handleLogin = async () => {
-    const validationErrors = validateForm(form, false);
+    // const validationErrors = validateForm(form, false);
 
-    if (Object.values(validationErrors).some(error => error !== '')) {
-      setErrors(validationErrors);
-      return;
-    }
+    // if (Object.values(validationErrors).some(error => error !== '')) {
+    //   setErrors(validationErrors);
+    //   return;
+    // }
 
     try {
       setSubmitting(true);
-      await LoginUser(form.email, form.password);
-    } catch (e) {
-      console.log('==> LoginScreen:handleLogin: ', e);
+      await loginUser(form.email, form.password);
+    } catch (error: any) {
+      const message = firebaseAuthErrorMessage(error.code);
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: message,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -70,9 +78,9 @@ const LoginScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="email-address"
           />
-          {errors.emailError && (
+          {/* {errors.emailError && (
             <Text style={styles.errorText}>{errors.emailError}</Text>
-          )}
+          )} */}
           <FormField
             title="Password"
             value={form.password}
@@ -80,9 +88,9 @@ const LoginScreen = () => {
             handleChangeText={(e: string) => setForm({...form, password: e})}
             otherStyles={{marginTop: 28}}
           />
-          {errors.passwordError && (
+          {/* {errors.passwordError && (
             <Text style={styles.errorText}>{errors.passwordError}</Text>
-          )}
+          )} */}
           <CustomButton
             title="Log In"
             handlePress={handleLogin}
@@ -99,6 +107,8 @@ const LoginScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      <Toast />
     </SafeAreaView>
   );
 };

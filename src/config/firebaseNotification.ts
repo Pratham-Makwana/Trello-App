@@ -1,6 +1,8 @@
 import messaging from '@react-native-firebase/messaging';
+import {navigate} from '@utils/NavigationUtils';
 
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
+import Toast from 'react-native-toast-message';
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
@@ -49,6 +51,13 @@ export const hasNotificationPermission = async () => {
 export const setupBackgroundAndForegroundHandlers = () => {
   // Foreground handler
   messaging().onMessage(async remoteMessage => {
+    if (remoteMessage?.notification?.title) {
+      Toast.show({
+        type: 'info',
+        text1: remoteMessage.notification.title,
+        text2: remoteMessage.notification.body,
+      });
+    }
     console.log('Foreground message:', remoteMessage);
     // Show in-app notification here if needed
   });
@@ -59,6 +68,12 @@ export const setupBackgroundAndForegroundHandlers = () => {
   });
 
   messaging().onNotificationOpenedApp(remoteMessage => {
+    const screen = remoteMessage?.data?.screen;
+    console.log('screen', screen);
+
+    if (typeof screen === 'string') {
+      navigate(screen);
+    }
     console.log(
       'Notification caused app to open from background:',
       remoteMessage.notification,
@@ -69,6 +84,14 @@ export const setupBackgroundAndForegroundHandlers = () => {
     .getInitialNotification()
     .then(remoteMessage => {
       if (remoteMessage) {
+        const screen = remoteMessage?.data?.screen;
+        if (typeof screen === 'string') {
+          console.log('called navigate');
+
+          navigate('UserBottomTab', {
+            screen,
+          });
+        }
         console.log(
           'App opened from quit state by notification:',
           remoteMessage.notification,
@@ -81,7 +104,10 @@ export const sendNotificationToOtherUser = async (
   notificationToken: string,
   title: string,
   body: string,
+  screen?: string,
 ) => {
+  console.log('screen :', screen);
+
   try {
     const isPermissionGranted = await hasNotificationPermission();
 
@@ -104,6 +130,7 @@ export const sendNotificationToOtherUser = async (
           notificationToken,
           title,
           body,
+          screen,
         }),
       },
     );

@@ -10,19 +10,20 @@ import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
 import BoardCard from '@features/board/boardcard/BoardCard';
 import BoardMenu from '@features/board/boardmenu/BoardMenu';
-import {auth, createBoard} from '@config/firebase';
+// import {createBoard} from '@config/firebase';
 import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
 import {goBack, navigationRef} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
-import {Alert, Platform, StyleSheet} from 'react-native';
+import {Platform, StyleSheet} from 'react-native';
 import {useEffect, useState} from 'react';
-import {onAuthStateChanged} from 'firebase/auth';
+import auth, {onAuthStateChanged} from '@react-native-firebase/auth';
 import Invite from '@components/board/Invite';
 import {useAppDispatch} from '@store/reduxHook';
 import {useUser} from '@hooks/useUser';
+import {createBoard} from '@config/firebaseRN';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,22 +33,22 @@ const Navigation = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user) {
-        const serializedUser = {
-          uid: user.uid,
-          username: user.displayName || null,
-          email: user.email || null,
-          photoURL: user.photoURL || null,
-        };
-        console.log('==> user', serializedUser);
-
-        setUser(serializedUser);
-        setInitializing(false);
-      } else {
-        console.log('==> user', user);
-        setInitializing(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth(), async user => {
+      setTimeout(() => {
+        if (user) {
+          const serializedUser = {
+            uid: user?.uid,
+            username: user?.displayName || null,
+            email: user?.email || null,
+            photoURL: user?.photoURL || null,
+          };
+          setUser(serializedUser);
+          setInitializing(false);
+        } else {
+          console.log('==> user', user);
+          setInitializing(false);
+        }
+      }, 300);
     });
     return () => unsubscribe();
   }, []);

@@ -1,7 +1,6 @@
 import {FlatList, StyleSheet, View} from 'react-native';
 import React, {useState} from 'react';
 import CustomSearchBar from './CustomSearchBar';
-import {findUsers, sendBoardInvite} from '@config/firebase';
 import UserList from './UserList';
 import LottieView from 'lottie-react-native';
 import notFound from '@assets/animation/notfound.json';
@@ -12,6 +11,7 @@ import {User} from '@utils/Constant';
 import Toast from 'react-native-toast-message';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {useAppSelector} from '@store/reduxHook';
+import {findUsers, sendBoardInvite} from '@config/firebaseRN';
 
 const Invite = () => {
   const route =
@@ -28,7 +28,7 @@ const Invite = () => {
     setSearchUser([]);
   };
   const onUserSearch = async () => {
-    const users = await findUsers(search);
+    const users = await findUsers(search.trim());
     setSearchUser(users);
   };
 
@@ -45,6 +45,7 @@ const Invite = () => {
           user.notificationToken,
           '📩 Board Invitation',
           `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
+          'notification',
         );
 
         await sendBoardInvite(boardId, user?.uid, currentUser!.uid);

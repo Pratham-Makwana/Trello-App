@@ -52,17 +52,13 @@ export enum VisibilityType {
   Public = 'public',
 }
 
-// export interface Board {
-//   id: string;
-//   boardId: string;
-//   createdBy: string;
-//   title: string;
-//   created_at: any;
-//   background: string[];
-//   last_edit: any;
-//   workspace: string;
-//   userInfo?: any;
-// }
+export const labelColors = [
+  '#FF5733',
+  '#33FF57',
+  '#3357FF',
+  '#F5A623',
+  '#8E44AD',
+];
 
 export interface Board {
   boardId: string;
@@ -108,6 +104,9 @@ export interface TaskItem {
   board_id: string;
   list_id: string;
   createdAt: any;
+
+  startDate: any;
+  endDate: any;
 }
 
 export interface BoardInvite {

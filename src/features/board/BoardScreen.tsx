@@ -9,12 +9,9 @@ import {
 } from 'react-native';
 import React, {useCallback, useEffect, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
-import {
-  DefaultTheme,
-  useFocusEffect,
-  useIsFocused,
-} from '@react-navigation/native';
-import {getBoards, listenToUserBoards} from '@config/firebase';
+import {DefaultTheme} from '@react-navigation/native';
+// import {listenToUserBoards} from '@config/firebase';
+
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
 import Icon from '@components/global/Icon';
@@ -22,11 +19,13 @@ import CustomModal from '@components/global/CustomModal';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {setBoards} from '@store/board/boardSlice';
+import auth from '@react-native-firebase/auth';
+import { listenToUserBoards } from '@config/firebaseRN';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const {user} = useUser();
+  const {user, setUser} = useUser();
   const boards = useAppSelector(state => state.board.boards);
   const dispatch = useAppDispatch();
 
@@ -38,16 +37,20 @@ const BoardScreen = () => {
     return () => unsubscribe();
   }, []);
 
-  // const fetchBoards = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     const allBoard = await getBoards(user!.uid);
-  //     dispatch(setBoards(allBoard));
-  //     setIsLoading(false);
-  //   } catch (error) {
-  //     console.error('Error fetching boards:', error);
-  //   }
-  // };
+  useEffect(() => {
+    const init = async () => {
+      await auth().currentUser?.reload();
+      const user = auth().currentUser;
+      console.log('==> user', user);
+      setUser({
+        uid: user?.uid,
+        username: user?.displayName || null,
+        email: user?.email || null,
+        photoURL: user?.photoURL || null,
+      });
+    };
+    init();
+  }, []);
 
   const ListItem = ({item}: {item: Board}) => {
     const gradientColors =

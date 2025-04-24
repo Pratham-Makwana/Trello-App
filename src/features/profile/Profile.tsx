@@ -10,13 +10,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useUser} from '@hooks/useUser';
-import {screenWidth} from '@utils/Scaling';
-import {
-  auth,
-  SignOut,
-  updateUserProfile,
-  uploadToCloudinary,
-} from '@config/firebase';
+import // auth,
+// updateUserProfile,
+//  uploadToCloudinary
+'@config/firebase';
+import auth from '@react-native-firebase/auth';
 import Icon from '@components/global/Icon';
 import {
   BottomSheetBackdrop,
@@ -32,16 +30,26 @@ import {
 } from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
 import {updateProfile} from 'firebase/auth';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {
+  signOut,
+  updateUserProfile,
+  uploadToCloudinary,
+} from '@config/firebaseRN';
 const Profile = () => {
   const {user: currentUser, logout, setUser} = useUser();
-
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
   const [isUploading, setIsUploading] = useState(false);
 
   const handleCloseAccount = async () => {
     try {
-      await SignOut();
+      const googleUser = await GoogleSignin.getCurrentUser();
+      if (googleUser) {
+        await GoogleSignin.revokeAccess();
+        await GoogleSignin.signOut();
+      }
+      await signOut();
       logout();
     } catch (error) {
       console.log('Error closing account:', error);
@@ -95,7 +103,10 @@ const Profile = () => {
 
               await updateUserProfile(currentUser!.uid, {photoURL: imageUrl});
 
-              await updateProfile(auth.currentUser!, {
+              // await updateProfile(auth.currentUser!, {
+              //   photoURL: imageUrl,
+              // });
+              await auth().currentUser?.updateProfile({
                 photoURL: imageUrl,
               });
               const updatedUser = {

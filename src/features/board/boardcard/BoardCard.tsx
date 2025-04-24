@@ -4,7 +4,7 @@ import {useRoute} from '@react-navigation/native';
 import {Board} from '@utils/Constant';
 import CustomHeaderIOS from '@components/global/CustomHeaderIOS';
 import CustomHeaderAndroid from '@components/global/CustomHeaderAndroid';
-import {getBoardInfo, listenToUpdateBoardInfo} from '@config/firebase';
+// import {getBoardInfo, listenToUpdateBoardInfo} from '@config/firebase';
 import LinearGradient from 'react-native-linear-gradient';
 import BoardCardArea from './BoardCardArea';
 import CustomModal from '@components/global/CustomModal';
@@ -12,6 +12,7 @@ import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {updateBoardTitle} from '@store/board/boardSlice';
 import {goBack, resetAndNavigate} from '@utils/NavigationUtils';
+import {getBoardInfo, listenToUpdateBoardInfo} from '@config/firebaseRN';
 
 const BoardCard = () => {
   const route = useRoute();

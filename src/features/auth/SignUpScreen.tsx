@@ -15,8 +15,11 @@ import {navigate} from '@utils/NavigationUtils';
 import {RFValue} from 'react-native-responsive-fontsize';
 import FormField from '@components/ui/FormField';
 import CustomText from '@components/ui/CustomText';
-import {createUser} from '@config/firebase';
+// import {createUser} from '@config/firebase';
 import {validateForm} from '@utils/validation';
+import Toast from 'react-native-toast-message';
+import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
+import { createUser } from '@config/firebaseRN';
 
 const SignupScreen = () => {
   const [form, setForm] = useState({
@@ -44,8 +47,13 @@ const SignupScreen = () => {
       setSubmitting(true);
       await createUser(form.username, form.email, form.password);
       setSubmitting(false);
-    } catch (e) {
-      console.log('==> SignupScreen:handleSignup: ', e);
+    } catch (error: any) {
+      const message = firebaseAuthErrorMessage(error.code);
+      Toast.show({
+        type: 'error',
+        text1: 'Login Failed',
+        text2: message,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +121,7 @@ const SignupScreen = () => {
           </View>
         </View>
       </ScrollView>
+      <Toast />
     </SafeAreaView>
   );
 };

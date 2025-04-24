@@ -9,6 +9,10 @@ import {
   GoogleSignin,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import auth from '@react-native-firebase/auth';
+import {doc, setDoc} from 'firebase/firestore';
+import {userRef} from '@config/firebase';
+import messaging from '@react-native-firebase/messaging';
 
 const LOGIN_OPTION = [
   {
@@ -29,25 +33,53 @@ const LOGIN_OPTION = [
   },
 ];
 
-const AuthModal: FC<{authType: ModalType | null}> = ({authType}) => {
-
-
+const AuthModal: FC<{
+  authType: ModalType | null;
+  onPress: (type: ModalType) => void;
+}> = ({authType, onPress}) => {
   const handleGoogleLogin = async () => {
     try {
-      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+
       const userInfo = await GoogleSignin.signIn();
       console.log('userinfo', userInfo);
-    } catch (error) {
-      if (typeof error === 'object' && error !== null && 'code' in error) {
-        if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-          console.log(error);
-        } else if (error.code === statusCodes.IN_PROGRESS) {
-          console.log(error);
-        } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-          console.log(error);
-        } else {
-          console.log('An unknown error occurred:', error);
-        }
+
+      const googleCredential = auth.GoogleAuthProvider.credential(
+        userInfo.idToken,
+      );
+
+      console.log('googleCredential: ', googleCredential);
+
+      const userCredential = await auth().signInWithCredential(
+        googleCredential,
+      );
+      const user = userCredential.user;
+
+      console.log('User signed in successfully:', user);
+
+      const fcmToken = await messaging().getToken();
+      console.log('FCM Token:', fcmToken);
+
+      // Prepare user data for Firestore
+      const userData = {
+        uid: user.uid,
+        username: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        notificationToken: fcmToken,
+      };
+      console.log('userData', userData);
+
+      // Store user data in Firestore
+      await setDoc(doc(userRef, user.uid), userData);
+      console.log('User data stored in Firestore successfully.');
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('Sign in was cancelled');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log('Sign in is in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        console.log('Play Services not available');
       } else {
         console.log('An unexpected error occurred:', error);
       }
@@ -57,11 +89,9 @@ const AuthModal: FC<{authType: ModalType | null}> = ({authType}) => {
     <BottomSheetView style={styles.modalContainer}>
       <TouchableOpacity
         style={styles.modalBtn}
-        onPress={
-          authType == ModalType.Login
-            ? () => navigate('LoginScreen')
-            : () => navigate('SignUpScreen')
-        }>
+        onPress={() => {
+          if (authType) onPress(authType);
+        }}>
         <Icon
           name="mail-outline"
           size={20}

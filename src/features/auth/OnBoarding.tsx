@@ -58,13 +58,31 @@ const OnBoarding = () => {
     [],
   );
 
+  const onHandlePress = (type: ModalType) => {
+    if (type === ModalType.Login) {
+      navigate('LoginScreen');
+    } else if (type === ModalType.SignUp) {
+      navigate('SignUpScreen');
+    }
+
+    bottomSheetModalRef.current?.close();
+  };
+  
   useEffect(() => {
-    GoogleSignin.configure({
-      webClientId: webClientId,
-    });
+    async function init() {
+      const has = await GoogleSignin.hasPlayServices();
+
+      if (has) {
+        GoogleSignin.configure({
+          offlineAccess: true,
+          webClientId: webClientId,
+        });
+      }
+    }
+    init();
   }, []);
   return (
-    <BottomSheetModalProvider>
+    <>
       <View style={[styles.container, paddingStyle]}>
         <StatusBar
           backgroundColor={isDark ? Colors.darkprimary : Colors.lightprimary}
@@ -123,9 +141,9 @@ const OnBoarding = () => {
         backdropComponent={renderBackdrop}
         enableOverDrag={false}
         enablePanDownToClose>
-        <AuthModal authType={authType} />
+        <AuthModal authType={authType} onPress={onHandlePress} />
       </BottomSheetModal>
-    </BottomSheetModalProvider>
+    </>
   );
 };
 

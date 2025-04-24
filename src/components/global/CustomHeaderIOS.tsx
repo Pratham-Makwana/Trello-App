@@ -42,22 +42,6 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board}) => {
         </View>
         {/* Icons  */}
         <View style={[styles.rowIconContainer]}>
-          <TouchableOpacity activeOpacity={0.8}>
-            <Icon
-              name="filter-circle-outline"
-              iconFamily="Ionicons"
-              size={26}
-              color={Colors.white}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8}>
-            <Icon
-              name="notifications-outline"
-              iconFamily="Ionicons"
-              size={26}
-              color={Colors.white}
-            />
-          </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => navigate('BoardMenu', {boardId: board?.boardId})}>

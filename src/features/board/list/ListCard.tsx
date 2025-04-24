@@ -9,13 +9,12 @@ import {
 import React, {FC, useEffect, useMemo, useState} from 'react';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Icon from '@components/global/Icon';
-import {
-  addCardList,
-  listenToCardsList,
-  listenToListInfo,
-  updateCart,
-  uploadToCloudinary,
-} from '@config/firebase';
+import // addCardList,
+// listenToCardsList,
+// listenToListInfo,
+// updateCart,
+// uploadToCloudinary,
+'@config/firebase';
 import DraggableFlatList, {
   DragEndParams,
 } from 'react-native-draggable-flatlist';
@@ -25,8 +24,13 @@ import {
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
-import {useAppDispatch, useAppSelector} from '@store/reduxHook';
-import {setCardList} from '@store/card/cardSlice';
+import {
+  listenToListInfo,
+  addCardList,
+  updateCart,
+  listenToCardsList,
+  uploadToCloudinary,
+} from '@config/firebaseRN';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -71,9 +75,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
       return {...item, position: index + 1};
     });
     setTasks(newData);
-    // newData.map(async item => {
-    //   await updateCart(item);
-    // });
+
     try {
       const updatePromises = newData.map(item => updateCart(item));
       await Promise.all(updatePromises);

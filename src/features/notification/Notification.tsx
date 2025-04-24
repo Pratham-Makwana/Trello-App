@@ -9,13 +9,17 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useAppSelector} from '@store/reduxHook';
-import {
-  acceptInvite,
-  declineInvite,
-  listenToPendingInvites,
-} from '@config/firebase';
+import // acceptInvite,
+// declineInvite,
+// listenToPendingInvites,
+'@config/firebase';
 import {Colors} from '@utils/Constant';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
+import {
+  listenToPendingInvites,
+  acceptInvite,
+  declineInvite,
+} from '@config/firebaseRN';
 
 export type Invite = {
   id: string;

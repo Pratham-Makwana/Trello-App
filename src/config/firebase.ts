@@ -31,7 +31,6 @@ import {
   orderBy,
   updateDoc,
   deleteDoc,
-  Timestamp,
   startAt,
   endAt,
   onSnapshot,
@@ -39,7 +38,6 @@ import {
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
-import {ref, uploadBytes, getDownloadURL, getStorage} from 'firebase/storage';
 import {addBoard} from '@store/board/boardSlice';
 
 // Your web app's Firebase configuration
@@ -72,7 +70,6 @@ const firebaseApp = initializeApp(firebaseConfig);
 
 // Initialize Firestore Database
 const db = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
 
 // Export references
 export {auth, db};
@@ -90,44 +87,34 @@ export const createUser = async (
   email: string,
   password: string,
 ) => {
-  try {
-    const {user} = await createUserWithEmailAndPassword(auth, email, password);
+  const {user} = await createUserWithEmailAndPassword(auth, email, password);
 
-    await updateProfile(user, {
-      displayName: username,
-      photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
-    });
+  await updateProfile(user, {
+    displayName: username,
+    photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
+  });
 
-    const token = await messaging().getToken();
-    // console.log(user.displayName);
-    // Set user data with uid as the document ID
-    const userDocRef = doc(userRef, user.uid); // sets doc ID to uid
-    await setDoc(userDocRef, {
-      uid: user.uid,
-      username: user.displayName,
-      email: user.email,
-      photoURL: user.photoURL,
-      notificationToken: token,
-    });
-  } catch (error) {
-    console.log('==> firebase:createUser: ', error);
-  }
+  const token = await messaging().getToken();
+  const userDocRef = doc(userRef, user.uid);
+  await setDoc(userDocRef, {
+    uid: user.uid,
+    username: user.displayName,
+    email: user.email,
+    photoURL: user.photoURL,
+    notificationToken: token,
+  });
 };
 
 export const LoginUser = async (email: string, password: string) => {
-  try {
-    const {user} = await signInWithEmailAndPassword(auth, email, password);
+  const {user} = await signInWithEmailAndPassword(auth, email, password);
 
-    const token = await messaging().getToken();
-    console.log('==> token', token);
+  const token = await messaging().getToken();
+  console.log('==> token', token);
 
-    const userDocRef = doc(userRef, user.uid);
-    await updateDoc(userDocRef, {
-      notificationToken: token,
-    });
-  } catch (error) {
-    console.log('==> firebase:LoginUser: ', error);
-  }
+  const userDocRef = doc(userRef, user.uid);
+  await updateDoc(userDocRef, {
+    notificationToken: token,
+  });
 };
 
 export const SignOut = async () => {
@@ -169,45 +156,6 @@ export const createBoard = async (
     // console.log('Board and user_board entry created');
   } catch (e) {
     console.error('Error adding document: ', e);
-  }
-};
-
-export const getBoards = async (userId: string) => {
-  try {
-    const q = query(userBoardRef, where('userId', '==', userId));
-    const joinDocs = await getDocs(q);
-
-    // console.log('==> joinDocs', joinDocs);
-    const boardIds = joinDocs.docs.map(doc => doc.data().boardId);
-
-    const boardDocs = await Promise.all(
-      boardIds.map(boardId => getDoc(doc(boardRef, boardId))),
-    );
-
-    const boardList: Board[] = boardDocs
-      .filter(doc => doc.exists())
-      .map(doc => {
-        const data = doc.data();
-
-        const createdAt = data.created_at ?? new Date().toISOString();
-        const lastEdit = data.last_edit ?? null;
-
-        return {
-          boardId: data.boardId,
-          createdBy: data.createdBy,
-          title: data.title,
-          created_at: createdAt,
-          last_edit: lastEdit,
-          background: Array.isArray(data.background) ? data.background : [],
-          workspace: data.workspace,
-          userInfo: data.userInfo,
-        } as Board;
-      });
-
-    return boardList;
-  } catch (error) {
-    console.log('==> firebase:getAllBoards:', error);
-    return [];
   }
 };
 
@@ -459,45 +407,6 @@ export const listenToBoardLists = (
     console.log('Error in listenToBoardLists:', error);
   }
 };
-
-// export const deleteBoardList = async (
-//   listId: string,
-//   boardId: string,
-//   listPosition: number,
-// ) => {
-//   try {
-//     const cardQuery = query(cardRef, where('list_id', '==', listId));
-//     const cardSnapshot = await getDocs(cardQuery);
-
-//     const deleteCardPromises = cardSnapshot.docs.map(docSnap =>
-//       deleteDoc(doc(cardRef, docSnap.id)),
-//     );
-//     await Promise.all(deleteCardPromises);
-
-//     const listQuery = query(
-//       listRef,
-//       where('board_id', '==', boardId),
-//       where('position', '>', listPosition),
-//     );
-
-//     const listSnapshot = await getDocs(listQuery);
-//     const batch = writeBatch(db);
-
-//     listSnapshot.forEach(docSnap => {
-//       const listRefToUpdate = doc(listRef, docSnap.id);
-//       const listData = docSnap.data();
-//       batch.update(listRefToUpdate, {position: listData.position - 1});
-//     });
-
-//     await batch.commit();
-
-//     const listDoc = doc(listRef, listId);
-//     await deleteDoc(listDoc);
-//     console.log('==> deleting Board List & card successfully');
-//   } catch (error) {
-//     console.log('Error deleting Board List', error);
-//   }
-// };
 
 export const deleteBoardList = async (
   listId: string,

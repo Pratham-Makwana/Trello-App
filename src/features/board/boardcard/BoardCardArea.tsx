@@ -16,13 +16,19 @@ import Carousel, {
 import {screenHeight, screenWidth} from '@utils/Scaling';
 import ListTitleInput from '../list/ListTitleInput';
 import {useSharedValue} from 'react-native-reanimated';
+import // addBoardList,
+// deleteBoardList,
+// getBoardLists,
+// listenToBoardLists,
+// updateBoardList,
+'@config/firebase';
 import {
-  addBoardList,
   deleteBoardList,
   getBoardLists,
-  listenToBoardLists,
+  addBoardList,
   updateBoardList,
-} from '@config/firebase';
+  listenToBoardLists,
+} from '@config/firebaseRN';
 import CustomText from '@components/ui/CustomText';
 import ListCard from '../list/ListCard';
 import {
@@ -85,8 +91,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
   };
 
   const onDeleteBoardList = async () => {
-    console.log('==> selectedList', selectedList);
-
     await deleteBoardList(
       selectedList!.list_id,
       selectedList!.board_id,
