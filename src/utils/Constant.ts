@@ -54,12 +54,12 @@ export enum VisibilityType {
 
 export const labelColors = [
   '#FF5733',
-  '#33FF57',
   '#3357FF',
-  '#F5A623',
   '#8E44AD',
+  '#C0392B',
+  '#2C3E50',
+  '#27AE60',
 ];
-
 export interface Board {
   boardId: string;
   createdBy: string;
@@ -72,6 +72,7 @@ export interface Board {
     email: any;
     username: any;
   };
+  role?: string;
 }
 
 export interface TaskList {
@@ -107,6 +108,10 @@ export interface TaskItem {
 
   startDate: any;
   endDate: any;
+  label: {
+    title: string;
+    color: string;
+  };
 }
 
 export interface BoardInvite {

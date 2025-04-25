@@ -27,7 +27,7 @@ import UserList from '@components/board/UserList';
 import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch} from '@store/reduxHook';
-import {closeBoard, updateBoardTitle} from '@store/board/boardSlice';
+import {closeBoard} from '@store/board/boardSlice';
 
 const BoardMenu = () => {
   const route =
@@ -35,7 +35,6 @@ const BoardMenu = () => {
   const {boardId, board} = route.params;
   const [boardData, setBoardData] = useState<Board | any>();
   const [member, setMember] = useState<User | any>();
-  const dispacth = useAppDispatch();
   const {user} = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useAppDispatch();
@@ -61,8 +60,6 @@ const BoardMenu = () => {
   const loadBoardInfo = async () => {
     setIsLoading(true);
     const data = await getBoardInfo(boardId, user!.uid);
-    console.log('==> board data', data);
-
     setBoardData(data);
     setIsLoading(false);
   };
@@ -76,13 +73,13 @@ const BoardMenu = () => {
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
-    dispacth(closeBoard(boardId));
+    dispatch(closeBoard(boardId));
     resetAndNavigate('UserBottomTab');
   };
 
   const onLeaveBoard = async () => {
     leaveBoard(boardId, user!.uid);
-    dispacth(closeBoard(boardId));
+    dispatch(closeBoard(boardId));
     resetAndNavigate('UserBottomTab');
   };
 
@@ -161,7 +158,7 @@ const BoardMenu = () => {
           <Text style={styles.deleteBtnText}>Close Board</Text>
         </TouchableOpacity>
       )}
-      {boardData?.role === 'memeber' && (
+      {boardData?.role === 'member' && (
         <TouchableOpacity style={styles.deleteBtn} onPress={onLeaveBoard}>
           <Text style={styles.deleteBtnText}>Leave Board</Text>
         </TouchableOpacity>

@@ -27,17 +27,28 @@ const boardSlice = createSlice({
         b => b.boardId === action.payload.boardId,
       );
       if (board) {
-        (board.title = action.payload.title),
-          (board.last_edit = new Date().toISOString());
+        return {
+          ...state,
+          boards: state.boards.map(b =>
+            b.boardId === action.payload.boardId
+              ? {
+                  ...b,
+                  title: action.payload.title,
+                  last_edit: new Date().toISOString(),
+                }
+              : b,
+          ),
+        };
       }
     },
-    updateBoardUserInfo: (
-      state,
-      action: PayloadAction<{ boardId: string; userInfo: { username: string; email: string } }>
-    ) => {
-      const board = state.boards.find(b => b.boardId === action.payload.boardId);
-      if (board) {
-        board.userInfo = action.payload.userInfo;
+    updateBoard: (state, action) => {
+      const {boardId} = action.payload;
+      const index = state.boards.findIndex(b => b.boardId === boardId);
+      if (index !== -1) {
+        state.boards[index] = {
+          ...state.boards[index],
+          ...action.payload,
+        };
       }
     },
     closeBoard: (state, action: PayloadAction<string>) => {
@@ -46,7 +57,7 @@ const boardSlice = createSlice({
   },
 });
 
-export const {setBoards, addBoard, closeBoard, updateBoardTitle} =
+export const {setBoards, addBoard, closeBoard, updateBoardTitle, updateBoard} =
   boardSlice.actions;
 
 export default boardSlice.reducer;

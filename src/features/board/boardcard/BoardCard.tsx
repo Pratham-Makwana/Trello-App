@@ -10,7 +10,7 @@ import BoardCardArea from './BoardCardArea';
 import CustomModal from '@components/global/CustomModal';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
-import {updateBoardTitle} from '@store/board/boardSlice';
+import {updateBoard, updateBoardTitle} from '@store/board/boardSlice';
 import {goBack, resetAndNavigate} from '@utils/NavigationUtils';
 import {getBoardInfo, listenToUpdateBoardInfo} from '@config/firebaseRN';
 
@@ -57,18 +57,24 @@ const BoardCard = () => {
   const loadBoardInfo = async () => {
     setLoading(true);
     const data = await getBoardInfo(boardDetails?.boardId, user!.uid);
+    dispatch(updateBoard(data));
     setBoard(data);
     setLoading(false);
   };
   return (
     <LinearGradient colors={gradientColors} style={{flex: 1}}>
       {Platform.OS === 'ios' && (
-        <CustomHeaderIOS title={boardDetails.title} board={board} />
+        <CustomHeaderIOS
+          title={currentBoard!.title}
+          // board={board}
+          boardId={currentBoard?.boardId || ''}
+        />
       )}
       {Platform.OS === 'android' && (
         <CustomHeaderAndroid
           title={currentBoard?.title || 'Untitled'}
-          board={board}
+          // board={board}
+          boardId={currentBoard?.boardId || ''}
         />
       )}
       {loading && <CustomModal loading={loading} />}

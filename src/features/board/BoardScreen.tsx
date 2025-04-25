@@ -20,11 +20,10 @@ import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {setBoards} from '@store/board/boardSlice';
 import auth from '@react-native-firebase/auth';
-import { listenToUserBoards } from '@config/firebaseRN';
+import {listenToUserBoards} from '@config/firebaseRN';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const {user, setUser} = useUser();
   const boards = useAppSelector(state => state.board.boards);
   const dispatch = useAppDispatch();
@@ -97,14 +96,13 @@ const BoardScreen = () => {
           renderItem={ListItem}
           keyExtractor={item => item.boardId}
           ListHeaderComponent={() => <ListHeader />}
-          // ListEmptyComponent={() => (
-          //   <View
-          //     style={{justifyContent: 'center', alignItems: 'center', flex: 1}}>
-          //     <Text style={{color: Colors.black, fontSize: 18}}>
-          //       No Board Avaliable
-          //     </Text>
-          //   </View>
-          // )}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                No boards yet. Tap the + button to create one!
+              </Text>
+            </View>
+          )}
           ItemSeparatorComponent={() => (
             <View
               style={{
@@ -174,5 +172,16 @@ const styles = StyleSheet.create({
     color: Colors.darkprimary,
     fontSize: 16,
     fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: Colors.darkprimary,
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

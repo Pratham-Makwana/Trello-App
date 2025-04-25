@@ -101,7 +101,7 @@ export const createBoard = async (
 
     // const joinId = `${user.uid}_${docRef.id}`;
 
-    await addUserToBoard(docRef.id, user.uid);
+    await addUserToBoard(docRef.id, user.uid, 'creator');
     // await userBoardRef.doc(joinId).set({
     //   userId: user.uid,
     //   boardId: docRef.id,
@@ -241,7 +241,7 @@ export const getBoardMembers = async (boardId: string) => {
 export const addUserToBoard = async (
   boardId: string,
   userId: string,
-  role: string = 'creator',
+  role: string,
 ) => {
   try {
     const joinId = `${userId}_${boardId}`;
@@ -488,7 +488,10 @@ export const addCardList = async (
       description: '',
       startDate: '',
       endDate: '',
-      labels: [],
+      labels: {
+        title: '',
+        color: '',
+      },
       createdAt: new Date().toISOString(),
     };
 
@@ -520,6 +523,10 @@ export const updateCart = async (task: TaskItem) => {
       position: task.position,
       startDate: task.startDate,
       endDate: task.endDate,
+      label: {
+        title: task.label.title,
+        color: task.label.color,
+      },
     });
   } catch (error) {
     console.log('❌ Error updating card:', error);
@@ -570,6 +577,8 @@ export const listenToCardsList = (
   callback: (cards: TaskItem[]) => void,
 ) => {
   try {
+    console.log('==> listId', listId);
+
     const cardRef = listRef.doc(listId).collection('cards');
 
     const q = cardRef.orderBy('position');
@@ -672,7 +681,7 @@ export const acceptInvite = async (
       status: 'accepted',
     });
 
-    await addUserToBoard(boardId, userId, 'memeber');
+    await addUserToBoard(boardId, userId, 'member');
 
     await db.collection('board_invitations').doc(inviteId).delete();
   } catch (error) {

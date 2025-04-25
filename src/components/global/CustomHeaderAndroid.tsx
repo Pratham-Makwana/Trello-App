@@ -1,15 +1,35 @@
-import {StyleSheet, Text, View, TouchableOpacity} from 'react-native';
+import {StyleSheet, Text, View, TouchableOpacity, Alert} from 'react-native';
 import React, {FC} from 'react';
 import {screenWidth} from '@utils/Scaling';
 import {Board, Colors} from '@utils/Constant';
 import Icon from './Icon';
-import {goBack, navigate} from '@utils/NavigationUtils';
+import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
+import {leaveBoard} from '@config/firebaseRN';
+import {useUser} from '@hooks/useUser';
+import {closeBoard} from '@store/board/boardSlice';
 
 interface CustomHeaderAndroidProps {
   title: string;
-  board: Board;
+  board?: Board;
+  boardId: string;
 }
-const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title, board}) => {
+const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
+  title,
+  board,
+  boardId,
+}) => {
+  const {user} = useUser();
+  const currentBoard = useAppSelector(state =>
+    state.board.boards.find(b => b.boardId === boardId),
+  );
+  const dispatch = useAppDispatch();
+
+  const onLeaveBoard = async () => {
+    leaveBoard(boardId, user!.uid);
+    dispatch(closeBoard(boardId));
+    resetAndNavigate('UserBottomTab');
+  };
   return (
     <View style={styles.mainContainer}>
       <View style={styles.icon}>
@@ -25,7 +45,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title, board}) => {
         <View style={styles.contentContainer}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.text}>
-            {board?.userInfo?.username || 'Person'}'s Workspace
+            {currentBoard?.userInfo?.username || 'Person'}'s Workspace
           </Text>
         </View>
       </View>
@@ -33,13 +53,48 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({title, board}) => {
       <View style={[styles.rowIconContainer]}>
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => navigate('BoardMenu', {boardId: board?.boardId})}>
-          <Icon
-            name="dots-horizontal"
-            iconFamily="MaterialCommunityIcons"
-            size={26}
-            color={Colors.black}
-          />
+          onPress={() => {
+            if (
+              currentBoard?.workspace == 'Private' &&
+              currentBoard?.role == 'member'
+            ) {
+              Alert.alert('Are you sure want to leave this board?', '', [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'OK',
+                  onPress: () => {
+                  
+                    onLeaveBoard();
+                  },
+                },
+              ]);
+              return;
+            }
+            navigate(
+              'BoardMenu',
+              {boardId: boardId},
+              // {boardId: board?.boardId}
+            );
+          }}>
+          {currentBoard?.workspace == 'Private' &&
+          currentBoard?.role == 'member' ? (
+            <Icon
+              name="log-out-outline"
+              iconFamily="Ionicons"
+              size={26}
+              color={Colors.black}
+            />
+          ) : (
+            <Icon
+              name="dots-horizontal"
+              iconFamily="MaterialCommunityIcons"
+              size={26}
+              color={Colors.black}
+            />
+          )}
         </TouchableOpacity>
       </View>
     </View>

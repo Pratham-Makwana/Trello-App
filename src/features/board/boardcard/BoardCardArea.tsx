@@ -40,6 +40,7 @@ import {DefaultTheme} from '@react-navigation/native';
 import {TextInput} from 'react-native-gesture-handler';
 
 import Icon from '@components/global/Icon';
+import Toast from 'react-native-toast-message';
 
 interface BoardCardAreaProps {
   board: Board | any;
@@ -152,6 +153,9 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
             <>
               {item.list_id && (
                 <ListCard
+                  disable={
+                    board.role == 'member' && board.workspace == 'Private'
+                  }
                   key={item.list_id}
                   taskList={item}
                   showModal={() => showModal(item)}
@@ -163,7 +167,23 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
                     <TouchableOpacity
                       style={styles.listAddBtn}
                       activeOpacity={0.8}
-                      onPress={() => setActive(true)}>
+                      onPress={() => {
+                        if (
+                          board.workspace == 'Private' &&
+                          board.role == 'member'
+                        ) {
+                          console.log('Access Denied');
+
+                          Toast.show({
+                            type: 'info',
+                            text1: 'Access Denied',
+                            text2:
+                              'You cannot add a list in a private workspace.',
+                          });
+                          return;
+                        }
+                        setActive(true);
+                      }}>
                       <CustomText variant="h4" fontFamily="Montserrat-SemiBold">
                         Add List
                       </CustomText>
@@ -251,6 +271,7 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>
+      <Toast />
     </SafeAreaView>
   );
 };

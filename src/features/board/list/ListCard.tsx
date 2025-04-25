@@ -31,12 +31,14 @@ import {
   listenToCardsList,
   uploadToCloudinary,
 } from '@config/firebaseRN';
+import Toast from 'react-native-toast-message';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
   showModal: () => void;
+  disable: boolean;
 }
-const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
+const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const [listTitle, setListTitle] = useState(taskList?.title);
   const [adding, setAdding] = useState(false);
   const [newTask, setNewTask] = useState('');
@@ -140,7 +142,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
         {/* List Header */}
         <View style={styles.header}>
           <Text style={styles.listTitle}>{listTitle}</Text>
-          <TouchableOpacity onPress={showModal}>
+          <TouchableOpacity disabled={disable} onPress={showModal}>
             <Icon
               name="dots-horizontal"
               iconFamily="MaterialCommunityIcons"
@@ -163,9 +165,12 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
         {!loading && (
           <DraggableFlatList
             data={memoizedTasks}
-            renderItem={ListItem}
+            // renderItem={ListItem}
+            renderItem={params => (
+              <ListItem {...params} disableDrag={disable} />
+            )}
             keyExtractor={item => item.id}
-            onDragEnd={onTaskCardDrop}
+            onDragEnd={disable ? () => {} : onTaskCardDrop}
             containerStyle={{
               paddingBottom: 4,
               maxHeight: '80%',
@@ -196,7 +201,17 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
               <TouchableOpacity
                 activeOpacity={0.8}
                 style={{flexDirection: 'row', alignItems: 'center'}}
-                onPress={() => setAdding(true)}>
+                onPress={() => {
+                  if (disable) {
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Access Denied',
+                      text2: 'You cannot add a card in a private workspace.',
+                    });
+                    return;
+                  }
+                  setAdding(true);
+                }}>
                 <Icon
                   name="plus"
                   iconFamily="MaterialCommunityIcons"
@@ -205,7 +220,10 @@ const ListCard: FC<CardListProps> = ({taskList, showModal}) => {
                 />
                 <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.8} onPress={onOpenGallery}>
+              <TouchableOpacity
+                disabled
+                activeOpacity={0.8}
+                onPress={onOpenGallery}>
                 <Icon
                   name="image-outline"
                   iconFamily="MaterialCommunityIcons"

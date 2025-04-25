@@ -33,11 +33,22 @@ import CheckBox from '@react-native-community/checkbox';
 import {useAppSelector} from '@store/reduxHook';
 import MoveList from './MoveList';
 import DatePicker from 'react-native-date-picker';
-import {format} from 'date-fns';
+import {format, set} from 'date-fns';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
+type ListItemProps = RenderItemParams<TaskItem> & {
+  disableDrag: boolean;
+};
+
+const ListItem = ({
+  item,
+  drag,
+  isActive,
+  getIndex,
+  disableDrag,
+}: ListItemProps) => {
+  // const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const [cardTitle, setCardTitle] = useState(item.title);
   const [cardDescription, setCardDescription] = useState(item.description);
   const descriptionInputRef = useRef<TextInput>(null);
@@ -68,7 +79,11 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   const [openStartDate, setOpenStartDate] = useState(false);
   const [openEndDate, setOpenEndDate] = useState(false);
   const [minimumDate, setMinimumDate] = useState(new Date());
-  const [labelTitle, setLabelTitle] = useState('');
+  const [labels, setLabels] = useState({
+    title: item?.label?.title || '',
+    color: item?.label?.color || labelColors[0],
+  });
+
   const [selectedColor, setSelectedColor] = useState(labelColors[0]);
 
   const currentBoard = useAppSelector(state =>
@@ -76,9 +91,13 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
   );
 
   useEffect(() => {
-    setIsDone(item.done);
-    setCardDescription(item.description);
-    setCardTitle(item.title);
+    setIsDone(item?.done);
+    setCardDescription(item?.description);
+    setCardTitle(item?.title);
+    setLabels({
+      title: item?.label?.title || '',
+      color: item?.label?.color || labelColors[0],
+    });
   }, [item]);
 
   const loadGetListsByBoardId = async () => {
@@ -225,12 +244,24 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
       setOpenEndDate(false);
     }
   };
+
+  const onUpdateCardLabel = async (updatedLabels = labels) => {
+    if (updatedLabels?.title.length > 0) {
+      await updateCart({
+        ...item,
+        label: {
+          title: updatedLabels.title,
+          color: updatedLabels.color,
+        },
+      });
+    }
+  };
   return (
     <>
       <AnimatedTouchable
-        onPress={showModal}
+        onPress={disableDrag ? () => {} : showModal}
         activeOpacity={1}
-        onLongPress={drag}
+        onLongPress={!disableDrag ? drag : undefined}
         disabled={isActive}
         style={[styles.rowItem]}>
         {item?.imageUrl && (
@@ -244,28 +275,112 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 backgroundColor: '#f3f3f3',
               }}
             />
+
+            <View style={{flexDirection: 'column'}}>
+              {item?.label?.color && (
+                <View
+                  style={{
+                    backgroundColor: item.label.color,
+                    paddingVertical: 4,
+                    paddingHorizontal: 8,
+                    borderRadius: 4,
+                    alignSelf: 'flex-start',
+                    marginBottom: 6,
+                  }}>
+                  {item.label.title && (
+                    <Text
+                      style={{color: '#fff', fontSize: 12, fontWeight: '500'}}>
+                      {item.label.title}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingTop: 5,
+                  gap: 10,
+                }}>
+                <CheckBox
+                  value={isDone}
+                  onValueChange={onCheckDone}
+                  tintColors={{
+                    true: '#4CAF50',
+                    false: '#aaa',
+                  }}
+                  boxType="circle"
+                  style={styles.checkbox}
+                  disabled={disableDrag}
+                />
+                <Text style={{flex: 1, color: Colors.black}}>{item.title}</Text>
+                <TouchableOpacity
+                  disabled={disableDrag}
+                  onPress={() => {
+                    bottomSheetModalCardRef.current?.present();
+                  }}>
+                  <Icon
+                    name="resize-outline"
+                    iconFamily="Ionicons"
+                    size={18}
+                    color={Colors.fontDark}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
+
+        {!item?.imageUrl && (
+          <View style={{flexDirection: 'column'}}>
+            {item?.label?.color && (
+              <View
+                style={{
+                  backgroundColor: item.label.color,
+                  paddingVertical: 4,
+                  paddingHorizontal: 8,
+                  borderRadius: 4,
+                  alignSelf: 'flex-start',
+                  marginBottom: 6,
+                }}>
+                {item.label.title && (
+                  <Text
+                    style={{color: '#fff', fontSize: 12, fontWeight: '500'}}>
+                    {item.label.title}
+                  </Text>
+                )}
+              </View>
+            )}
+
             <View
               style={{
                 flexDirection: 'row',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                paddingTop: 5,
-                gap: 10,
               }}>
-              <CheckBox
-                value={isDone}
-                onValueChange={onCheckDone}
-                tintColors={{
-                  true: '#4CAF50',
-                  false: '#aaa',
-                }}
-                boxType="circle"
-                style={styles.checkbox}
-              />
-              <Text style={{flex: 1, color: Colors.black}}>{item.title}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  bottomSheetModalCardRef.current?.present();
-                }}>
+              <View
+                style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                <CheckBox
+                  value={isDone}
+                  onValueChange={onCheckDone}
+                  tintColors={{
+                    true: '#4CAF50',
+                    false: '#aaa',
+                  }}
+                  boxType="circle"
+                  style={styles.checkbox}
+                  disabled={disableDrag}
+                />
+                <Text
+                  style={{
+                    color: isDone ? Colors.fontDark : Colors.black,
+                    textDecorationLine: isDone ? 'line-through' : 'none',
+                  }}>
+                  {item.title}
+                </Text>
+              </View>
+              <TouchableOpacity disabled={disableDrag} onPress={showCardModal}>
                 <Icon
                   name="resize-outline"
                   iconFamily="Ionicons"
@@ -274,38 +389,6 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 />
               </TouchableOpacity>
             </View>
-          </>
-        )}
-
-        {!item?.imageUrl && (
-          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-            <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-              <CheckBox
-                value={isDone}
-                onValueChange={onCheckDone}
-                tintColors={{
-                  true: '#4CAF50',
-                  false: '#aaa',
-                }}
-                boxType="circle"
-                style={styles.checkbox}
-              />
-              <Text
-                style={{
-                  color: isDone ? Colors.fontDark : Colors.black,
-                  textDecorationLine: isDone ? 'line-through' : 'none',
-                }}>
-                {item.title}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={showCardModal}>
-              <Icon
-                name="resize-outline"
-                iconFamily="Ionicons"
-                size={18}
-                color={Colors.fontDark}
-              />
-            </TouchableOpacity>
           </View>
         )}
       </AnimatedTouchable>
@@ -433,11 +516,20 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 Label Title
               </Text>
               <TextInput
-                value={labelTitle}
-                onChangeText={setLabelTitle}
+                value={labels.title}
+                onChangeText={text => setLabels({...labels, title: text})}
                 style={styles.input}
                 placeholder="Label Title"
                 placeholderTextColor={Colors.placeholdertext}
+                returnKeyType="done"
+                enterKeyHint="done"
+                // onEndEditing={onUpdateCardLabel}
+                onEndEditing={e => {
+                  const text = e.nativeEvent.text;
+                  const updatedLabels = {...labels, title: text};
+                  setLabels(updatedLabels);
+                  onUpdateCardLabel(updatedLabels);
+                }}
               />
             </View>
 
@@ -457,16 +549,20 @@ const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
                 {labelColors.map(color => (
                   <TouchableOpacity
                     key={color}
-                    onPress={() => setSelectedColor(color)}
+                    onPress={() => {
+                      const updatedLabels = {...labels, color};
+                      setLabels(updatedLabels);
+                      onUpdateCardLabel(updatedLabels);
+                    }}
                     style={{
                       backgroundColor: color,
                       width: 40,
                       height: 40,
                       borderRadius: 20,
                       marginRight: 8,
-                      borderWidth: selectedColor === color ? 2 : 0,
+                      borderWidth: labels?.color === color ? 2 : 0,
                       borderColor:
-                        selectedColor === color ? '#000' : 'transparent',
+                        labels?.color === color ? '#000' : 'transparent',
                     }}
                   />
                 ))}

@@ -7,7 +7,7 @@ import {
   requestNotificationPermission,
   setupBackgroundAndForegroundHandlers,
 } from '@config/firebaseNotification';
-import {Provider} from 'react-redux';
+import {Provider} from 'react-redux'; 
 import store from '@store/store';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
