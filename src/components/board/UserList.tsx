@@ -2,6 +2,7 @@ import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import React, {FC} from 'react';
 import {Colors, User} from '@utils/Constant';
 import Icon from '@components/global/Icon';
+import {RFValue} from 'react-native-responsive-fontsize';
 
 interface UserListProps {
   onPress?: (user: User) => void;
@@ -14,16 +15,29 @@ const UserList: FC<UserListProps> = ({member, onPress, addUser = false}) => {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onPress?.(member)}
-      style={styles.btnContainer}>
-      <View style={styles.flexRowGap}>
-        <Image
-          source={{uri: member.photoURL}}
-          style={styles.profileImage}
-        />
-        <View>
-          <Text style={styles.text}>{member.username}</Text>
-          <Text style={{color: Colors.fontDark}}>{member.email}</Text>
+      style={addUser ? styles.btnContainer : {}}
+      >
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+        <View style={styles.flexRowGap}>
+          <Image source={{uri: member.photoURL}} style={styles.profileImage} />
+          <View>
+            <Text style={styles.text}>{member.username}</Text>
+            <Text style={{color: Colors.fontDark}}>{member.email}</Text>
+          </View>
         </View>
+        <Text
+          style={{
+            color: Colors.fontDark,
+            fontSize: RFValue(12),
+            fontWeight: '600',
+          }}>
+          {member.role}
+        </Text>
       </View>
 
       {addUser && (

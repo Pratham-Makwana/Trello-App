@@ -33,6 +33,7 @@ const BoardCard = () => {
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
       boardDetails.boardId,
+      user!.uid,
       updatedBoard => {
         dispatch(
           updateBoardTitle({

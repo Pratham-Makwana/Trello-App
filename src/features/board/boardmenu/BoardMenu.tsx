@@ -19,15 +19,16 @@ import {
   listenToUpdateBoardInfo,
   updateBoardInfo,
   deleteBoard,
-  getBoardMembers,
   getBoardInfo,
   leaveBoard,
+  listenToBoardMembers,
 } from '@config/firebaseRN';
 import UserList from '@components/board/UserList';
 import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch} from '@store/reduxHook';
 import {closeBoard} from '@store/board/boardSlice';
+import Toast from 'react-native-toast-message';
 
 const BoardMenu = () => {
   const route =
@@ -36,40 +37,56 @@ const BoardMenu = () => {
   const [boardData, setBoardData] = useState<Board | any>();
   const [member, setMember] = useState<User | any>();
   const {user} = useUser();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     loadBoardInfo();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchBoardMemebers();
-    }, []),
-  );
-
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     fetchBoardMemebers();
+  //   }, []),
+  // );
   useEffect(() => {
-    const unsubscribe = listenToUpdateBoardInfo(boardId, updatedBoard => {
-      setBoardData(updatedBoard);
+    const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
+      // console.log('==> members', members);
+      setMember(members);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = listenToUpdateBoardInfo(
+      boardId,
+      user!.uid,
+      updatedBoard => {
+        // console.log('==> updatedBoard', updatedBoard);
+
+        setBoardData(updatedBoard);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
   const loadBoardInfo = async () => {
-    setIsLoading(true);
     const data = await getBoardInfo(boardId, user!.uid);
     setBoardData(data);
     setIsLoading(false);
   };
 
-  const fetchBoardMemebers = async () => {
-    setIsLoading(true);
-    const member = await getBoardMembers(boardId);
-    setMember(member);
-    setIsLoading(false);
-  };
+  // const fetchBoardMemebers = async () => {
+  //   setIsLoading(true);
+  //   const member = await getBoardMembers(boardId);
+  //   console.log('==> member', member);
+
+  //   setMember(member);
+  //   setIsLoading(false);
+  // };
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
@@ -85,6 +102,25 @@ const BoardMenu = () => {
 
   const onUpdateBoard = async () => {
     await updateBoardInfo(boardData);
+  };
+
+  const onUpdateBoardVisibility = async (visibility: string) => {
+    console.log('==> onUpdateBoardVisibility', member);
+
+    const currentUser = member.find((item: User) => item.uid === user!.uid);
+    console.log('==> currentUser', currentUser);
+
+    if (currentUser?.role !== 'creator') {
+      Toast.show({
+        type: 'error',
+        text1: 'You are not allowed to change the visibility',
+        position: 'bottom',
+      });
+      return;
+    }
+    const updated = {...boardData, workspace: visibility};
+    setBoardData(updated);
+    await updateBoardInfo(updated);
   };
   return (
     <View>
@@ -112,17 +148,23 @@ const BoardMenu = () => {
       </View>
       {/* Memebers */}
       <View style={styles.container}>
-        <View style={styles.rowGap}>
-          <Icon
-            name="person-outline"
-            iconFamily="Ionicons"
-            size={18}
-            color={Colors.fontDark}
-          />
-          <Text
-            style={{fontSize: 16, fontWeight: 'bold', color: Colors.fontDark}}>
-            Memebers
-          </Text>
+        <View style={styles.rowSpaceBetween}>
+          <View style={styles.rowGap}>
+            <Icon
+              name="person-outline"
+              iconFamily="Ionicons"
+              size={18}
+              color={Colors.fontDark}
+            />
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: 'bold',
+                color: Colors.fontDark,
+              }}>
+              Memebers
+            </Text>
+          </View>
         </View>
         {isLoading && (
           <View
@@ -153,16 +195,42 @@ const BoardMenu = () => {
         </TouchableOpacity>
       </View>
 
-      {boardData?.role === 'creator' && (
+      {/* Visibility Settings */}
+      <View style={styles.container}>
+        <Text style={styles.label}>Visibility</Text>
+        <View style={styles.visibilityContainer}>
+          {['Workspace', 'Private'].map(option => (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              key={option}
+              style={[
+                styles.visibilityOption,
+                boardData?.workspace === option && styles.selectedVisibility,
+              ]}
+              onPress={() => onUpdateBoardVisibility(option)}>
+              <Text
+                style={[
+                  styles.visibilityText,
+                  boardData?.workspace === option && styles.selectedText,
+                ]}>
+                {option === 'Workspace' ? 'Workspace' : 'Private'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {boardData?.role == 'creator' && (
         <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteBoard}>
           <Text style={styles.deleteBtnText}>Close Board</Text>
         </TouchableOpacity>
       )}
-      {boardData?.role === 'member' && (
+      {boardData?.role == 'member' && (
         <TouchableOpacity style={styles.deleteBtn} onPress={onLeaveBoard}>
           <Text style={styles.deleteBtnText}>Leave Board</Text>
         </TouchableOpacity>
       )}
+      <Toast />
     </View>
   );
 };
@@ -185,6 +253,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  rowSpaceBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   inviteBtn: {
     backgroundColor: Colors.lightprimary,
     padding: 8,
@@ -194,6 +267,35 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
   },
+  visibilityContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  visibilityOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+  selectedVisibility: {
+    backgroundColor: Colors.lightprimary,
+  },
+  visibilityText: {
+    fontSize: 14,
+    color: Colors.fontDark,
+    fontWeight: 'bold',
+  },
+  selectedText: {
+    color: '#fff',
+  },
+  notice: {
+    fontSize: 12,
+    color: 'red',
+    marginTop: 6,
+  },
+
   deleteBtn: {
     backgroundColor: '#fff',
     padding: 8,

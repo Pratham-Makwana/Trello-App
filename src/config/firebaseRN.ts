@@ -4,6 +4,7 @@ import firestore, {deleteDoc} from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import {addBoard} from '@store/board/boardSlice';
 import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
+import {ro} from 'date-fns/locale';
 
 export const db = firestore();
 export const userRef = db.collection('users');
@@ -164,16 +165,45 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
   }
 };
 
+// export const listenToUpdateBoardInfo = (
+//   boardId: string,
+//   callback: (board: Board) => void,
+// ) => {
+//   const docRef = boardRef.doc(boardId);
+
+//   const unsubscribe = docRef.onSnapshot(snapshot => {
+//     if (snapshot.exists) {
+//       const boardData = snapshot.data() as Board;
+//       callback({...boardData});
+//     }
+//   });
+
+//   return unsubscribe;
+// };
+
 export const listenToUpdateBoardInfo = (
   boardId: string,
+  userId: string, // Pass the current user's ID to fetch their role
   callback: (board: Board) => void,
 ) => {
   const docRef = boardRef.doc(boardId);
+  const userBoard = userBoardRef.doc(userId).collection('boards').doc(boardId);
 
-  const unsubscribe = docRef.onSnapshot(snapshot => {
+  const unsubscribe = docRef.onSnapshot(async snapshot => {
     if (snapshot.exists) {
       const boardData = snapshot.data() as Board;
-      callback({...boardData});
+
+      // Fetch the role for the current user from the userBoardRef
+      const userBoardDoc = await userBoard.get();
+      const role = userBoardDoc.exists ? userBoardDoc.data()?.role : 'creator'; // Default to 'creator' if no role found
+
+      // Merge the role into the board data
+      const updatedBoard = {
+        ...boardData,
+        role: role,
+      };
+
+      callback(updatedBoard);
     }
   });
 
@@ -185,6 +215,7 @@ export const updateBoardInfo = async (board: Board) => {
     const docRef = boardRef.doc(board.boardId);
 
     await docRef.update({
+      workspace: board.workspace,
       title: board.title,
       last_edit: new Date().toISOString(),
     });
@@ -213,29 +244,39 @@ export const deleteBoard = async (boardId: string) => {
   }
 };
 
-export const getBoardMembers = async (boardId: string) => {
-  try {
-    const querySnapshot = await userBoardRef
-      .where('boardId', '==', boardId)
-      .get();
+export const listenToBoardMembers = (boardId: string, callback: Function) => {
+  return userBoardRef
+    .where('boardId', '==', boardId)
+    .onSnapshot(async querySnapshot => {
+      if (querySnapshot.empty) {
+        callback([]);
+        return;
+      }
 
-    if (querySnapshot.empty) return [];
+      const boardMemberEntries = querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+      }));
 
-    const userIds = querySnapshot.docs.map(doc => doc.data().userId);
+      const userDocs = await Promise.all(
+        boardMemberEntries.map(entry => userRef.doc(entry.userId).get()),
+      );
 
-    const userDocs = await Promise.all(
-      userIds.map(userId => userRef.doc(userId).get()),
-    );
+      const members = userDocs
+        .map((doc, index) => {
+          if (!doc.exists) return null;
 
-    const members = userDocs
-      .filter(doc => doc.exists)
-      .map(doc => ({uid: doc.id, ...doc.data()}));
+          const userData = doc.data();
+          const {role, addedAt} = boardMemberEntries[index];
 
-    return members;
-  } catch (error) {
-    console.error('Error fetching board members:', error);
-    return [];
-  }
+          return {
+            uid: doc.id,
+            ...userData,
+            role,
+          };
+        })
+        .filter(Boolean);
+      callback(members);
+    });
 };
 
 export const addUserToBoard = async (

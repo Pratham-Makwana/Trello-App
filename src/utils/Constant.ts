@@ -93,6 +93,7 @@ export interface User {
   username: string;
   photoURL: string;
   notificationToken?: string;
+  role?: string;
 }
 
 export interface TaskItem {

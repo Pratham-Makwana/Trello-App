@@ -36,6 +36,8 @@ import {
   updateUserProfile,
   uploadToCloudinary,
 } from '@config/firebaseRN';
+import {Colors} from '@utils/Constant';
+import {RFValue} from 'react-native-responsive-fontsize';
 const Profile = () => {
   const {user: currentUser, logout, setUser} = useUser();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -167,7 +169,13 @@ const Profile = () => {
       <TouchableOpacity
         style={styles.closeAccountButton}
         onPress={handleCloseAccount}>
-        <Text style={styles.closeAccountText}>Close Account</Text>
+        <Icon
+          name="log-out-outline"
+          iconFamily="Ionicons"
+          size={22}
+          color={Colors.black}
+        />
+        <Text style={styles.closeAccountText}>Log out</Text>
       </TouchableOpacity>
 
       <BottomSheetModal
@@ -222,7 +230,7 @@ export default Profile;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: DefaultTheme.colors.background,
     padding: 16,
   },
   header: {
@@ -269,10 +277,24 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   closeAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#fff',
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.2,
+    shadowRadius: 1.2,
+    elevation: 1,
+    padding: 5,
+    width: '100%',
     marginTop: 20,
     alignSelf: 'center',
   },
   closeAccountText: {
+    fontSize: RFValue(14),
     color: 'red',
     fontWeight: '600',
   },
