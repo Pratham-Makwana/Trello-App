@@ -44,7 +44,6 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
     if (!taskList?.list_id) return;
 
     const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
-      console.log('==> cards', cards);
       setTasks(cards);
     });
 
@@ -215,7 +214,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
                 <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                disabled
+                disabled={disable}
                 activeOpacity={0.8}
                 onPress={onOpenGallery}>
                 <Icon

@@ -282,10 +282,10 @@ const ListItem = ({
                   style={{
                     backgroundColor: item.label.color,
                     paddingVertical: 4,
-                    paddingHorizontal: 8,
+                    paddingHorizontal: 10,
                     borderRadius: 4,
                     alignSelf: 'flex-start',
-                    marginBottom: 6,
+                    marginTop: 6,
                   }}>
                   {item.label.title && (
                     <Text
@@ -312,14 +312,18 @@ const ListItem = ({
                   }}
                   boxType="circle"
                   style={styles.checkbox}
-                  disabled={disableDrag}
                 />
-                <Text style={{flex: 1, color: Colors.black}}>{item.title}</Text>
+                <Text
+                  style={{
+                    flex: 1,
+                    color: Colors.black,
+                    textDecorationLine: isDone ? 'line-through' : 'none',
+                  }}>
+                  {item.title}
+                </Text>
                 <TouchableOpacity
                   disabled={disableDrag}
-                  onPress={() => {
-                    bottomSheetModalCardRef.current?.present();
-                  }}>
+                  onPress={showCardModal}>
                   <Icon
                     name="resize-outline"
                     iconFamily="Ionicons"
@@ -370,7 +374,6 @@ const ListItem = ({
                   }}
                   boxType="circle"
                   style={styles.checkbox}
-                  disabled={disableDrag}
                 />
                 <Text
                   style={{
@@ -745,6 +748,16 @@ const ListItem = ({
                 onSelectList={onSelectList}
               />
             )}
+            ListEmptyComponent={() => (
+              <Text
+                style={{
+                  textAlign: 'center',
+                  color: Colors.fontDark,
+                  fontSize: 16,
+                }}>
+                No Lists Found
+              </Text>
+            )}
           />
           {selectedList && (
             <View style={styles.positionContainer}>
@@ -885,6 +898,7 @@ const styles = StyleSheet.create({
   positionContainer: {
     paddingHorizontal: 16,
     marginTop: 12,
+    marginBottom: 50,
   },
   positionLabel: {
     marginBottom: 8,

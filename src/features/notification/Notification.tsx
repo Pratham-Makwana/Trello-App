@@ -20,6 +20,7 @@ import {
   acceptInvite,
   declineInvite,
 } from '@config/firebaseRN';
+import Toast from 'react-native-toast-message';
 
 export type Invite = {
   id: string;
@@ -62,6 +63,12 @@ const Notification = () => {
 
   const handleAccept = async (invite: Invite) => {
     try {
+      Toast.show({
+        type: 'success',
+        text1: 'Invitation Accepted',
+        text2: `You can now access the board "${invite.boardName}" in the Boards screen.`,
+      });
+
       await acceptInvite(invite.id, invite.boardId, currentUser!.uid);
 
       if (invite.invitedByUserInfo?.notificationToken) {
@@ -143,6 +150,7 @@ const Notification = () => {
           <Text style={styles.emptyText}>No invitations yet.</Text>
         }
       />
+      <Toast />
     </View>
   );
 };

@@ -75,15 +75,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     await addBoardList(board?.boardId, title, taskList.length);
   };
 
-  useEffect(() => {
-    loadBoardLists();
-  }, []);
-
-  const loadBoardLists = async () => {
-    if (!board) return;
-    const lists = await getBoardLists(board?.boardId);
-    setTaskList([...lists, {id: undefined}]);
-  };
 
   const onDeleteBoardList = async () => {
     await deleteBoardList(

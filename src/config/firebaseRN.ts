@@ -178,7 +178,8 @@ export const listenToUpdateBoardInfo = (
   callback: (board: Board) => void,
 ) => {
   const docRef = boardRef.doc(boardId);
-  const userBoard = userBoardRef.doc(userId).collection('boards').doc(boardId);
+  const joinId = `${userId}_${boardId}`;
+  const userBoard = userBoardRef.doc(joinId);
 
   const unsubscribe = docRef.onSnapshot(async snapshot => {
     if (snapshot.exists) {
@@ -382,13 +383,20 @@ export const getBoardLists = async (boardId: string) => {
 export const updateBoardList = async (
   list: TaskItem | FakeTaskList,
   newTitle: string,
+  newPosition?: number,
 ) => {
   try {
-    const listDocRef = listRef.doc(list.list_id);
-    await listDocRef.update({
+    const updates: {title: string; last_edit: string; position?: number} = {
       title: newTitle,
       last_edit: new Date().toISOString(),
-    });
+    };
+    const listDocRef = listRef.doc(list.list_id);
+
+    if (newPosition !== undefined) {
+      updates['position'] = newPosition;
+    }
+
+    await listDocRef.update(updates);
   } catch (error) {
     console.log('Error updating Board List:', error);
   }
@@ -554,8 +562,8 @@ export const updateCart = async (task: TaskItem) => {
       startDate: task.startDate,
       endDate: task.endDate,
       label: {
-        title: task.label.title,
-        color: task.label.color,
+        title: task.label?.title || '',
+        color: task.label?.color || '',
       },
     });
   } catch (error) {

@@ -22,7 +22,7 @@ import {
   listenToBoardMembers,
 } from '@config/firebaseRN';
 import UserList from '@components/board/UserList';
-import {navigate, resetAndNavigate} from '@utils/NavigationUtils';
+import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch} from '@store/reduxHook';
 import {closeBoard} from '@store/board/boardSlice';
@@ -55,6 +55,12 @@ const BoardMenu = () => {
       boardId,
       user!.uid,
       updatedBoard => {
+        if (
+          updatedBoard?.role == 'member' &&
+          updatedBoard?.workspace == 'Private'
+        ) {
+          goBack();
+        }
         setBoardData(updatedBoard);
       },
     );
@@ -67,15 +73,6 @@ const BoardMenu = () => {
     setBoardData(data);
     setIsLoading(false);
   };
-
-  // const fetchBoardMemebers = async () => {
-  //   setIsLoading(true);
-  //   const member = await getBoardMembers(boardId);
-  //   console.log('==> member', member);
-
-  //   setMember(member);
-  //   setIsLoading(false);
-  // };
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);
@@ -132,6 +129,12 @@ const BoardMenu = () => {
             returnKeyType="done"
             enterKeyHint="done"
             onEndEditing={onUpdateBoard}
+            editable={
+              !(
+                boardData?.role === 'member' &&
+                boardData?.workspace === 'Workspace'
+              )
+            }
           />
         )}
       </View>

@@ -29,9 +29,9 @@ const SignupScreen = () => {
   // });
 
   const [form, setForm] = useState({
-    username: '',
-    email: 'usergmail.com',
-    password: 'Test1234',
+    username: 'user',
+    email: 'user@gmail.com',
+    password: 'Test@1234',
   });
 
   const [isSubmitting, setSubmitting] = useState(false);

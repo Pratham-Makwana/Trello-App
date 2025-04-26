@@ -66,7 +66,6 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
                 {
                   text: 'OK',
                   onPress: () => {
-                  
                     onLeaveBoard();
                   },
                 },

@@ -40,7 +40,6 @@ const BoardScreen = () => {
     const init = async () => {
       await auth().currentUser?.reload();
       const user = auth().currentUser;
-      console.log('==> user', user);
       setUser({
         uid: user?.uid,
         username: user?.displayName || null,

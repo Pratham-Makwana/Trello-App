@@ -3,6 +3,8 @@ import {navigate} from '@utils/NavigationUtils';
 
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
 import Toast from 'react-native-toast-message';
+
+
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
