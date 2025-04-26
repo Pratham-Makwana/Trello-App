@@ -9,12 +9,6 @@ import {
 import React, {FC, useEffect, useMemo, useState} from 'react';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Icon from '@components/global/Icon';
-import // addCardList,
-// listenToCardsList,
-// listenToListInfo,
-// updateCart,
-// uploadToCloudinary,
-'@config/firebase';
 import DraggableFlatList, {
   DragEndParams,
 } from 'react-native-draggable-flatlist';

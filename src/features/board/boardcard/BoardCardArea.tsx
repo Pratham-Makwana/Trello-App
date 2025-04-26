@@ -1,5 +1,5 @@
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import React, {
   FC,
   useCallback,
@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {Board, Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
+import {Board, Colors, FakeTaskList, TaskList} from '@utils/Constant';
 import Carousel, {
   ICarouselInstance,
   Pagination,
@@ -16,12 +16,6 @@ import Carousel, {
 import {screenHeight, screenWidth} from '@utils/Scaling';
 import ListTitleInput from '../list/ListTitleInput';
 import {useSharedValue} from 'react-native-reanimated';
-import // addBoardList,
-// deleteBoardList,
-// getBoardLists,
-// listenToBoardLists,
-// updateBoardList,
-'@config/firebase';
 import {
   deleteBoardList,
   getBoardLists,

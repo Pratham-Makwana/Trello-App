@@ -16,10 +16,11 @@ import CustomButton from '@components/ui/CustomButton';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {navigate} from '@utils/NavigationUtils';
 // import {LoginUser} from '@config/firebase';
-import {validateForm} from '@utils/validation';
+
 import Toast from 'react-native-toast-message';
 import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
 import {loginUser} from '@config/firebaseRN';
+import {validateEmail, validatePassword} from '@utils/validation';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
@@ -27,23 +28,31 @@ const LoginScreen = () => {
     password: 'Test1234',
   });
   const [isSubmitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({
-    usernameError: '',
-    emailError: '',
-    passwordError: '',
-  });
+  const [emailError, setEmailError] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
 
   const handleLogin = async () => {
-    // const validationErrors = validateForm(form, false);
+    setEmailError('');
+    setPasswordError('');
 
-    // if (Object.values(validationErrors).some(error => error !== '')) {
-    //   setErrors(validationErrors);
-    //   return;
-    // }
+    if (!validateEmail(form.email)) {
+      setEmailError('Please enter a valid email address.');
+    } else {
+      setEmailError('');
+    }
+
+    const passwordError = validatePassword(form.password);
+    if (passwordError) {
+      setPasswordError(passwordError);
+    } else {
+      setPasswordError('');
+    }
 
     try {
-      setSubmitting(true);
-      await loginUser(form.email, form.password);
+      if (validateEmail(form.email) && !passwordError) {
+        setSubmitting(true);
+        await loginUser(form.email, form.password);
+      }
     } catch (error: any) {
       const message = firebaseAuthErrorMessage(error.code);
       Toast.show({
@@ -78,9 +87,9 @@ const LoginScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="email-address"
           />
-          {/* {errors.emailError && (
-            <Text style={styles.errorText}>{errors.emailError}</Text>
-          )} */}
+          {emailError ? (
+            <Text style={styles.errorText}>{emailError}</Text>
+          ) : null}
           <FormField
             title="Password"
             value={form.password}
@@ -88,9 +97,10 @@ const LoginScreen = () => {
             handleChangeText={(e: string) => setForm({...form, password: e})}
             otherStyles={{marginTop: 28}}
           />
-          {/* {errors.passwordError && (
-            <Text style={styles.errorText}>{errors.passwordError}</Text>
-          )} */}
+          {passwordError ? (
+            <Text style={styles.errorText}>{passwordError}</Text>
+          ) : null}
+
           <CustomButton
             title="Log In"
             handlePress={handleLogin}

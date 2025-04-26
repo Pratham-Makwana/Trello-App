@@ -1,5 +1,5 @@
 import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import React, {FC} from 'react';
+import React, {FC, useState} from 'react';
 import {BottomSheetView} from '@gorhom/bottom-sheet';
 import Icon from '../global/Icon';
 import {Colors, ModalType} from '@utils/Constant';
@@ -13,6 +13,10 @@ import auth from '@react-native-firebase/auth';
 import {doc, setDoc} from 'firebase/firestore';
 import {userRef} from '@config/firebase';
 import messaging from '@react-native-firebase/messaging';
+import Toast from 'react-native-toast-message';
+import {set} from 'date-fns';
+import {is} from 'date-fns/locale';
+import CustomModal from '@components/global/CustomModal';
 
 const LOGIN_OPTION = [
   {
@@ -35,32 +39,29 @@ const LOGIN_OPTION = [
 
 const AuthModal: FC<{
   authType: ModalType | null;
-  onPress: (type: ModalType) => void;
+  onPress: () => void;
 }> = ({authType, onPress}) => {
+  const [loading, setLoading] = useState(false);
+
   const handleGoogleLogin = async () => {
+    onPress();
+    setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
 
       const userInfo = await GoogleSignin.signIn();
-      console.log('userinfo', userInfo);
 
       const googleCredential = auth.GoogleAuthProvider.credential(
         userInfo.idToken,
       );
-
-      console.log('googleCredential: ', googleCredential);
 
       const userCredential = await auth().signInWithCredential(
         googleCredential,
       );
       const user = userCredential.user;
 
-      console.log('User signed in successfully:', user);
-
       const fcmToken = await messaging().getToken();
-      console.log('FCM Token:', fcmToken);
 
-      // Prepare user data for Firestore
       const userData = {
         uid: user.uid,
         username: user.displayName,
@@ -70,28 +71,52 @@ const AuthModal: FC<{
       };
       console.log('userData', userData);
 
-      // Store user data in Firestore
       await setDoc(doc(userRef, user.uid), userData);
       console.log('User data stored in Firestore successfully.');
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Sign in was cancelled');
+        Toast.show({
+          type: 'error',
+          text1: 'Sign in was cancelled',
+          text2: 'Please try again.',
+        });
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        console.log('Sign in is in progress');
+        Toast.show({
+          type: 'error',
+          text1: 'Sign in is in progress',
+          text2: 'Please wait.',
+        });
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        console.log('Play Services not available');
+        Toast.show({
+          type: 'error',
+          text1: 'Play Services not available',
+          text2: 'Please install or update Google Play Services.',
+        });
       } else {
-        console.log('An unexpected error occurred:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'An unexpected error occurred',
+          text2: 'Please try again later.',
+        });
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    if (authType == ModalType.Login) {
+      navigate('LoginScreen');
+      onPress();
+    } else {
+      navigate('SignUpScreen');
+      onPress();
     }
   };
   return (
     <BottomSheetView style={styles.modalContainer}>
-      <TouchableOpacity
-        style={styles.modalBtn}
-        onPress={() => {
-          if (authType) onPress(authType);
-        }}>
+      {loading && <CustomModal loading />}
+      <TouchableOpacity style={styles.modalBtn} onPress={handleSubmit}>
         <Icon
           name="mail-outline"
           size={20}
@@ -120,6 +145,7 @@ const AuthModal: FC<{
           </CustomText>
         </TouchableOpacity>
       ))}
+      <Toast />
     </BottomSheetView>
   );
 };

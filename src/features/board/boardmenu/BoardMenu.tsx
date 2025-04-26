@@ -1,19 +1,17 @@
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
-import {RouteProp, useFocusEffect, useRoute} from '@react-navigation/native';
-// import {getBoardInfo} from '@config/firebase';
+import {RouteProp, useRoute} from '@react-navigation/native';
 
 import {
   listenToUpdateBoardInfo,
@@ -43,15 +41,8 @@ const BoardMenu = () => {
   useEffect(() => {
     loadBoardInfo();
   }, []);
-
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     fetchBoardMemebers();
-  //   }, []),
-  // );
   useEffect(() => {
     const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
-      // console.log('==> members', members);
       setMember(members);
       setIsLoading(false);
     });
@@ -64,8 +55,6 @@ const BoardMenu = () => {
       boardId,
       user!.uid,
       updatedBoard => {
-        // console.log('==> updatedBoard', updatedBoard);
-
         setBoardData(updatedBoard);
       },
     );

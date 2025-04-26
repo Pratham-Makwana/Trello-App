@@ -15,38 +15,62 @@ import {navigate} from '@utils/NavigationUtils';
 import {RFValue} from 'react-native-responsive-fontsize';
 import FormField from '@components/ui/FormField';
 import CustomText from '@components/ui/CustomText';
-// import {createUser} from '@config/firebase';
-import {validateForm} from '@utils/validation';
+
 import Toast from 'react-native-toast-message';
 import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
-import { createUser } from '@config/firebaseRN';
+import {createUser} from '@config/firebaseRN';
+import {validateEmail, validatePassword} from '@utils/validation';
 
 const SignupScreen = () => {
+  // const [form, setForm] = useState({
+  //   username: 'user',
+  //   email: 'user@gmail.com',
+  //   password: 'Test1234',
+  // });
+
   const [form, setForm] = useState({
-    username: 'user',
-    email: 'user@gmail.com',
+    username: '',
+    email: 'usergmail.com',
     password: 'Test1234',
   });
 
   const [isSubmitting, setSubmitting] = useState(false);
-  const [errors, setErrors] = useState({
-    usernameError: '',
-    emailError: '',
-    passwordError: '',
-  });
+  const [emailError, setEmailError] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [usernameError, setUsernameError] = useState<string>('');
 
   const handleSignup = async () => {
-    const validationErrors = validateForm(form, true);
+    setEmailError('');
+    setPasswordError('');
+    setUsernameError('');
+    if (form.username.length < 3) {
+      setUsernameError('Username must be at least 3 characters long.');
+    } else {
+      setUsernameError('');
+    }
+    if (form.username.length > 20) {
+      setUsernameError('Username must be at most 20 characters long.');
+    }
 
-    if (Object.values(validationErrors).some(error => error !== '')) {
-      setErrors(validationErrors);
-      return;
+    if (!validateEmail(form.email)) {
+      setEmailError('Please enter a valid email address.');
+    } else {
+      setEmailError('');
+    }
+
+    const passwordError = validatePassword(form.password);
+    if (passwordError) {
+      setPasswordError(passwordError);
+    } else {
+      setPasswordError('');
     }
 
     try {
-      setSubmitting(true);
-      await createUser(form.username, form.email, form.password);
-      setSubmitting(false);
+      if (validateEmail(form.email) && !passwordError && !usernameError) {
+        setSubmitting(true);
+        await createUser(form.username, form.email, form.password);
+        setSubmitting(false);
+      }
     } catch (error: any) {
       const message = firebaseAuthErrorMessage(error.code);
       Toast.show({
@@ -81,9 +105,9 @@ const SignupScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="default"
           />
-          {errors.usernameError && (
-            <Text style={styles.errorText}>{errors.usernameError}</Text>
-          )}
+          {usernameError ? (
+            <Text style={styles.errorText}>{usernameError}</Text>
+          ) : null}
           <FormField
             title="Email"
             value={form.email}
@@ -92,9 +116,10 @@ const SignupScreen = () => {
             otherStyles={{marginTop: 28}}
             keyboardType="email-address"
           />
-          {errors.emailError && (
-            <Text style={styles.errorText}>{errors.emailError}</Text>
-          )}
+          {emailError ? (
+            <Text style={styles.errorText}>{emailError}</Text>
+          ) : null}
+
           <FormField
             title="Password"
             value={form.password}
@@ -102,9 +127,9 @@ const SignupScreen = () => {
             handleChangeText={(e: string) => setForm({...form, password: e})}
             otherStyles={{marginTop: 28}}
           />
-          {errors.passwordError && (
-            <Text style={styles.errorText}>{errors.passwordError}</Text>
-          )}
+          {passwordError ? (
+            <Text style={styles.errorText}>{passwordError}</Text>
+          ) : null}
           <CustomButton
             title="Sign Up"
             handlePress={handleSignup}

@@ -19,50 +19,41 @@ export const createUser = async (
   email: string,
   password: string,
 ) => {
-  try {
-    const {user} = await auth().createUserWithEmailAndPassword(email, password);
+  const {user} = await auth().createUserWithEmailAndPassword(email, password);
 
-    await user.updateProfile({
-      displayName: username,
-      photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
-    });
+  await user.updateProfile({
+    displayName: username,
+    photoURL: `https://ui-avatars.com/api/?name=${username}&format=png&background=random&color=fff&rounded=true`,
+  });
 
-    await user.reload();
-    const updatedUser = auth().currentUser;
+  await user.reload();
+  const updatedUser = auth().currentUser;
 
-    const token = await messaging().getToken();
+  const token = await messaging().getToken();
 
-    await userRef.doc(user.uid).set({
-      uid: updatedUser?.uid,
-      username: username,
-      email: updatedUser?.email,
-      photoURL: updatedUser?.photoURL,
-      notificationToken: token,
-      createdAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Error creating user:', error);
-  }
+  await userRef.doc(user.uid).set({
+    uid: updatedUser?.uid,
+    username: username,
+    email: updatedUser?.email,
+    photoURL: updatedUser?.photoURL,
+    notificationToken: token,
+    createdAt: new Date().toISOString(),
+  });
 };
 
 export const loginUser = async (email: string, password: string) => {
-  try {
-    const userCredential = await auth().signInWithEmailAndPassword(
-      email,
-      password,
-    );
-    const user = userCredential.user;
+  const userCredential = await auth().signInWithEmailAndPassword(
+    email,
+    password,
+  );
+  const user = userCredential.user;
 
-    const token = await messaging().getToken();
-    console.log('==> token', token);
+  const token = await messaging().getToken();
+  console.log('==> token', token);
 
-    await userRef.doc(user.uid).update({
-      notificationToken: token,
-    });
-  } catch (error) {
-    console.error('Error logging in:', error);
-    throw error;
-  }
+  await userRef.doc(user.uid).update({
+    notificationToken: token,
+  });
 };
 
 export const signOut = async () => {
@@ -183,7 +174,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
 
 export const listenToUpdateBoardInfo = (
   boardId: string,
-  userId: string, // Pass the current user's ID to fetch their role
+  userId: string,
   callback: (board: Board) => void,
 ) => {
   const docRef = boardRef.doc(boardId);
@@ -193,11 +184,9 @@ export const listenToUpdateBoardInfo = (
     if (snapshot.exists) {
       const boardData = snapshot.data() as Board;
 
-      // Fetch the role for the current user from the userBoardRef
       const userBoardDoc = await userBoard.get();
-      const role = userBoardDoc.exists ? userBoardDoc.data()?.role : 'creator'; // Default to 'creator' if no role found
+      const role = userBoardDoc.exists ? userBoardDoc.data()?.role : 'creator';
 
-      // Merge the role into the board data
       const updatedBoard = {
         ...boardData,
         role: role,
