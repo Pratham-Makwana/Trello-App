@@ -10,23 +10,12 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
     const enabled =
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-    console.log(
-      enabled
-        ? '✅ iOS notification permission granted'
-        : '❌ iOS notification permission denied',
-    );
     return enabled;
   } else if (Platform.OS === 'android') {
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
     );
 
-    console.log(
-      granted === PermissionsAndroid.RESULTS.GRANTED
-        ? '✅ Android (13+) notification permission granted'
-        : '❌ Android (13+) notification permission denied',
-    );
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   }
 

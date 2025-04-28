@@ -65,6 +65,19 @@ export const signOut = async () => {
   }
 };
 
+export const checkUserExists = async (email: string) => {
+  try {
+    const userSnapshot = await userRef.where('email', '==', email).get();
+    
+    if (userSnapshot.docs.length === 0) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error checking user existence:', error);
+  }
+};
+
 // ================ Board ==================
 
 export const createBoard = async (

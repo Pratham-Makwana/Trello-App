@@ -18,5 +18,5 @@ export const validatePassword = (password: string): string | null => {
     return 'Password must include uppercase and lowercase letters, numbers, and special characters.';
   }
 
-  return null; // No errors
+  return null; 
 };

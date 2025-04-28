@@ -24,6 +24,7 @@ import Invite from '@components/board/Invite';
 import {useAppDispatch} from '@store/reduxHook';
 import {useUser} from '@hooks/useUser';
 import {createBoard} from '@config/firebaseRN';
+import ForgotPasswordScreen from '@features/auth/ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -217,6 +218,11 @@ const AuthStack = () => {
         options={{
           headerShown: false,
         }}
+      />
+      <Stack.Screen
+        name="ForgotPasswordScreen"
+        component={ForgotPasswordScreen}
+        options={{headerShown: false}}
       />
     </Stack.Navigator>
   );
