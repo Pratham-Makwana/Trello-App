@@ -1,6 +1,7 @@
 import {
   ActivityIndicator,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,8 +26,10 @@ import UserList from '@components/board/UserList';
 import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch} from '@store/reduxHook';
-import {closeBoard} from '@store/board/boardSlice';
+import {closeBoard, updateBoard} from '@store/board/boardSlice';
 import Toast from 'react-native-toast-message';
+import {BGCOLORS} from '../BGSelect';
+import LinearGradient from 'react-native-linear-gradient';
 
 const BoardMenu = () => {
   const route =
@@ -61,6 +64,7 @@ const BoardMenu = () => {
         ) {
           goBack();
         }
+        dispatch(updateBoard(updatedBoard));
         setBoardData(updatedBoard);
       },
     );
@@ -88,6 +92,12 @@ const BoardMenu = () => {
 
   const onUpdateBoard = async () => {
     await updateBoardInfo(boardData);
+  };
+
+  const handleChangeBg = async (color: string[]) => {
+    const updated = {...boardData, background: color};
+
+    await updateBoardInfo(updated);
   };
 
   const onUpdateBoardVisibility = async (visibility: string) => {
@@ -187,6 +197,48 @@ const BoardMenu = () => {
         </TouchableOpacity>
       </View>
 
+      {/* Change Color */}
+      <View style={styles.container}>
+        <Text style={styles.label}>Change Color</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.rowSpaceBetween}>
+          {BGCOLORS.map((color, index) => {
+            const gradientColors =
+              color.length === 1 ? [color[0], color[0]] : color;
+
+            const isSelected =
+              JSON.stringify(boardData?.background) === JSON.stringify(color);
+
+            return (
+              <TouchableOpacity
+                disabled={
+                  boardData?.role === 'member' &&
+                  boardData?.workspace === 'Workspace'
+                }
+                activeOpacity={0.8}
+                key={index}
+                style={[
+                  styles.btnContainer,
+                  isSelected && {
+                    borderWidth: 2,
+                    borderColor: Colors.lightprimary,
+                  },
+                ]}
+                onPress={() => handleChangeBg(color)}>
+                <LinearGradient
+                  colors={gradientColors}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}
+                  style={styles.linearColor}
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* Visibility Settings */}
       <View style={styles.container}>
         <Text style={styles.label}>Visibility</Text>
@@ -236,6 +288,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginVertical: 16,
   },
+  btnContainer: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 25,
+    marginHorizontal: 5,
+  },
   label: {
     color: Colors.textgrey,
     fontSize: 12,
@@ -249,6 +309,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  linearColor: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   inviteBtn: {
     backgroundColor: Colors.lightprimary,
@@ -294,6 +359,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 6,
     alignItems: 'center',
+    shadowOffset: {
+      width: 1,
+      height: 1,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 0.5,
+    elevation: 1,
   },
   deleteBtnText: {
     color: '#B22222',

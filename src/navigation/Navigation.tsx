@@ -45,7 +45,6 @@ const Navigation = () => {
           setUser(serializedUser);
           setInitializing(false);
         } else {
-          console.log('==> user', user);
           setInitializing(false);
         }
       }, 300);

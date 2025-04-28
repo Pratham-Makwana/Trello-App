@@ -222,6 +222,14 @@ const ListItem = ({
   const onConfirmDate = async (date: Date, type: 'start' | 'end') => {
     if (type === 'start') {
       console.log('Start Date:', date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (date < today) {
+        setOpenStartDate(false);
+        Alert.alert('Start Date must be later than today.');
+        return;
+      }
 
       await updateCart({
         ...item,
@@ -266,43 +274,21 @@ const ListItem = ({
         style={[styles.rowItem]}>
         {item?.imageUrl && (
           <>
-            <Image
-              source={{uri: item?.imageUrl}}
-              style={{
-                width: '100%',
-                height: 200,
-                borderRadius: 4,
-                backgroundColor: '#f3f3f3',
-              }}
-            />
+            <Image source={{uri: item?.imageUrl}} style={styles.image} />
 
-            <View style={{flexDirection: 'column'}}>
-              {item?.label?.color && (
-                <View
-                  style={{
-                    backgroundColor: item.label.color,
-                    paddingVertical: 4,
-                    paddingHorizontal: 10,
-                    borderRadius: 4,
-                    alignSelf: 'flex-start',
-                    marginTop: 6,
-                  }}>
-                  {item.label.title && (
-                    <Text
-                      style={{color: '#fff', fontSize: 12, fontWeight: '500'}}>
-                      {item.label.title}
-                    </Text>
-                  )}
-                </View>
-              )}
+            <View>
+              <View style={styles.labelWrapper}>
+                {item?.label?.color && (
+                  <View
+                    style={[styles.label, {backgroundColor: item.label.color}]}>
+                    {item.label.title && (
+                      <Text style={styles.labelText}>{item.label.title}</Text>
+                    )}
+                  </View>
+                )}
+              </View>
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingTop: 5,
-                  gap: 10,
-                }}>
+              <View style={styles.taskRow}>
                 <CheckBox
                   value={isDone}
                   onValueChange={onCheckDone}
@@ -314,11 +300,10 @@ const ListItem = ({
                   style={styles.checkbox}
                 />
                 <Text
-                  style={{
-                    flex: 1,
-                    color: Colors.black,
-                    textDecorationLine: isDone ? 'line-through' : 'none',
-                  }}>
+                  style={[
+                    styles.taskText,
+                    {textDecorationLine: isDone ? 'line-through' : 'none'},
+                  ]}>
                   {item.title}
                 </Text>
                 <TouchableOpacity
@@ -332,39 +317,43 @@ const ListItem = ({
                   />
                 </TouchableOpacity>
               </View>
+              {item?.startDate && (
+                <View style={styles.dateChip}>
+                  <Icon
+                    name="clock-outline"
+                    iconFamily="MaterialCommunityIcons"
+                    size={16}
+                    color={Colors.fontDark}
+                  />
+                  <View>
+                    <Text style={styles.dateText}>
+                      {format(new Date(startDate), 'dd MMM yyyy')}
+                      {item?.endDate
+                        ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
+                        : ''}
+                    </Text>
+                  </View>
+                </View>
+              )}
             </View>
           </>
         )}
 
         {!item?.imageUrl && (
-          <View style={{flexDirection: 'column'}}>
-            {item?.label?.color && (
-              <View
-                style={{
-                  backgroundColor: item.label.color,
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
-                  borderRadius: 4,
-                  alignSelf: 'flex-start',
-                  marginBottom: 6,
-                }}>
-                {item.label.title && (
-                  <Text
-                    style={{color: '#fff', fontSize: 12, fontWeight: '500'}}>
-                    {item.label.title}
-                  </Text>
-                )}
-              </View>
-            )}
+          <View>
+            <View style={styles.labelWrapper}>
+              {item?.label?.color && (
+                <View
+                  style={[styles.label, {backgroundColor: item.label.color}]}>
+                  {item.label.title && (
+                    <Text style={styles.labelText}>{item.label.title}</Text>
+                  )}
+                </View>
+              )}
+            </View>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-              <View
-                style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+            <View style={styles.taskRowSpace}>
+              <View style={styles.checkboxAndTextWrapper}>
                 <CheckBox
                   value={isDone}
                   onValueChange={onCheckDone}
@@ -392,6 +381,25 @@ const ListItem = ({
                 />
               </TouchableOpacity>
             </View>
+
+            {item?.startDate && (
+              <View style={styles.dateChip}>
+                <Icon
+                  name="clock-outline"
+                  iconFamily="MaterialCommunityIcons"
+                  size={16}
+                  color={Colors.fontDark}
+                />
+                <View>
+                  <Text style={styles.dateText}>
+                    {format(new Date(startDate), 'dd MMM yyyy')}
+                    {item?.endDate
+                      ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
+                      : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
       </AnimatedTouchable>
@@ -601,18 +609,6 @@ const ListItem = ({
                     {!startDate
                       ? 'Start Date Not Selected'
                       : format(new Date(startDate), 'dd MMM yyyy')}
-                    {/* {startDate === null ||
-                    startDate === undefined ||
-                    startDate === ''
-                      ? 'Start Date Not Selected'
-                      : format(
-                          new Date(
-                            typeof startDate === 'string'
-                              ? startDate
-                              : startDate.toISOString(),
-                          ),
-                          'dd MMM yyyy',
-                        )} */}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -621,7 +617,7 @@ const ListItem = ({
                 title="Select Start Date"
                 mode="date"
                 modal
-                minimumDate={minimumDate}
+                // minimumDate={new Date()}
                 open={openStartDate}
                 date={startDate || date}
                 onConfirm={date => onConfirmDate(date, 'start')}
@@ -655,16 +651,6 @@ const ListItem = ({
                     {!endDate
                       ? 'endDate Date Not Selected'
                       : format(new Date(endDate), 'dd MMM yyyy')}
-                    {/* {endDate === null || endDate === undefined || endDate === ''
-                      ? 'Start Date Not Selected'
-                      : format(
-                          new Date(
-                            typeof endDate === 'string'
-                              ? endDate
-                              : endDate.toISOString(),
-                          ),
-                          'dd MMM yyyy',
-                        )} */}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -673,7 +659,6 @@ const ListItem = ({
                 title="Select End Date"
                 mode="date"
                 modal
-                minimumDate={minimumDate}
                 open={openEndDate}
                 date={endDate || date}
                 onConfirm={date => onConfirmDate(date, 'end')}
@@ -799,8 +784,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
-    // padding: 20,
-    // gap: 16,
   },
 
   contentContainer: {
@@ -808,6 +791,69 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     backgroundColor: Colors.grey,
   },
+  image: {
+    width: '100%',
+    height: 200,
+    borderRadius: 4,
+    backgroundColor: '#f3f3f3',
+  },
+
+  labelWrapper: {
+    marginHorizontal: 5,
+    marginBottom: 2,
+  },
+  label: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+
+  labelText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 5,
+    gap: 10,
+  },
+  taskRowSpace: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  taskText: {
+    flex: 1,
+    color: Colors.black,
+  },
+  checkboxAndTextWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#27AE60',
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+    marginHorizontal: 5,
+    paddingVertical: 5,
+    borderRadius: 4,
+    marginTop: 6,
+    gap: 5,
+  },
+  dateText: {
+    color: Colors.black,
+    fontSize: RFValue(11),
+  },
+
   input: {
     fontSize: RFValue(16),
     color: Colors.fontDark,

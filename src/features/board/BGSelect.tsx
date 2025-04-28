@@ -11,7 +11,7 @@ type RootStackParamList = {
   BGSelect: {bg?: string[]};
 };
 
-const COLORS = [
+export const BGCOLORS = [
   ['#4158D0', '#C850C0', '#FFCC70'],
   ['#0093E9', '#80D0C7'],
   ['#F4D03F', '#16A085'],
@@ -26,7 +26,7 @@ const COLORS = [
   ['#838C91'],
 ];
 
-export const DEFAULT_COLOR = COLORS[0];
+export const DEFAULT_COLOR = BGCOLORS[0];
 
 const BGSelect = () => {
   const {selectedColor, setSelectedColor} = useBoard();
@@ -40,7 +40,7 @@ const BGSelect = () => {
     <ScrollView
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.container}>
-      {COLORS.map((color, index) => {
+      {BGCOLORS.map((color, index) => {
         const gradientColors =
           color.length === 1 ? [color[0], color[0]] : color;
 

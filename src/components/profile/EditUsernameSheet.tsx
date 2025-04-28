@@ -9,9 +9,7 @@ import {
 } from 'react-native';
 import {useUser} from '@hooks/useUser';
 import auth from '@react-native-firebase/auth';
-import // auth,
-//  updateUserProfile
-'@config/firebase';
+
 import {updateUserProfile} from '@config/firebaseRN';
 
 const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
@@ -25,9 +23,6 @@ const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
     try {
       setLoading(true);
       await updateUserProfile(currentUser!.uid, {username: username.trim()});
-      // await updateProfile(auth.currentUser!, {
-      //   displayName: username.trim(),
-      // });
       await auth().currentUser?.updateProfile({
         displayName: username.trim(),
       });
@@ -36,8 +31,7 @@ const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
         ...currentUser,
         username: username.trim(),
       };
-      console.log('Updated user:', updatedUser);
-      
+
       setUser(updatedUser);
       onClose();
     } catch (error) {

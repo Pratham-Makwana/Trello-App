@@ -1,16 +1,14 @@
 import {
   FlatList,
-  RefreshControl,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
 import {DefaultTheme} from '@react-navigation/native';
-// import {listenToUserBoards} from '@config/firebase';
 
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
@@ -55,6 +53,7 @@ const BoardScreen = () => {
       item.background.length === 1
         ? [item.background[0], item.background[0]]
         : item.background;
+
     return (
       <TouchableOpacity
         style={[styles.boardList]}
@@ -84,7 +83,7 @@ const BoardScreen = () => {
   );
   return (
     <View style={styles.boardContainer}>
-      <StatusBar backgroundColor={DefaultTheme.colors.text} />
+      <StatusBar backgroundColor={Colors.lightprimary}  />
       {isLoading && <CustomModal loading={isLoading} transparent={false} />}
       {!isLoading && (
         <FlatList

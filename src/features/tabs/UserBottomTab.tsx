@@ -40,7 +40,8 @@ const UserBottomTab = () => {
             />
           ),
           headerStyle: {
-            backgroundColor: DarkColors.headerbgcolor,
+            // backgroundColor: DarkColors.headerbgcolor
+            backgroundColor: Colors.lightprimary,
           },
           headerRight: () => (
             <View
@@ -63,14 +64,14 @@ const UserBottomTab = () => {
               }}>
               <Icon
                 name="trello"
-                color="#388BFF"
+                color="#fff"
                 iconFamily="MaterialCommunityIcons"
                 size={RFValue(18)}
               />
               <CustomText
                 variant="h2"
                 fontFamily="Montserrat-SemiBold"
-                color="#388BFF">
+                color="#fff">
                 Trello
               </CustomText>
             </View>

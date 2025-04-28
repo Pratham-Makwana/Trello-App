@@ -84,9 +84,9 @@ const BoardCard = () => {
   }, []);
 
   const gradientColors =
-    boardDetails?.background.length === 1
-      ? [boardDetails?.background[0], boardDetails?.background[0]]
-      : boardDetails?.background;
+    currentBoard?.background.length === 1
+      ? [currentBoard?.background[0], currentBoard?.background[0]]
+      : currentBoard?.background || ['#ffffff', '#ffffff'];
 
   const onPressPagination = (index: number) => {
     ref.current?.scrollTo({
