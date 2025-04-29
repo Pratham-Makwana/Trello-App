@@ -113,7 +113,6 @@ const ForgotPasswordScreen = () => {
           </View>
         </ScrollView>
       </SafeAreaView>
-      <Toast />
     </KeyboardAvoidingView>
   );
 };

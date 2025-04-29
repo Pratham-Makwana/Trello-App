@@ -75,7 +75,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
     await addBoardList(board?.boardId, title, taskList.length);
   };
 
-
   const onDeleteBoardList = async () => {
     await deleteBoardList(
       selectedList!.list_id,
@@ -256,7 +255,6 @@ const BoardCardArea: FC<BoardCardAreaProps> = ({board}) => {
           </TouchableOpacity>
         </BottomSheetView>
       </BottomSheetModal>
-      <Toast />
     </SafeAreaView>
   );
 };

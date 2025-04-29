@@ -193,7 +193,6 @@ const Profile = () => {
           <EditUsernameSheet onClose={() => bottomSheetRef.current?.close()} />
         </BottomSheetView>
       </BottomSheetModal>
-      <Toast />
     </ScrollView>
   );
 };

@@ -145,7 +145,6 @@ const AuthModal: FC<{
           </CustomText>
         </TouchableOpacity>
       ))}
-      <Toast />
     </BottomSheetView>
   );
 };

@@ -7,12 +7,9 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {useAppSelector} from '@store/reduxHook';
-import // acceptInvite,
-// declineInvite,
-// listenToPendingInvites,
-'@config/firebase';
+
 import {Colors} from '@utils/Constant';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {
@@ -39,27 +36,10 @@ export type Invite = {
   };
 };
 
-const Notification = () => {
-  const [invites, setInvites] = useState<Invite[]>([]);
-  const [loading, setLoading] = useState(true);
+const InviteScreen = () => {
+  const [loading, setLoading] = useState(false);
   const currentUser = useAppSelector(state => state.user.currentUser);
-
-  useEffect(() => {
-    let unsubscribe: () => void;
-
-    const subscribe = async () => {
-      unsubscribe = listenToPendingInvites(currentUser!.uid, data => {
-        setInvites(data);
-        setLoading(false);
-      });
-    };
-
-    subscribe();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
+  const invites = useAppSelector(state => state.invite.pendingInvites);
 
   const handleAccept = async (invite: Invite) => {
     try {
@@ -150,12 +130,11 @@ const Notification = () => {
           <Text style={styles.emptyText}>No invitations yet.</Text>
         }
       />
-      <Toast />
     </View>
   );
 };
 
-export default Notification;
+export default InviteScreen;
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#fff', padding: 16},

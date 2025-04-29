@@ -18,7 +18,6 @@ interface CustomSearchBarProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   onClear?: () => void;
-  OnSearch: () => void;
 }
 
 const CustomSearchBar: FC<CustomSearchBarProps> = ({
@@ -26,7 +25,6 @@ const CustomSearchBar: FC<CustomSearchBarProps> = ({
   onChangeText,
   placeholder,
   onClear,
-  OnSearch,
 }) => {
   return (
     <View style={styles.mainContainer}>
@@ -48,31 +46,13 @@ const CustomSearchBar: FC<CustomSearchBarProps> = ({
           <Pressable onPress={onClear} style={styles.clearIcon}>
             <Icon
               name="close-circle"
-              size={20}
+              size={22}
               color="#888"
               iconFamily="Ionicons"
             />
           </Pressable>
         )}
       </View>
-      {value.length > 0 && (
-        <TouchableOpacity
-          onPress={OnSearch}
-          activeOpacity={0.8}
-          style={{
-            justifyContent: 'center',
-            marginRight: 10,
-          }}>
-          <Text
-            style={{
-              textAlign: 'center',
-              color: Colors.lightprimary,
-              fontSize: 16,
-            }}>
-            Search
-          </Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };

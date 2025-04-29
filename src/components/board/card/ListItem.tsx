@@ -33,7 +33,8 @@ import CheckBox from '@react-native-community/checkbox';
 import {useAppSelector} from '@store/reduxHook';
 import MoveList from './MoveList';
 import DatePicker from 'react-native-date-picker';
-import {format, set} from 'date-fns';
+import {format} from 'date-fns';
+import {SelectList} from 'react-native-dropdown-select-list';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -78,13 +79,11 @@ const ListItem = ({
 
   const [openStartDate, setOpenStartDate] = useState(false);
   const [openEndDate, setOpenEndDate] = useState(false);
-  const [minimumDate, setMinimumDate] = useState(new Date());
   const [labels, setLabels] = useState({
     title: item?.label?.title || '',
     color: item?.label?.color || labelColors[0],
   });
-
-  const [selectedColor, setSelectedColor] = useState(labelColors[0]);
+  const [selected, setSelected] = useState('');
 
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === item.board_id),
@@ -140,9 +139,6 @@ const ListItem = ({
         title: cardTitle,
       };
       await updateCart(updatedCard);
-      runOnJS(() => {
-        bottomSheetModalRef.current?.close();
-      })();
     } catch (error) {
       console.log('Error deleting card:', error);
     }
@@ -481,6 +477,20 @@ const ListItem = ({
               </View>
             )}
 
+            {/* Assign User */}
+            <View
+              style={{
+                backgroundColor: '#fff',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                marginBottom: 16,
+              }}>
+              <Text
+                style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
+                Assign to Member
+              </Text>
+            </View>
+
             {/* Description Input */}
             <View style={styles.inputRow}>
               <Icon
@@ -675,6 +685,7 @@ const ListItem = ({
         </BottomSheetView>
       </BottomSheetModal>
 
+      {/* Move List  */}
       <BottomSheetModal
         ref={bottomSheetModalCardRef}
         index={0}
@@ -893,12 +904,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+
   deleteBtn: {
     backgroundColor: '#fff',
     padding: 8,
     marginHorizontal: 16,
     borderRadius: 6,
     alignItems: 'center',
+    shadowOffset: {
+      width: 1,
+      height: 1,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 0.5,
+    elevation: 1,
   },
   deleteBtnText: {
     color: '#B22222',

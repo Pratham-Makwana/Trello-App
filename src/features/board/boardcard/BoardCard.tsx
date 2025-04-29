@@ -347,7 +347,6 @@ const BoardCard = () => {
               </TouchableOpacity>
             </BottomSheetView>
           </BottomSheetModal>
-          <Toast />
         </SafeAreaView>
       )}
     </LinearGradient>

@@ -25,6 +25,7 @@ import {useAppDispatch} from '@store/reduxHook';
 import {useUser} from '@hooks/useUser';
 import {createBoard} from '@config/firebaseRN';
 import ForgotPasswordScreen from '@features/auth/ForgotPasswordScreen';
+import {useNotificationHandlers} from '@config/useNotificationHandlers';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,8 @@ const Navigation = () => {
   const {user, setUser} = useUser();
   const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  useNotificationHandlers();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth(), async user => {

@@ -274,7 +274,6 @@ const BoardMenu = () => {
           <Text style={styles.deleteBtnText}>Leave Board</Text>
         </TouchableOpacity>
       )}
-      <Toast />
     </View>
   );
 };

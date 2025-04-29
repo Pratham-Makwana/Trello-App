@@ -1,5 +1,5 @@
 import {FlatList, StyleSheet, View} from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import CustomSearchBar from './CustomSearchBar';
 import UserList from './UserList';
 import LottieView from 'lottie-react-native';
@@ -27,33 +27,47 @@ const Invite = () => {
     setSearch('');
     setSearchUser([]);
   };
-  const onUserSearch = async () => {
-    const users = await findUsers(search.trim());
-    setSearchUser(users);
-  };
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (search.trim()) {
+        const users = await findUsers(search.trim());
+        setSearchUser(users);
+      } else {
+        setSearchUser([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const onAddUser = async (user: User) => {
     try {
-      Toast.show({
-        type: 'success',
-        text1: 'Invitation Sent 🎉',
-        text2: `Your invitation to join the "${title}" board has been sent.`,
-      });
-
       if (user?.notificationToken) {
-        sendNotificationToOtherUser(
+        const response = await sendNotificationToOtherUser(
           user.notificationToken,
           '📩 Board Invitation',
           `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
           'notification',
         );
-
-        await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
-        setTimeout(() => {
-          goBack();
-        }, 1000);
+        if (response) {
+          Toast.show({
+            type: 'success',
+            text1: 'Invitation Sent 🎉',
+            text2: `Your invitation to join the "${title}" board has been sent.`,
+          });
+          await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
+          setTimeout(() => {
+            goBack();
+          }, 1000);
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Something went wrong, please try later',
+          });
+        }
       } else {
-        console.error('Notification token is undefined');
+        console.log('Notification token is undefined');
       }
     } catch (error) {
       console.log('Error On Add User', error);
@@ -66,7 +80,7 @@ const Invite = () => {
         onChangeText={setSearch}
         placeholder="search user by email"
         onClear={onClear}
-        OnSearch={onUserSearch}
+        // OnSearch={onUserSearch}
       />
 
       <View style={{paddingHorizontal: 20, flex: 1}}>
@@ -95,7 +109,6 @@ const Invite = () => {
           style={{marginVertical: 12}}
         />
       </View>
-      <Toast />
     </>
   );
 };

@@ -68,7 +68,7 @@ export const signOut = async () => {
 export const checkUserExists = async (email: string) => {
   try {
     const userSnapshot = await userRef.where('email', '==', email).get();
-    
+
     if (userSnapshot.docs.length === 0) {
       return false;
     }
@@ -678,7 +678,6 @@ export const sendBoardInvite = async (
       invitedBy,
       status: 'pending',
     });
-    console.log(' Board invite sent successfully');
   } catch (error) {
     console.error(' Error sending board invite:', error);
   }

@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
-import {DefaultTheme} from '@react-navigation/native';
 
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
@@ -83,7 +82,7 @@ const BoardScreen = () => {
   );
   return (
     <View style={styles.boardContainer}>
-      <StatusBar backgroundColor={Colors.lightprimary}  />
+      <StatusBar backgroundColor={Colors.lightprimary} />
       {isLoading && <CustomModal loading={isLoading} transparent={false} />}
       {!isLoading && (
         <FlatList

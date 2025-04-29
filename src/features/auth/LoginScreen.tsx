@@ -130,7 +130,6 @@ const LoginScreen = () => {
           </View>
         </ScrollView>
 
-        <Toast />
       </SafeAreaView>
     </KeyboardAvoidingView>
   );

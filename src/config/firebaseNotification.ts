@@ -1,9 +1,7 @@
 import messaging from '@react-native-firebase/messaging';
 import {navigate} from '@utils/NavigationUtils';
-
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
-import Toast from 'react-native-toast-message';
-
+import firestore from '@react-native-firebase/firestore';
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
@@ -40,15 +38,25 @@ export const hasNotificationPermission = async () => {
 
 export const setupBackgroundAndForegroundHandlers = () => {
   // Foreground handler
-  messaging().onMessage(async remoteMessage => {
-    if (remoteMessage?.notification?.title) {
-      Toast.show({
-        type: 'info',
-        text1: remoteMessage.notification?.title,
-        text2: remoteMessage.notification?.body,
-      });
-    }
-  });
+  // messaging().onMessage(async remoteMessage => {
+  //   const dispatch = useAppDispatch();
+  //   if (remoteMessage?.notification?.title) {
+  //     console.log('==> Foreground handler ', remoteMessage);
+
+  //     Toast.show({
+  //       type: 'info',
+  //       text1: remoteMessage.notification?.title,
+  //       text2: remoteMessage.notification?.body,
+  //     });
+  //     dispatch(
+  //       addNotification({
+  //         id: remoteMessage.messageId ?? 'unknown-id',
+  //         title: remoteMessage.notification?.title,
+  //         body: remoteMessage.notification?.body || '',
+  //       }),
+  //     );
+  //   }
+  // });
 
   // Background & Quit state
   messaging().setBackgroundMessageHandler(async remoteMessage => {
@@ -109,7 +117,24 @@ export const sendNotificationToOtherUser = async (
         }),
       },
     );
+
+    return response.ok;
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.log('Error sending notification:', error);
+    return false;
   }
+};
+
+export const saveNotification = async (
+  id: string,
+  title: string,
+  body: string | undefined,
+) => {
+  await firestore().collection('notifications').add({
+    userId: id,
+    title,
+    body,
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
 };

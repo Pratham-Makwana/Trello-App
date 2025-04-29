@@ -158,7 +158,6 @@ const SignupScreen = () => {
             </View>
           </View>
         </ScrollView>
-        <Toast />
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
