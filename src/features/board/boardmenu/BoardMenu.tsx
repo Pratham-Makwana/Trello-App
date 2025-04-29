@@ -25,28 +25,31 @@ import {
 import UserList from '@components/board/UserList';
 import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
-import {useAppDispatch} from '@store/reduxHook';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {closeBoard, updateBoard} from '@store/board/boardSlice';
 import Toast from 'react-native-toast-message';
 import {BGCOLORS} from '../BGSelect';
 import LinearGradient from 'react-native-linear-gradient';
+import {setMembers} from '@store/member/memberSlice';
 
 const BoardMenu = () => {
   const route =
     useRoute<RouteProp<{BoardMenu: {boardId: string; board: Board}}>>();
   const {boardId, board} = route.params;
   const [boardData, setBoardData] = useState<Board | any>();
-  const [member, setMember] = useState<User | any>();
+  // const [member, setMember] = useState<User | any>();
   const {user} = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const dispatch = useAppDispatch();
+  const members = useAppSelector(state => state.member.members);
 
   useEffect(() => {
     loadBoardInfo();
   }, []);
   useEffect(() => {
     const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
-      setMember(members);
+      dispatch(setMembers(members));
+      // setMember(members);
       setIsLoading(false);
     });
 
@@ -101,10 +104,7 @@ const BoardMenu = () => {
   };
 
   const onUpdateBoardVisibility = async (visibility: string) => {
-    console.log('==> onUpdateBoardVisibility', member);
-
-    const currentUser = member.find((item: User) => item.uid === user!.uid);
-    console.log('==> currentUser', currentUser);
+    const currentUser = members.find((item: User) => item.uid === user!.uid);
 
     if (currentUser?.role !== 'creator') {
       Toast.show({
@@ -180,7 +180,7 @@ const BoardMenu = () => {
         )}
         {!isLoading && (
           <FlatList
-            data={member}
+            data={members}
             keyExtractor={item => item.uid}
             renderItem={({item}) => <UserList member={item} />}
             contentContainerStyle={{gap: 8}}

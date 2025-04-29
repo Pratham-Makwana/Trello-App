@@ -71,6 +71,7 @@ export interface Board {
   userInfo?: {
     email: any;
     username: any;
+    notificationToken : string
   };
   role?: string;
 }

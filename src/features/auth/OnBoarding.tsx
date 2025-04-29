@@ -30,7 +30,6 @@ const OnBoarding = () => {
   const {top} = useSafeAreaInsets();
   const isDark = useGlobalColorScheme();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  bottomSheetModalRef.current?.present();
   const snapPoints = useMemo(() => ['33%'], []);
   const [authType, setAuthType] = useState<ModalType | null>(null);
 

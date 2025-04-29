@@ -5,6 +5,7 @@ interface Notification {
   title: string;
   body: string;
   read: boolean;
+  createdAt: any;
 }
 
 interface NotificationState {

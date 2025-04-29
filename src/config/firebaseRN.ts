@@ -49,7 +49,6 @@ export const loginUser = async (email: string, password: string) => {
   const user = userCredential.user;
 
   const token = await messaging().getToken();
-  console.log('==> token', token);
 
   await userRef.doc(user.uid).update({
     notificationToken: token,
@@ -152,6 +151,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
       userInfo: {
         username: creatorData?.username || 'Unknown',
         email: creatorData?.email || '',
+        notificationToken: creatorData?.notificationToken,
       },
     };
 
@@ -753,7 +753,6 @@ export const leaveBoard = async (boardId: string, userId: string) => {
   try {
     const joinDocRef = userBoardRef.doc(`${userId}_${boardId}`);
     await deleteDoc(joinDocRef);
-    console.log(`User ${userId} has left the board.`);
   } catch (error) {
     console.error('Error leaving board:', error);
   }

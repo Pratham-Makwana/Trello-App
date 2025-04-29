@@ -1,13 +1,11 @@
 import React, {useEffect} from 'react';
 import {View, Text, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
 import {useAppSelector, useAppDispatch} from '@store/reduxHook';
-import {
-  markAllAsRead,
-  setNotifications,
-} from '@store/notification/notificationSlice';
+import {markAllAsRead} from '@store/notification/notificationSlice';
 import firestore from '@react-native-firebase/firestore';
 import {useUser} from '@hooks/useUser';
 import {Colors} from '@utils/Constant';
+import {clearAllNotifications} from '@config/firebaseNotification';
 
 const NotificationScreen = () => {
   const notifications = useAppSelector(
@@ -32,33 +30,22 @@ const NotificationScreen = () => {
     dispatch(markAllAsRead());
   };
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const snapshot = await firestore()
-          .collection('notifications')
-          .orderBy('createdAt', 'desc')
-          .get();
-
-        const notificationsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          title: doc.data().title || '',
-          body: doc.data().body || '',
-          read: doc.data().read || false,
-        }));
-
-        dispatch(setNotifications(notificationsData));
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
-    fetchNotifications();
-  }, [dispatch]);
+  const handleClearAll = async () => {
+    if (user?.uid) {
+      await clearAllNotifications(user?.uid);
+    }
+  };
 
   const renderItem = ({
     item,
   }: {
-    item: {id: string; title: string; body: string; read: boolean};
+    item: {
+      id: string;
+      title: string;
+      body: string;
+      read: boolean;
+      createdAt: any;
+    };
   }) => (
     <View
       style={[
@@ -71,6 +58,7 @@ const NotificationScreen = () => {
       <Text style={[styles.body, item.read && styles.readBody]}>
         {item.body}
       </Text>
+      <Text>{new Date(item.createdAt).toLocaleString()}</Text>
     </View>
   );
 
@@ -78,9 +66,14 @@ const NotificationScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         {notifications.length > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead}>
-            <Text style={styles.clearButton}>Mark all read</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity onPress={handleClearAll}>
+              <Text style={styles.clearButton}>Clear All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleMarkAllRead}>
+              <Text style={styles.clearButton}>Mark all read</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -88,6 +81,7 @@ const NotificationScreen = () => {
         <Text style={styles.emptyText}>No notifications yet.</Text>
       ) : (
         <FlatList
+          showsVerticalScrollIndicator={false}
           data={notifications}
           keyExtractor={item => item.id}
           renderItem={renderItem}
@@ -107,7 +101,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },

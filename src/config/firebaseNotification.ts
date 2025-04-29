@@ -130,11 +130,36 @@ export const saveNotification = async (
   title: string,
   body: string | undefined,
 ) => {
-  await firestore().collection('notifications').add({
-    userId: id,
-    title,
-    body,
-    read: false,
-    createdAt: new Date().toISOString(),
-  });
+  console.log('==> saveNotification called');
+
+  try {
+    await firestore().collection('notifications').add({
+      userId: id,
+      title,
+      body,
+      read: false,
+      createdAt: firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.log('==> saveNotification Error', error);
+  }
+};
+
+export const clearAllNotifications = async (userId: string ) => {
+  try {
+    const snapshot = await firestore()
+      .collection('notifications')
+      .where('userId', '==', userId)
+      .get();
+
+    const batch = firestore().batch();
+
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+  } catch (error) {
+    console.log(' Error clearing notifications:', error);
+  }
 };

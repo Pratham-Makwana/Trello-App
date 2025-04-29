@@ -8,6 +8,7 @@ import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {leaveBoard} from '@config/firebaseRN';
 import {useUser} from '@hooks/useUser';
 import {closeBoard} from '@store/board/boardSlice';
+import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 
 interface CustomHeaderAndroidProps {
   title: string;
@@ -27,6 +28,13 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
 
   const onLeaveBoard = async () => {
     leaveBoard(boardId, user!.uid);
+    if (currentBoard?.userInfo?.notificationToken) {
+      sendNotificationToOtherUser(
+        currentBoard?.userInfo?.notificationToken,
+        'Board Update',
+        `${user?.username} has left the board "${currentBoard?.title}`,
+      );
+    }
     dispatch(closeBoard(boardId));
     resetAndNavigate('UserBottomTab');
   };

@@ -2,9 +2,7 @@ import Toast from 'react-native-toast-message';
 import messaging from '@react-native-firebase/messaging';
 import {useEffect} from 'react';
 import {useAppDispatch} from '@store/reduxHook';
-import {addNotification} from '@store/notification/notificationSlice';
 import {navigate} from '@utils/NavigationUtils';
-import firestore from '@react-native-firebase/firestore';
 import {useUser} from '@hooks/useUser';
 import {saveNotification} from './firebaseNotification';
 
@@ -13,68 +11,61 @@ export const useNotificationHandlers = () => {
   const {user} = useUser();
 
   useEffect(() => {
+    if (!user?.uid) {
+      return;
+    }
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       const notification = remoteMessage.notification;
 
-      if (notification?.title) {
-        Toast.show({
-          type: 'info',
-          text1: notification.title,
-          text2: notification.body,
-        });
+      if (notification?.title && user?.uid) {
+        try {
+          await saveNotification(
+            user.uid,
+            notification.title,
+            notification.body,
+          );
 
-        await saveNotification(
-          user!.uid,
-          notification.title,
-          notification.body,
-        );
-
-        dispatch(
-          addNotification({
-            id: remoteMessage.messageId || '',
-            title: notification.title,
-            body: notification.body || '',
-          }),
-        );
+          Toast.show({
+            type: 'info',
+            text1: notification.title,
+            text2: notification.body,
+          });
+        } catch (err) {
+          console.log('Notification Save Error', err);
+        }
+      } else {
+        console.log('not called');
       }
     });
 
     messaging().onNotificationOpenedApp(async remoteMessage => {
-      const notification = remoteMessage.notification;
-      if (notification?.body && notification?.title) {
-        await saveNotification(
-          user!.uid,
-          notification.title,
-          notification.body,
-        );
+      const notification = remoteMessage?.notification;
+
+      if (notification?.title) {
+        await saveNotification(user.uid, notification.title, notification.body);
       }
+
       const screen = remoteMessage?.data?.screen;
-      if (typeof screen === 'string') {
-        navigate(screen);
-      }
+      if (screen) navigate('UserBottomTab', {screen});
     });
 
     messaging()
       .getInitialNotification()
       .then(async remoteMessage => {
         const notification = remoteMessage?.notification;
-        if (notification) {
-          if (notification?.body && notification?.title) {
-            await saveNotification(
-              user!.uid,
-              notification.title,
-              notification.body,
-            );
-          }
+
+        if (notification?.title) {
+          await saveNotification(
+            user.uid,
+            notification.title,
+            notification.body,
+          );
         }
-        if (remoteMessage) {
-          const screen = remoteMessage?.data?.screen;
-          if (screen) {
-            navigate('UserBottomTab', {screen});
-          }
-        }
+
+        const screen = remoteMessage?.data?.screen;
+        if (screen) navigate('UserBottomTab', {screen});
       });
 
     return () => unsubscribe();
-  }, [dispatch]);
+  }, [dispatch, user?.uid]);
 };
