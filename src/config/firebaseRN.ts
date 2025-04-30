@@ -58,7 +58,6 @@ export const loginUser = async (email: string, password: string) => {
 export const signOut = async () => {
   try {
     await auth().signOut();
-    console.log('User signed out successfully');
   } catch (error) {
     console.log('==> firebase:logout: ', error);
   }
@@ -483,8 +482,6 @@ export const deleteBoardList = async (
     await batch.commit();
 
     await listRef.doc(listId).delete();
-
-    console.log(' Deleted board list and all its cards successfully');
   } catch (error) {
     console.error(' Error deleting board list:', error);
   }
@@ -543,6 +540,7 @@ export const addCardList = async (
         title: '',
         color: '',
       },
+      assigned_to: [],
       createdAt: new Date().toISOString(),
     };
 
@@ -558,7 +556,7 @@ export const addCardList = async (
 export const updateCart = async (task: TaskItem) => {
   try {
     if (!task?.id || !task?.list_id) {
-      console.error('❌ Invalid task: missing id or list_id');
+      console.log('Invalid task: missing id or list_id');
       return;
     }
 
@@ -578,9 +576,10 @@ export const updateCart = async (task: TaskItem) => {
         title: task.label?.title || '',
         color: task.label?.color || '',
       },
+      assigned_to: task?.assigned_to,
     });
   } catch (error) {
-    console.log('❌ Error updating card:', error);
+    console.log('Error updating card:', error);
   }
 };
 
@@ -590,7 +589,7 @@ export const deleteCard = async (item: TaskItem) => {
     const deletedCardListId = item?.list_id;
 
     if (!deletedCardListId || item?.id === undefined) {
-      console.error('❌ Missing list_id or card id');
+      console.log('Missing list_id or card id');
       return;
     }
 
@@ -615,10 +614,8 @@ export const deleteCard = async (item: TaskItem) => {
 
     const cardDocRef = cardsRef.doc(item.id);
     await cardDocRef.delete();
-
-    console.log('✅ Card deleted and positions updated');
   } catch (error) {
-    console.error('❌ Error deleting card:', error);
+    console.error('Error deleting card:', error);
     throw error;
   }
 };
@@ -629,21 +626,26 @@ export const listenToCardsList = (
 ) => {
   try {
     const cardRef = listRef.doc(listId).collection('cards');
+    const listDocRef = listRef.doc(listId);
 
     const q = cardRef.orderBy('position');
 
-    const unsubscribe = q.onSnapshot(snapshot => {
-      const cards: TaskItem[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as TaskItem[];
+    const unsubscribe = q.onSnapshot(async snapshot => {
+      const cards: (TaskItem & {listTitle: string})[] = await Promise.all(
+        snapshot.docs.map(async doc => {
+          const cardData = doc.data() as TaskItem;
+          const listDoc = await listDocRef.get();
+          const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
+          return {...cardData, id: doc.id, listTitle};
+        }),
+      );
 
       callback(cards);
     });
 
     return unsubscribe;
   } catch (error) {
-    console.log('❌ Error in listenToCardsList:', error);
+    console.log('Error in listenToCardsList:', error);
   }
 };
 
@@ -679,7 +681,7 @@ export const sendBoardInvite = async (
       status: 'pending',
     });
   } catch (error) {
-    console.error(' Error sending board invite:', error);
+    console.log(' Error sending board invite:', error);
   }
 };
 
@@ -733,7 +735,7 @@ export const acceptInvite = async (
 
     await db.collection('board_invitations').doc(inviteId).delete();
   } catch (error) {
-    console.error('Error accepting invite:', error);
+    console.log('Error accepting invite:', error);
   }
 };
 
@@ -745,7 +747,7 @@ export const declineInvite = async (inviteId: string) => {
 
     await db.collection('board_invitations').doc(inviteId).delete();
   } catch (error) {
-    console.error('Error declining invite:', error);
+    console.log('Error declining invite:', error);
   }
 };
 
@@ -754,7 +756,7 @@ export const leaveBoard = async (boardId: string, userId: string) => {
     const joinDocRef = userBoardRef.doc(`${userId}_${boardId}`);
     await deleteDoc(joinDocRef);
   } catch (error) {
-    console.error('Error leaving board:', error);
+    console.log('Error leaving board:', error);
   }
 };
 
@@ -785,7 +787,8 @@ export const uploadToCloudinary = async (image: {
   if (result.secure_url) {
     return result.secure_url;
   } else {
-    throw new Error('Upload failed: ' + JSON.stringify(result));
+    console.log('Upload failed: ' + JSON.stringify(result));
+    return ''; 
   }
 };
 
@@ -798,8 +801,7 @@ export const updateUserProfile = async (
   try {
     await userDoc.update(updates);
   } catch (error) {
-    console.error('Error updating profile:', error);
-    throw new Error('Profile update failed');
+    console.log('Error updating profile:', error);
   }
 };
 

@@ -20,7 +20,7 @@ import auth from '@react-native-firebase/auth';
 import {listenToUserBoards} from '@config/firebaseRN';
 
 const BoardScreen = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const {user, setUser} = useUser();
   const boards = useAppSelector(state => state.board.boards);
   const dispatch = useAppDispatch();
@@ -28,6 +28,7 @@ const BoardScreen = () => {
   useEffect(() => {
     const unsubscribe = listenToUserBoards(user!.uid, boards => {
       dispatch(setBoards(boards));
+      setIsLoading(false);
     });
 
     return () => unsubscribe();

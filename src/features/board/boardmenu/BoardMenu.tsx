@@ -18,7 +18,6 @@ import {
   listenToUpdateBoardInfo,
   updateBoardInfo,
   deleteBoard,
-  getBoardInfo,
   leaveBoard,
   listenToBoardMembers,
 } from '@config/firebaseRN';
@@ -37,19 +36,14 @@ const BoardMenu = () => {
     useRoute<RouteProp<{BoardMenu: {boardId: string; board: Board}}>>();
   const {boardId, board} = route.params;
   const [boardData, setBoardData] = useState<Board | any>();
-  // const [member, setMember] = useState<User | any>();
   const {user} = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const dispatch = useAppDispatch();
   const members = useAppSelector(state => state.member.members);
 
   useEffect(() => {
-    loadBoardInfo();
-  }, []);
-  useEffect(() => {
     const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
       dispatch(setMembers(members));
-      // setMember(members);
       setIsLoading(false);
     });
 
@@ -74,12 +68,6 @@ const BoardMenu = () => {
 
     return () => unsubscribe();
   }, []);
-
-  const loadBoardInfo = async () => {
-    const data = await getBoardInfo(boardId, user!.uid);
-    setBoardData(data);
-    setIsLoading(false);
-  };
 
   const onDeleteBoard = async () => {
     await deleteBoard(boardId);

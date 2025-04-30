@@ -71,7 +71,7 @@ export interface Board {
   userInfo?: {
     email: any;
     username: any;
-    notificationToken : string
+    notificationToken: string;
   };
   role?: string;
 }
@@ -107,13 +107,14 @@ export interface TaskItem {
   board_id: string;
   list_id: string;
   createdAt: any;
-
+  assigned_to: any[];
   startDate: any;
   endDate: any;
   label: {
     title: string;
     color: string;
   };
+  listTitle: string;
 }
 
 export interface BoardInvite {
@@ -123,3 +124,11 @@ export interface BoardInvite {
   createdAt: Timestamp;
   status: 'pending' | 'accepted' | 'declined';
 }
+
+export type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+};

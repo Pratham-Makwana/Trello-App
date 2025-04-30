@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -16,6 +17,7 @@ import Icon from '@components/global/Icon';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetScrollView,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import {DefaultTheme} from '@react-navigation/native';
@@ -28,18 +30,25 @@ import {
   fetchAvailablePositionsForList,
   moveCardToList,
   List,
+  listenToBoardMembers,
 } from '@config/firebaseRN';
 import CheckBox from '@react-native-community/checkbox';
-import {useAppSelector} from '@store/reduxHook';
+import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import MoveList from './MoveList';
 import DatePicker from 'react-native-date-picker';
 import {format} from 'date-fns';
 import {SelectList} from 'react-native-dropdown-select-list';
+import UserList from '../UserList';
+import {User} from '@utils/Constant';
+import {setMembers} from '@store/member/memberSlice';
+import {sendNotificationToOtherUser} from '@config/firebaseNotification';
+import {useUser} from '@hooks/useUser';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 type ListItemProps = RenderItemParams<TaskItem> & {
-  disableDrag: boolean;
+  disable: boolean;
+  loading: boolean;
 };
 
 const ListItem = ({
@@ -47,14 +56,17 @@ const ListItem = ({
   drag,
   isActive,
   getIndex,
-  disableDrag,
+  disable,
+  loading,
 }: ListItemProps) => {
-  // const ListItem = ({item, drag, isActive}: RenderItemParams<TaskItem>) => {
+  const {user} = useUser();
   const [cardTitle, setCardTitle] = useState(item.title);
   const [cardDescription, setCardDescription] = useState(item.description);
+  const [assignedUsers, setAssignedUsers] = useState(item?.assigned_to);
   const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const bottomSheetModalCardRef = useRef<BottomSheetModal>(null);
+  const bottomSheetAssignCard = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['80%'], []);
   const [isDone, setIsDone] = useState(item.done);
   const [BoardList, setBoardList] = useState<any[]>([]);
@@ -83,11 +95,12 @@ const ListItem = ({
     title: item?.label?.title || '',
     color: item?.label?.color || labelColors[0],
   });
-  const [selected, setSelected] = useState('');
-
+  const dispatch = useAppDispatch();
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === item.board_id),
   );
+
+  const members = useAppSelector(state => state.member.members);
 
   useEffect(() => {
     setIsDone(item?.done);
@@ -97,6 +110,7 @@ const ListItem = ({
       title: item?.label?.title || '',
       color: item?.label?.color || labelColors[0],
     });
+    setAssignedUsers(item?.assigned_to);
   }, [item]);
 
   const loadGetListsByBoardId = async () => {
@@ -151,9 +165,6 @@ const ListItem = ({
       };
 
       await updateCart(updatedCard);
-      runOnJS(() => {
-        bottomSheetModalRef.current?.close();
-      })();
     } catch (error) {
       console.log('Error deleting card:', error);
     }
@@ -183,9 +194,13 @@ const ListItem = ({
     })();
   };
   const showModal = async () => {
-    runOnJS(() => {
-      bottomSheetModalRef.current?.present();
-    })();
+    const isUserAssigned = item.assigned_to.findIndex(u => u.uid == user?.uid);
+
+    if (isUserAssigned !== -1 || !disable) {
+      runOnJS(() => {
+        bottomSheetModalRef.current?.present();
+      })();
+    }
   };
 
   const onSelectList = async (list: List) => {
@@ -250,22 +265,74 @@ const ListItem = ({
   };
 
   const onUpdateCardLabel = async (updatedLabels = labels) => {
-    if (updatedLabels?.title.length > 0) {
-      await updateCart({
-        ...item,
-        label: {
-          title: updatedLabels.title,
-          color: updatedLabels.color,
-        },
-      });
-    }
+    await updateCart({
+      ...item,
+      label: {
+        title: updatedLabels.title,
+        color: updatedLabels.color,
+      },
+    });
   };
+
+  const onAssignUser = async (user: User) => {
+    const assignedUser = {
+      uid: user.uid,
+      username: user.username,
+      photoURL: user.photoURL,
+    };
+
+    if (user?.notificationToken) {
+      await sendNotificationToOtherUser(
+        user?.notificationToken,
+        `Assigned to a task on ${currentBoard?.title}`,
+        `You’ve been assigned to the card "${item?.title}" in the "${item?.listTitle}" list of the board "${currentBoard?.title}".`,
+      );
+    }
+
+    const updatedCard = {
+      ...item,
+      assigned_to: [...item.assigned_to, assignedUser],
+    };
+    await updateCart(updatedCard);
+    bottomSheetAssignCard.current?.close();
+  };
+  const onRemoveUser = async (user: User) => {
+    if (user?.notificationToken) {
+      await sendNotificationToOtherUser(
+        user?.notificationToken,
+        `Removed from a task on ${currentBoard?.title}`,
+        `You’ve been removed from the card "${item?.title}" in the "${item?.listTitle}" list of the board "${currentBoard?.title}".`,
+      );
+    }
+    const updatedAssignedUsers = assignedUsers.filter(
+      assignedUser => assignedUser.uid !== user.uid,
+    );
+
+    const updatedCard = {
+      ...item,
+      assigned_to: updatedAssignedUsers,
+    };
+
+    await updateCart(updatedCard);
+  };
+
+  useEffect(() => {
+    const unsubscribe = listenToBoardMembers(
+      item?.board_id,
+      (members: User[]) => {
+        dispatch(setMembers(members));
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <>
       <AnimatedTouchable
-        onPress={disableDrag ? () => {} : showModal}
+        onPress={showModal}
         activeOpacity={1}
-        onLongPress={!disableDrag ? drag : undefined}
+        onLongPress={!disable ? drag : undefined}
         disabled={isActive}
         style={[styles.rowItem]}>
         {item?.imageUrl && (
@@ -274,7 +341,7 @@ const ListItem = ({
 
             <View>
               <View style={styles.labelWrapper}>
-                {item?.label?.color && (
+                {item?.label?.color && item?.label?.title.length > 0 && (
                   <View
                     style={[styles.label, {backgroundColor: item.label.color}]}>
                     {item.label.title && (
@@ -302,9 +369,7 @@ const ListItem = ({
                   ]}>
                   {item.title}
                 </Text>
-                <TouchableOpacity
-                  disabled={disableDrag}
-                  onPress={showCardModal}>
+                <TouchableOpacity disabled={disable} onPress={showCardModal}>
                   <Icon
                     name="resize-outline"
                     iconFamily="Ionicons"
@@ -338,7 +403,7 @@ const ListItem = ({
         {!item?.imageUrl && (
           <View>
             <View style={styles.labelWrapper}>
-              {item?.label?.color && (
+              {item?.label?.color && item?.label?.title.length > 0 && (
                 <View
                   style={[styles.label, {backgroundColor: item.label.color}]}>
                   {item.label.title && (
@@ -368,7 +433,7 @@ const ListItem = ({
                   {item.title}
                 </Text>
               </View>
-              <TouchableOpacity disabled={disableDrag} onPress={showCardModal}>
+              <TouchableOpacity disabled={disable} onPress={showCardModal}>
                 <Icon
                   name="resize-outline"
                   iconFamily="Ionicons"
@@ -413,12 +478,11 @@ const ListItem = ({
         }}
         enableOverDrag={false}
         enablePanDownToClose>
-        <BottomSheetView style={styles.container}>
+        <BottomSheetScrollView style={styles.container}>
           <View
             style={{
               paddingTop: 10,
               alignItems: 'center',
-              paddingBottom: 16,
             }}>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -441,7 +505,7 @@ const ListItem = ({
                   backgroundColor: '#fff',
                   paddingHorizontal: 16,
                   paddingVertical: 8,
-                  marginBottom: 16,
+                  marginBottom: 15,
                 }}>
                 <Text
                   style={{
@@ -483,12 +547,92 @@ const ListItem = ({
                 backgroundColor: '#fff',
                 paddingHorizontal: 16,
                 paddingVertical: 8,
-                marginBottom: 16,
+                marginBottom: 10,
               }}>
-              <Text
-                style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
-                Assign to Member
-              </Text>
+              <TouchableOpacity
+                disabled={disable}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+                onPress={() => bottomSheetAssignCard.current?.present()}>
+                <Text
+                  style={{
+                    color: Colors.fontDark,
+                    fontSize: 14,
+                    fontWeight: '500',
+                  }}>
+                  Assign to Member
+                </Text>
+                <Icon name="chevron-forward" iconFamily="Ionicons" size={20} />
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: '#fff',
+                padding: 16,
+                borderRadius: 8,
+                marginHorizontal: 16,
+                marginBottom: 10,
+              }}>
+              {assignedUsers?.length === 0 ? (
+                <Text style={{fontSize: RFValue(12), color: Colors.fontDark}}>
+                  No member assigned.
+                </Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {assignedUsers.map((user, index) => (
+                    <View
+                      key={index}
+                      style={{
+                        alignItems: 'center',
+                        marginRight: 16,
+                      }}>
+                      <Image
+                        source={{uri: user.photoURL}}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          marginBottom: 4,
+                          backgroundColor: '#ccc',
+                        }}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: Colors.fontDark,
+                          maxWidth: 60,
+                          textAlign: 'center',
+                        }}
+                        numberOfLines={1}>
+                        {user.username || user.email}
+                      </Text>
+                      <TouchableOpacity
+                        disabled={disable}
+                        style={{
+                          marginTop: 5,
+                          backgroundColor: '#FFCDD2',
+                          height: 20,
+                          width: 20,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        onPress={() => onRemoveUser(user)}>
+                        <Icon
+                          name="remove"
+                          iconFamily="MaterialIcons"
+                          size={20}
+                          color="red"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
             {/* Description Input */}
@@ -544,7 +688,6 @@ const ListItem = ({
                 placeholderTextColor={Colors.placeholdertext}
                 returnKeyType="done"
                 enterKeyHint="done"
-                // onEndEditing={onUpdateCardLabel}
                 onEndEditing={e => {
                   const text = e.nativeEvent.text;
                   const updatedLabels = {...labels, title: text};
@@ -575,17 +718,18 @@ const ListItem = ({
                       setLabels(updatedLabels);
                       onUpdateCardLabel(updatedLabels);
                     }}
-                    style={{
-                      backgroundColor: color,
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      marginRight: 8,
-                      borderWidth: labels?.color === color ? 2 : 0,
-                      borderColor:
-                        labels?.color === color ? '#000' : 'transparent',
-                    }}
-                  />
+                    style={[
+                      styles.btnContainer,
+                      {
+                        borderWidth: labels?.color === color ? 2 : undefined,
+                        borderColor:
+                          labels?.color === color
+                            ? Colors.lightprimary
+                            : 'transparent',
+                      },
+                    ]}>
+                    <View style={[styles.Color, {backgroundColor: color}]} />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
@@ -677,12 +821,13 @@ const ListItem = ({
             </View>
 
             <TouchableOpacity
+              disabled={disable}
               style={styles.deleteBtn}
               onPress={() => onDeleteBoardCard(item)}>
               <Text style={styles.deleteBtnText}>Close Card</Text>
             </TouchableOpacity>
           </View>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
 
       {/* Move List  */}
@@ -781,6 +926,85 @@ const ListItem = ({
               />
             </View>
           )}
+        </BottomSheetView>
+      </BottomSheetModal>
+
+      <BottomSheetModal
+        ref={bottomSheetAssignCard}
+        index={0}
+        snapPoints={snapPoints}
+        handleComponent={null}
+        backdropComponent={renderBackdrop}
+        handleStyle={{
+          backgroundColor: DefaultTheme.colors.background,
+          borderRadius: 12,
+        }}
+        enableOverDrag={false}
+        enablePanDownToClose>
+        <BottomSheetView style={styles.container}>
+          <View
+            style={{
+              paddingTop: 10,
+              alignItems: 'center',
+              paddingBottom: 16,
+            }}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => bottomSheetAssignCard.current?.close()}
+              style={{
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: '#B4B4B4',
+                borderRadius: 50,
+                padding: 5,
+              }}>
+              <Icon name="close" iconFamily="Ionicons" size={22} />
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={members}
+            keyExtractor={item => item.uid}
+            renderItem={({item}) => (
+              <UserList member={item} onPress={onAssignUser} />
+            )}
+            ListHeaderComponent={() => (
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  backgroundColor: Colors.lightprimary,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}>
+                  <Icon
+                    name="people-outline"
+                    iconFamily="Ionicons"
+                    size={18}
+                    color={Colors.white}
+                  />
+                  <Text
+                    style={{
+                      color: Colors.white,
+                      fontSize: RFValue(13),
+                      fontWeight: '500',
+                    }}>
+                    Assigned Members
+                  </Text>
+                </View>
+              </View>
+            )}
+            contentContainerStyle={{gap: 8, paddingBottom: 20}}
+            style={{marginVertical: 12, paddingHorizontal: 10}}
+          />
         </BottomSheetView>
       </BottomSheetModal>
     </>
@@ -884,7 +1108,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ddd',
-    marginTop: 20,
     marginBottom: 20,
   },
   descriptionInput: {
@@ -987,5 +1210,18 @@ const styles = StyleSheet.create({
   positionTextSelected: {
     color: Colors.white,
     fontWeight: '600',
+  },
+  btnContainer: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 25,
+    marginHorizontal: 5,
+  },
+  Color: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
 });

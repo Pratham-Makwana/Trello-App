@@ -1,7 +1,6 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {View, Text, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
-import {useAppSelector, useAppDispatch} from '@store/reduxHook';
-import {markAllAsRead} from '@store/notification/notificationSlice';
+import {useAppSelector} from '@store/reduxHook';
 import firestore from '@react-native-firebase/firestore';
 import {useUser} from '@hooks/useUser';
 import {Colors} from '@utils/Constant';
@@ -11,7 +10,6 @@ const NotificationScreen = () => {
   const notifications = useAppSelector(
     state => state.notification.notifications,
   );
-  const dispatch = useAppDispatch();
   const {user} = useUser();
 
   const handleMarkAllRead = () => {
@@ -27,7 +25,6 @@ const NotificationScreen = () => {
       .catch(error => {
         console.log('Error updating notifications in Firestore:', error);
       });
-    dispatch(markAllAsRead());
   };
 
   const handleClearAll = async () => {
@@ -58,7 +55,16 @@ const NotificationScreen = () => {
       <Text style={[styles.body, item.read && styles.readBody]}>
         {item.body}
       </Text>
-      <Text>{new Date(item.createdAt).toLocaleString()}</Text>
+      <Text>
+        {new Date(item.createdAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: true,
+        })}
+      </Text>
     </View>
   );
 

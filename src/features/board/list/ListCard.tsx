@@ -44,6 +44,8 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
     if (!taskList?.list_id) return;
 
     const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
+      console.log("==> cards", cards);
+      
       setTasks(cards);
     });
 
@@ -106,6 +108,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           const image = response.assets?.[0];
 
           if (image?.uri) {
+            setLoading(true);
             try {
               const imageUrl = await uploadToCloudinary({
                 uri: image?.uri,
@@ -120,6 +123,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
                 tasks.length,
                 imageUrl,
               );
+              setLoading(false);
             } catch (error) {
               console.log('Error uploading or saving:', error);
             }
@@ -146,31 +150,21 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
         </View>
 
         {/* Render Card Tasks */}
-        {loading && (
-          <View
-            style={{
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-            <ActivityIndicator size={'large'} color={Colors.lightprimary} />
-          </View>
-        )}
-        {!loading && (
-          <DraggableFlatList
-            data={memoizedTasks}
-            // renderItem={ListItem}
-            renderItem={params => (
-              <ListItem {...params} disableDrag={disable} />
-            )}
-            keyExtractor={item => item.id}
-            onDragEnd={disable ? () => {} : onTaskCardDrop}
-            containerStyle={{
-              paddingBottom: 4,
-              maxHeight: '80%',
-            }}
-            contentContainerStyle={{gap: 4}}
-          />
-        )}
+
+        <DraggableFlatList
+          data={memoizedTasks}
+          // renderItem={ListItem}
+          renderItem={params => (
+            <ListItem {...params} disable={disable} loading={loading} />
+          )}
+          keyExtractor={item => item.id}
+          onDragEnd={disable ? () => {} : onTaskCardDrop}
+          containerStyle={{
+            paddingBottom: 4,
+            maxHeight: '80%',
+          }}
+          contentContainerStyle={{gap: 4}}
+        />
 
         {adding && (
           <TextInput

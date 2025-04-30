@@ -6,17 +6,21 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import {useUser} from '@hooks/useUser';
 import auth from '@react-native-firebase/auth';
 
 import {updateUserProfile} from '@config/firebaseRN';
+import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
 
 const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
   const {user: currentUser, setUser} = useUser();
   const [username, setUsername] = useState(currentUser?.username || '');
   const [loading, setLoading] = useState(false);
-
+  const keyboardOffset = useKeyboardOffsetHeight();
   const handleSave = async () => {
     if (!username.trim()) return;
 
@@ -42,34 +46,44 @@ const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
   };
 
   return (
-    <View style={sheetStyles.container}>
-      <Text style={sheetStyles.title}>Edit Username</Text>
-      <TextInput
-        style={sheetStyles.input}
-        placeholder="Enter new username"
-        value={username}
-        onChangeText={setUsername}
-        editable={!loading}
-      />
-      <View style={sheetStyles.buttonRow}>
-        <TouchableOpacity
-          style={[sheetStyles.button, sheetStyles.cancelButton]}
-          onPress={onClose}
-          disabled={loading}>
-          <Text style={sheetStyles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[sheetStyles.button, sheetStyles.saveButton]}
-          onPress={handleSave}
-          disabled={loading || !username.trim()}>
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={sheetStyles.buttonText}>Save</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      style={{flex: 1}}>
+      <ScrollView
+        contentContainerStyle={[
+          sheetStyles.container,
+          {paddingBottom: keyboardOffset},
+        ]}
+        keyboardShouldPersistTaps="handled">
+        <Text style={sheetStyles.title}>Edit Username</Text>
+        <TextInput
+          style={sheetStyles.input}
+          placeholder="Enter new username"
+          value={username}
+          onChangeText={setUsername}
+          editable={!loading}
+        />
+        <View style={sheetStyles.buttonRow}>
+          <TouchableOpacity
+            style={[sheetStyles.button, sheetStyles.cancelButton]}
+            onPress={onClose}
+            disabled={loading}>
+            <Text style={sheetStyles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[sheetStyles.button, sheetStyles.saveButton]}
+            onPress={handleSave}
+            disabled={loading || !username.trim()}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={sheetStyles.buttonText}>Save</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -97,6 +111,7 @@ const sheetStyles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: 10,
+    marginBottom : 20
   },
   button: {
     paddingVertical: 10,

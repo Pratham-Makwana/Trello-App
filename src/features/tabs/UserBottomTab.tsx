@@ -15,6 +15,7 @@ import InviteScreen from '@features/invite/InviteScreen';
 import NotificationScreen from '@features/notification/NotificationScreen';
 import {setNotifications} from '@store/notification/notificationSlice';
 import firestore from '@react-native-firebase/firestore';
+import {listenToNotifications} from '@config/firebaseNotification';
 
 const Tab = createBottomTabNavigator();
 
@@ -42,26 +43,10 @@ const UserBottomTab = () => {
   }, [currentUser, dispatch]);
 
   useEffect(() => {
-    const unsubscribe = firestore()
-      .collection('notifications')
-      .where('userId', '==', currentUser?.uid)
-      .orderBy('createdAt', 'desc')
-      .onSnapshot(
-        snapshot => {
-          const notificationsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            title: doc.data().title || '',
-            body: doc.data().body || '',
-            read: doc.data().read || false,
-            createdAt: doc.data().createdAt?.toDate().toISOString() || new Date().toISOString(),
-          }));
-
-          dispatch(setNotifications(notificationsData));
-        },
-        error => {
-          console.error('Error listening to notifications:', error);
-        },
-      );
+    if (!currentUser?.uid) return;
+    const unsubscribe = listenToNotifications(currentUser?.uid, data => {
+      dispatch(setNotifications(data));
+    });
 
     return () => unsubscribe();
   }, [currentUser?.uid, dispatch]);

@@ -2,6 +2,7 @@ import messaging from '@react-native-firebase/messaging';
 import {navigate} from '@utils/NavigationUtils';
 import {Platform, PermissionsAndroid, Alert} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
+import {Notification} from '@utils/Constant';
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Platform.OS === 'ios') {
     const authStatus = await messaging().requestPermission();
@@ -145,7 +146,7 @@ export const saveNotification = async (
   }
 };
 
-export const clearAllNotifications = async (userId: string ) => {
+export const clearAllNotifications = async (userId: string) => {
   try {
     const snapshot = await firestore()
       .collection('notifications')
@@ -162,4 +163,34 @@ export const clearAllNotifications = async (userId: string ) => {
   } catch (error) {
     console.log(' Error clearing notifications:', error);
   }
+};
+
+export const listenToNotifications = (
+  userId: string,
+  callback: (notifications: Notification[]) => void,
+): (() => void) => {
+  const unsubscribe = firestore()
+    .collection('notifications')
+    .where('userId', '==', userId)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(
+      snapshot => {
+        const notificationsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          title: doc.data().title || '',
+          body: doc.data().body || '',
+          read: doc.data().read || false,
+          createdAt:
+            doc.data().createdAt?.toDate().toISOString() ||
+            new Date().toISOString(),
+        }));
+
+        callback(notificationsData);
+      },
+      error => {
+        console.error('Error listening to notifications:', error);
+      },
+    );
+
+  return unsubscribe;
 };

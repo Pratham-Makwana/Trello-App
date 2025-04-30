@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 10,
     height: screenWidth * 0.15,
-    backgroundColor: 'white',
+    backgroundColor: Colors.white,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'grey',
     // justifyContent: 'space-around',

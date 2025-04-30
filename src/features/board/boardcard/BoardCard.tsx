@@ -1,5 +1,6 @@
 import {
   Platform,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -199,6 +200,8 @@ const BoardCard = () => {
 
   return (
     <LinearGradient colors={gradientColors} style={{flex: 1}}>
+      <StatusBar 
+      barStyle={'dark-content'}  backgroundColor={'#fff'}/>
       {Platform.OS === 'ios' && (
         <CustomHeaderIOS
           title={currentBoard!.title}
@@ -214,7 +217,6 @@ const BoardCard = () => {
         />
       )}
       {loading && <CustomModal loading={loading} />}
-      {/* {board && <BoardCardArea key={board?.board_id} board={board} />} */}
       {board && (
         <SafeAreaView style={{flex: 1}}>
           <Carousel
