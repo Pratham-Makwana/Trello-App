@@ -51,9 +51,9 @@ const InviteScreen = () => {
 
       await acceptInvite(invite.id, invite.boardId, currentUser!.uid);
 
-      if (invite.invitedByUserInfo?.notificationToken) {
+      if (invite.invitedBy) {
         sendNotificationToOtherUser(
-          invite.invitedByUserInfo.notificationToken,
+          invite.invitedBy,
           '✅ Invite Accepted',
           `${currentUser?.username} has accepted your invitation to join the board "${invite.boardName}"`,
         );
@@ -66,9 +66,9 @@ const InviteScreen = () => {
   const handleReject = async (invite: Invite) => {
     try {
       await declineInvite(invite.id);
-      if (invite.invitedByUserInfo?.notificationToken) {
+      if (invite.invitedBy) {
         sendNotificationToOtherUser(
-          invite.invitedByUserInfo.notificationToken,
+          invite.invitedBy,
           '❌ Invite Rejected',
           `${currentUser?.username} has rejected your invitation to join the board "${invite.boardName}"`,
         );

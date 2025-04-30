@@ -24,13 +24,14 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === boardId),
   );
+
   const dispatch = useAppDispatch();
 
   const onLeaveBoard = async () => {
     leaveBoard(boardId, user!.uid);
-    if (currentBoard?.userInfo?.notificationToken) {
+    if (currentBoard?.createdBy) {
       sendNotificationToOtherUser(
-        currentBoard?.userInfo?.notificationToken,
+        currentBoard?.createdBy,
         'Board Update',
         `${user?.username} has left the board "${currentBoard?.title}`,
       );

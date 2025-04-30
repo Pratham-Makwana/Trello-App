@@ -55,7 +55,7 @@ const NotificationScreen = () => {
       <Text style={[styles.body, item.read && styles.readBody]}>
         {item.body}
       </Text>
-      <Text>
+      <Text style={[styles.body, item.read && styles.readBody]}>
         {new Date(item.createdAt).toLocaleString('en-US', {
           year: 'numeric',
           month: 'numeric',

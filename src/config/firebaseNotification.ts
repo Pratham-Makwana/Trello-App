@@ -87,7 +87,7 @@ export const setupBackgroundAndForegroundHandlers = () => {
 };
 
 export const sendNotificationToOtherUser = async (
-  notificationToken: string,
+  userId: string,
   title: string,
   body: string,
   screen?: string,
@@ -103,23 +103,21 @@ export const sendNotificationToOtherUser = async (
       );
       return;
     }
-    const response = await fetch(
-      'http://192.168.200.98:5000/api/notification/send-token',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          notificationToken,
-          title,
-          body,
-          screen,
-        }),
-      },
-    );
 
-    return response.ok;
+    await fetch('http://192.168.200.98:5000/api/notification/send-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        title,
+        body,
+        screen,
+      }),
+    });
+
+    return true;
   } catch (error) {
     console.log('Error sending notification:', error);
     return false;

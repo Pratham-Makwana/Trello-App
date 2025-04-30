@@ -150,7 +150,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
       userInfo: {
         username: creatorData?.username || 'Unknown',
         email: creatorData?.email || '',
-        notificationToken: creatorData?.notificationToken,
+        userId: creatorData?.uid,
       },
     };
 
@@ -710,7 +710,11 @@ export const listenToPendingInvites = (
         id: inviteId,
         ...data,
         boardName: boardData?.title || 'Unknown Board',
-        invitedByUserInfo: invitedByData || 'Unknown User',
+        invitedByUserInfo: {
+          email: invitedByData?.email,
+          username: invitedByData?.username,
+          photoURL: invitedByData?.photoURL,
+        },
       };
     });
 
@@ -788,7 +792,7 @@ export const uploadToCloudinary = async (image: {
     return result.secure_url;
   } else {
     console.log('Upload failed: ' + JSON.stringify(result));
-    return ''; 
+    return '';
   }
 };
 

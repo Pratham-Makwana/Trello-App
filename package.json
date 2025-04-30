@@ -37,7 +37,6 @@
     "react-native-date-picker": "^5.0.12",
     "react-native-dotenv": "^3.4.11",
     "react-native-draggable-flatlist": "^4.0.1",
-    "react-native-dropdown-select-list": "^2.0.5",
     "react-native-gesture-handler": "^2.20.2",
     "react-native-image-picker": "^7.2.3",
     "react-native-ios-context-menu": "^3.1.0",

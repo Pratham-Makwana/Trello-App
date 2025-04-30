@@ -37,7 +37,6 @@ import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import MoveList from './MoveList';
 import DatePicker from 'react-native-date-picker';
 import {format} from 'date-fns';
-import {SelectList} from 'react-native-dropdown-select-list';
 import UserList from '../UserList';
 import {User} from '@utils/Constant';
 import {setMembers} from '@store/member/memberSlice';
@@ -48,18 +47,11 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 type ListItemProps = RenderItemParams<TaskItem> & {
   disable: boolean;
-  loading: boolean;
 };
 
-const ListItem = ({
-  item,
-  drag,
-  isActive,
-  getIndex,
-  disable,
-  loading,
-}: ListItemProps) => {
+const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const {user} = useUser();
+  const [imageLoad, setImageLoad] = useState(false);
   const [cardTitle, setCardTitle] = useState(item.title);
   const [cardDescription, setCardDescription] = useState(item.description);
   const [assignedUsers, setAssignedUsers] = useState(item?.assigned_to);
@@ -281,9 +273,9 @@ const ListItem = ({
       photoURL: user.photoURL,
     };
 
-    if (user?.notificationToken) {
+    if (user?.uid) {
       await sendNotificationToOtherUser(
-        user?.notificationToken,
+        user?.uid,
         `Assigned to a task on ${currentBoard?.title}`,
         `You’ve been assigned to the card "${item?.title}" in the "${item?.listTitle}" list of the board "${currentBoard?.title}".`,
       );
@@ -297,9 +289,9 @@ const ListItem = ({
     bottomSheetAssignCard.current?.close();
   };
   const onRemoveUser = async (user: User) => {
-    if (user?.notificationToken) {
+    if (user?.uid) {
       await sendNotificationToOtherUser(
-        user?.notificationToken,
+        user?.uid,
         `Removed from a task on ${currentBoard?.title}`,
         `You’ve been removed from the card "${item?.title}" in the "${item?.listTitle}" list of the board "${currentBoard?.title}".`,
       );
@@ -335,72 +327,90 @@ const ListItem = ({
         onLongPress={!disable ? drag : undefined}
         disabled={isActive}
         style={[styles.rowItem]}>
-        {item?.imageUrl && (
-          <>
-            <Image source={{uri: item?.imageUrl}} style={styles.image} />
-
-            <View>
-              <View style={styles.labelWrapper}>
-                {item?.label?.color && item?.label?.title.length > 0 && (
-                  <View
-                    style={[styles.label, {backgroundColor: item.label.color}]}>
-                    {item.label.title && (
-                      <Text style={styles.labelText}>{item.label.title}</Text>
-                    )}
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.taskRow}>
-                <CheckBox
-                  value={isDone}
-                  onValueChange={onCheckDone}
-                  tintColors={{
-                    true: '#4CAF50',
-                    false: '#aaa',
-                  }}
-                  boxType="circle"
-                  style={styles.checkbox}
-                />
-                <Text
-                  style={[
-                    styles.taskText,
-                    {textDecorationLine: isDone ? 'line-through' : 'none'},
-                  ]}>
-                  {item.title}
-                </Text>
-                <TouchableOpacity disabled={disable} onPress={showCardModal}>
-                  <Icon
-                    name="resize-outline"
-                    iconFamily="Ionicons"
-                    size={18}
-                    color={Colors.fontDark}
-                  />
-                </TouchableOpacity>
-              </View>
-              {item?.startDate && (
-                <View style={styles.dateChip}>
-                  <Icon
-                    name="clock-outline"
-                    iconFamily="MaterialCommunityIcons"
-                    size={16}
-                    color={Colors.fontDark}
-                  />
-                  <View>
-                    <Text style={styles.dateText}>
-                      {format(new Date(startDate), 'dd MMM yyyy')}
-                      {item?.endDate
-                        ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
-                        : ''}
-                    </Text>
-                  </View>
+        <>
+          <View>
+            <View style={styles.labelWrapper}>
+              {item?.label?.color && item?.label?.title.length > 0 && (
+                <View
+                  style={[styles.label, {backgroundColor: item.label.color}]}>
+                  {item.label.title && (
+                    <Text style={styles.labelText}>{item.label.title}</Text>
+                  )}
                 </View>
               )}
             </View>
-          </>
-        )}
+            {item?.imageUrl && (
+              <>
+                {imageLoad && (
+                  <View style={styles.loader}>
+                    <ActivityIndicator
+                      color={Colors.lightprimary}
+                      size="large"
+                    />
+                  </View>
+                )}
+                <Image
+                  source={{uri: item?.imageUrl}}
+                  style={styles.image}
+                  onLoadStart={() => {
+                    setImageLoad(prev => !prev);
+                  }}
+                  onLoadEnd={() => {
+                    setImageLoad(prev => !prev);
+                  }}
+                />
+              </>
+            )}
 
-        {!item?.imageUrl && (
+            <View style={styles.taskRow}>
+              <CheckBox
+                value={isDone}
+                onValueChange={onCheckDone}
+                tintColors={{
+                  true: '#4CAF50',
+                  false: '#aaa',
+                }}
+                boxType="circle"
+                style={styles.checkbox}
+              />
+              <Text
+                style={[
+                  styles.taskText,
+                  {textDecorationLine: isDone ? 'line-through' : 'none'},
+                ]}>
+                {item.title}
+              </Text>
+              <TouchableOpacity disabled={disable} onPress={showCardModal}>
+                <Icon
+                  name="resize-outline"
+                  iconFamily="Ionicons"
+                  size={18}
+                  color={Colors.fontDark}
+                />
+              </TouchableOpacity>
+            </View>
+            {item?.startDate && (
+              <View style={styles.dateChip}>
+                <Icon
+                  name="clock-outline"
+                  iconFamily="MaterialCommunityIcons"
+                  size={16}
+                  color={Colors.fontDark}
+                />
+                <View>
+                  <Text style={styles.dateText}>
+                    {format(new Date(startDate), 'dd MMM yyyy')}
+                    {item?.endDate
+                      ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
+                      : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </>
+
+        {/* {!item?.imageUrl && (
           <View>
             <View style={styles.labelWrapper}>
               {item?.label?.color && item?.label?.title.length > 0 && (
@@ -462,7 +472,7 @@ const ListItem = ({
               </View>
             )}
           </View>
-        )}
+        )} */}
       </AnimatedTouchable>
 
       {/* BottomSheet For the Card  */}
@@ -1223,5 +1233,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  loader: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    zIndex: 1,
   },
 });

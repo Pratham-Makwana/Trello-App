@@ -42,10 +42,12 @@ const Invite = () => {
   }, [search]);
 
   const onAddUser = async (user: User) => {
+    console.log('==> user', user?.notificationToken);
+
     try {
-      if (user?.notificationToken) {
+      if (user?.uid) {
         const response = await sendNotificationToOtherUser(
-          user.notificationToken,
+          user?.uid,
           '📩 Board Invitation',
           `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
           'notification',

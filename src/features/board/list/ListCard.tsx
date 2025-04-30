@@ -37,15 +37,12 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const [adding, setAdding] = useState(false);
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
 
   useEffect(() => {
     if (!taskList?.list_id) return;
 
     const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
-      console.log("==> cards", cards);
-      
       setTasks(cards);
     });
 
@@ -108,7 +105,6 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           const image = response.assets?.[0];
 
           if (image?.uri) {
-            setLoading(true);
             try {
               const imageUrl = await uploadToCloudinary({
                 uri: image?.uri,
@@ -123,7 +119,6 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
                 tasks.length,
                 imageUrl,
               );
-              setLoading(false);
             } catch (error) {
               console.log('Error uploading or saving:', error);
             }
@@ -154,9 +149,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
         <DraggableFlatList
           data={memoizedTasks}
           // renderItem={ListItem}
-          renderItem={params => (
-            <ListItem {...params} disable={disable} loading={loading} />
-          )}
+          renderItem={params => <ListItem {...params} disable={disable} />}
           keyExtractor={item => item.id}
           onDragEnd={disable ? () => {} : onTaskCardDrop}
           containerStyle={{
