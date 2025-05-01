@@ -129,8 +129,6 @@ export const saveNotification = async (
   title: string,
   body: string | undefined,
 ) => {
-  console.log('==> saveNotification called');
-
   try {
     await firestore().collection('notifications').add({
       userId: id,

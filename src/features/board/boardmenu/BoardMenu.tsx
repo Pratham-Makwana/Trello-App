@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -30,6 +31,8 @@ import Toast from 'react-native-toast-message';
 import {BGCOLORS} from '../BGSelect';
 import LinearGradient from 'react-native-linear-gradient';
 import {setMembers} from '@store/member/memberSlice';
+import {sendNotificationToOtherUser} from '@config/firebaseNotification';
+import CustomLoading from '@components/global/CustomLoading';
 
 const BoardMenu = () => {
   const route =
@@ -40,6 +43,7 @@ const BoardMenu = () => {
   const [isLoading, setIsLoading] = useState(true);
   const dispatch = useAppDispatch();
   const members = useAppSelector(state => state.member.members);
+  const [isClose, setIsClose] = useState(false);
 
   useEffect(() => {
     const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
@@ -70,15 +74,50 @@ const BoardMenu = () => {
   }, []);
 
   const onDeleteBoard = async () => {
-    await deleteBoard(boardId);
-    dispatch(closeBoard(boardId));
-    resetAndNavigate('UserBottomTab');
+    Alert.alert(
+      'Delete Board',
+      'Are you sure you want to delete this board? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'OK',
+          onPress: async () => {
+            setIsClose(true);
+            await deleteBoard(boardId);
+            dispatch(closeBoard(boardId));
+            setIsClose(true);
+            resetAndNavigate('UserBottomTab');
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   const onLeaveBoard = async () => {
-    leaveBoard(boardId, user!.uid);
-    dispatch(closeBoard(boardId));
-    resetAndNavigate('UserBottomTab');
+    Alert.alert('Leave Board', 'Are you sure want to leave this board?', [
+      {text: 'Cancle', style: 'cancel'},
+      {
+        text: 'OK',
+        onPress: async () => {
+          setIsClose(true);
+          await leaveBoard(boardId, user!.uid);
+          if (boardData?.createdBy) {
+            sendNotificationToOtherUser(
+              boardData?.createdBy,
+              'Board Update',
+              `${user?.username} has left the board "${boardData?.title}`,
+            );
+          }
+          dispatch(closeBoard(boardId));
+          setIsClose(true);
+          resetAndNavigate('UserBottomTab');
+        },
+      },
+    ]);
   };
 
   const onUpdateBoard = async () => {
@@ -108,6 +147,7 @@ const BoardMenu = () => {
   };
   return (
     <View>
+      {isClose && <CustomLoading transparent={false} />}
       <View style={styles.container}>
         <Text style={styles.label}>Board Name</Text>
         {isLoading && (
@@ -177,6 +217,9 @@ const BoardMenu = () => {
         )}
 
         <TouchableOpacity
+          disabled={
+            boardData?.role === 'member' && boardData?.workspace === 'Workspace'
+          }
           style={styles.inviteBtn}
           onPress={() =>
             navigate('Invite', {boardId, title: boardData?.title})

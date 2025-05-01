@@ -24,8 +24,7 @@ import CustomeText from '@components/ui/CustomText';
 
 import AuthModal from '@components/auth/AuthModal';
 import {navigate} from '@utils/NavigationUtils';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import {webClientId} from '@env';
+
 const OnBoarding = () => {
   const {top} = useSafeAreaInsets();
   const isDark = useGlobalColorScheme();
@@ -60,19 +59,7 @@ const OnBoarding = () => {
   const closeModal = () => {
     bottomSheetModalRef.current?.close();
   };
-  useEffect(() => {
-    async function init() {
-      const has = await GoogleSignin.hasPlayServices();
 
-      if (has) {
-        GoogleSignin.configure({
-          offlineAccess: true,
-          webClientId: webClientId,
-        });
-      }
-    }
-    init();
-  }, []);
   return (
     <>
       <View style={[styles.container, paddingStyle]}>

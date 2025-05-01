@@ -54,7 +54,7 @@ const InviteScreen = () => {
       if (invite.invitedBy) {
         sendNotificationToOtherUser(
           invite.invitedBy,
-          '✅ Invite Accepted',
+          'Invite Accepted',
           `${currentUser?.username} has accepted your invitation to join the board "${invite.boardName}"`,
         );
       }
@@ -69,7 +69,7 @@ const InviteScreen = () => {
       if (invite.invitedBy) {
         sendNotificationToOtherUser(
           invite.invitedBy,
-          '❌ Invite Rejected',
+          'Invite Rejected',
           `${currentUser?.username} has rejected your invitation to join the board "${invite.boardName}"`,
         );
       }

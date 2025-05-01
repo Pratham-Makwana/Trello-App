@@ -5,6 +5,7 @@ import {useAppDispatch} from '@store/reduxHook';
 import {navigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {saveNotification} from './firebaseNotification';
+import notifee from '@notifee/react-native';
 
 export const useNotificationHandlers = () => {
   const dispatch = useAppDispatch();
@@ -14,6 +15,7 @@ export const useNotificationHandlers = () => {
     if (!user?.uid) {
       return;
     }
+    // Foreground
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       const notification = remoteMessage.notification;
 
@@ -24,20 +26,25 @@ export const useNotificationHandlers = () => {
             notification.title,
             notification.body,
           );
+          const notifeeNotification = {
+            title: remoteMessage.notification?.title,
+            body: remoteMessage.notification?.body,
+            android: {
+              channelId: 'default',
+            },
+            ios: {
+              sound: 'default',
+            },
+          };
 
-          Toast.show({
-            type: 'info',
-            text1: notification.title,
-            text2: notification.body,
-          });
+          await notifee.displayNotification(notifeeNotification);
         } catch (err) {
           console.log('Notification Save Error', err);
         }
-      } else {
-        console.log('not called');
       }
     });
 
+    // When the app is in background, and user taps a notification:
     messaging().onNotificationOpenedApp(async remoteMessage => {
       const notification = remoteMessage?.notification;
 
@@ -49,6 +56,7 @@ export const useNotificationHandlers = () => {
       if (screen) navigate('UserBottomTab', {screen});
     });
 
+    // When the app is completely closed and started by tapping the notification:
     messaging()
       .getInitialNotification()
       .then(async remoteMessage => {

@@ -28,7 +28,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
   const dispatch = useAppDispatch();
 
   const onLeaveBoard = async () => {
-    leaveBoard(boardId, user!.uid);
+    await leaveBoard(boardId, user!.uid);
     if (currentBoard?.createdBy) {
       sendNotificationToOtherUser(
         currentBoard?.createdBy,
@@ -67,18 +67,22 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
               currentBoard?.workspace == 'Private' &&
               currentBoard?.role == 'member'
             ) {
-              Alert.alert('Are you sure want to leave this board?', '', [
-                {
-                  text: 'Cancel',
-                  style: 'cancel',
-                },
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    onLeaveBoard();
+              Alert.alert(
+                'Leave Board',
+                'Are you sure want to leave this board?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
                   },
-                },
-              ]);
+                  {
+                    text: 'OK',
+                    onPress: () => {
+                      onLeaveBoard();
+                    },
+                  },
+                ],
+              );
               return;
             }
             navigate(

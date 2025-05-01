@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Platform,
   StatusBar,
   StyleSheet,
@@ -43,6 +44,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import ListCard from '../list/ListCard';
 import {screenHeight, screenWidth} from '@utils/Scaling';
 import {useSharedValue} from 'react-native-reanimated';
+import CustomLoading from '@components/global/CustomLoading';
 
 const BoardCard = () => {
   const route = useRoute();
@@ -50,6 +52,7 @@ const BoardCard = () => {
   const {boardDetails} = route.params as {boardDetails: Board};
   const {user} = useUser();
   const [loading, setLoading] = useState(false);
+  const [loadChangePosition, setLoadchangePosition] = useState(false);
   const [board, setBoard] = useState<Board | any>();
   const [active, setActive] = useState(false);
   const [taskList, setTaskList] = useState<Array<TaskList | FakeTaskList>>([
@@ -179,29 +182,52 @@ const BoardCard = () => {
     };
   }, []);
 
-  const onChangePosition = async (newPosition: number) => {
+  const onListChangePosition = async (newPosition: number) => {
     if (!selectedList || selectedList.position === newPosition) return;
 
+    setLoadchangePosition(true);
+
     const currentList = selectedList;
+    const currentPosition = currentList.position;
 
-    const otherList = taskList.find(
-      list =>
-        'position' in list && list.position === newPosition && list.list_id,
-    ) as TaskList;
+    const updatedLists: TaskList[] = [];
 
-    if (otherList) {
-      await updateBoardList(otherList, otherList.title, currentList.position);
-      bottomSheetModalRef.current?.close();
+    if (newPosition < currentPosition) {
+      taskList.forEach(list => {
+        if (
+          'position' in list &&
+          list?.position >= newPosition &&
+          list.position < currentPosition &&
+          list.list_id !== currentList.list_id
+        ) {
+          updatedLists.push({...list, position: list.position + 1});
+        }
+      });
+    } else {
+      taskList.forEach(list => {
+        if (
+          'position' in list &&
+          list.position <= newPosition &&
+          list.position > currentPosition &&
+          list.list_id !== currentList.list_id
+        ) {
+          updatedLists.push({...list, position: list.position - 1});
+        }
+      });
     }
 
-    await updateBoardList(currentList, currentList.title, newPosition);
+    updatedLists.push({...currentList, position: newPosition});
+
+    for (const list of updatedLists) {
+      await updateBoardList(list, list.title, list.position);
+    }
+    setLoadchangePosition(false);
     bottomSheetModalRef.current?.close();
   };
 
   return (
     <LinearGradient colors={gradientColors} style={{flex: 1}}>
-      <StatusBar 
-      barStyle={'dark-content'}  backgroundColor={'#fff'}/>
+      <StatusBar barStyle={'dark-content'} backgroundColor={'#fff'} />
       {Platform.OS === 'ios' && (
         <CustomHeaderIOS
           title={currentBoard!.title}
@@ -294,6 +320,7 @@ const BoardCard = () => {
             enableOverDrag={false}
             enablePanDownToClose>
             <BottomSheetView style={styles.container}>
+              {loadChangePosition && <CustomLoading />}
               <View style={styles.cancleBtnContainer}>
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -328,7 +355,7 @@ const BoardCard = () => {
                           selectedList?.position === idx + 1 &&
                             styles.positionBtnActive,
                         ]}
-                        onPress={() => onChangePosition(idx + 1)}>
+                        onPress={() => onListChangePosition(idx + 1)}>
                         <Text
                           style={[
                             styles.positionText,

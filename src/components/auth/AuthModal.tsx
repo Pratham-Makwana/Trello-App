@@ -14,9 +14,7 @@ import {doc, setDoc} from 'firebase/firestore';
 import {userRef} from '@config/firebase';
 import messaging from '@react-native-firebase/messaging';
 import Toast from 'react-native-toast-message';
-import {set} from 'date-fns';
-import {is} from 'date-fns/locale';
-import CustomModal from '@components/global/CustomModal';
+import firestore from '@react-native-firebase/firestore';
 
 const LOGIN_OPTION = [
   {
@@ -41,11 +39,7 @@ const AuthModal: FC<{
   authType: ModalType | null;
   onPress: () => void;
 }> = ({authType, onPress}) => {
-  const [loading, setLoading] = useState(false);
-
   const handleGoogleLogin = async () => {
-    onPress();
-    setLoading(true);
     try {
       await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
 
@@ -62,6 +56,9 @@ const AuthModal: FC<{
 
       const fcmToken = await messaging().getToken();
 
+      const userDocRef = firestore().collection('users').doc(user.uid);
+      const existingUser = await userDocRef.get();
+
       const userData = {
         uid: user.uid,
         username: user.displayName,
@@ -69,10 +66,15 @@ const AuthModal: FC<{
         photoURL: user.photoURL,
         notificationToken: fcmToken,
       };
-      console.log('userData', userData);
 
-      await setDoc(doc(userRef, user.uid), userData);
-      console.log('User data stored in Firestore successfully.');
+      if (!existingUser.exists) {
+        await userDocRef.set(userData);
+      } else {
+        const existingToken = existingUser.data()?.notificationToken;
+        if (existingToken !== fcmToken) {
+          await userDocRef.update({notificationToken: fcmToken});
+        }
+      }
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         Toast.show({
@@ -99,8 +101,6 @@ const AuthModal: FC<{
           text2: 'Please try again later.',
         });
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -115,7 +115,6 @@ const AuthModal: FC<{
   };
   return (
     <BottomSheetView style={styles.modalContainer}>
-      {loading && <CustomModal loading />}
       <TouchableOpacity style={styles.modalBtn} onPress={handleSubmit}>
         <Icon
           name="mail-outline"

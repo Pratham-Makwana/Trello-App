@@ -10,15 +10,58 @@ import {Provider} from 'react-redux';
 import store from '@store/store';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import Toast from 'react-native-toast-message';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {webClientId} from '@env';
 import messaging from '@react-native-firebase/messaging';
-import {useAppDispatch} from '@store/reduxHook';
-import {addNotification} from '@store/notification/notificationSlice';
-import {useNotificationHandlers} from '@config/useNotificationHandlers';
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import notifee, {AndroidImportance} from '@notifee/react-native';
 
 function App(): React.JSX.Element {
   useEffect(() => {
     requestNotificationPermission();
-    // setupBackgroundAndForegroundHandlers();
+
+    async function init() {
+      const has = await GoogleSignin.hasPlayServices();
+
+      if (has) {
+        GoogleSignin.configure({
+          webClientId: webClientId,
+        });
+      }
+    }
+
+    const unsubscribeTokenRefresh = messaging().onTokenRefresh(
+      async newToken => {
+        const userId = auth().currentUser?.uid;
+        if (userId) {
+          try {
+            await firestore().collection('users').doc(userId).update({
+              notificationToken: newToken,
+            });
+          } catch (error) {
+            console.error('Error updating token:', error);
+          }
+        }
+      },
+    );
+
+    init();
+
+    return () => {
+      unsubscribeTokenRefresh();
+    };
+  }, []);
+
+  useEffect(() => {
+    async function createChannel() {
+      await notifee.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+        importance: AndroidImportance.HIGH,
+      });
+    }
+    createChannel();
   }, []);
 
   return (

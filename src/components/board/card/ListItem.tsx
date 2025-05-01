@@ -53,9 +53,9 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const {user} = useUser();
   const [imageLoad, setImageLoad] = useState(false);
   const [cardTitle, setCardTitle] = useState(item.title);
+  let dummyCardDescription = item?.description;
   const [cardDescription, setCardDescription] = useState(item.description);
   const [assignedUsers, setAssignedUsers] = useState(item?.assigned_to);
-  const descriptionInputRef = useRef<TextInput>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const bottomSheetModalCardRef = useRef<BottomSheetModal>(null);
   const bottomSheetAssignCard = useRef<BottomSheetModal>(null);
@@ -66,19 +66,19 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const [availablePositions, setAvailablePositions] = useState<number[]>([]);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [date, setDate] = useState(new Date());
-  const [startDate, setStartDate] = useState<Date | ''>(
+  const [startDate, setStartDate] = useState<Date | null>(
     item?.startDate
       ? new Date(
           item.startDate.seconds * 1000 + item.startDate.nanoseconds / 1000000,
         )
-      : '',
+      : null,
   );
-  const [endDate, setEndDate] = useState<Date | ''>(
+  const [endDate, setEndDate] = useState<Date | null>(
     item?.endDate
       ? new Date(
           item?.endDate.seconds * 1000 + item?.endDate.nanoseconds / 1000000,
         )
-      : '',
+      : null,
   );
 
   const [openStartDate, setOpenStartDate] = useState(false);
@@ -162,6 +162,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
     }
   };
   const onCancleModal = () => {
+    setCardDescription(dummyCardDescription);
     runOnJS(() => {
       bottomSheetModalRef.current?.close();
     })();
@@ -223,8 +224,9 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   };
 
   const onConfirmDate = async (date: Date, type: 'start' | 'end') => {
+    console.log('==> date', date);
+
     if (type === 'start') {
-      console.log('Start Date:', date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
@@ -328,151 +330,79 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         disabled={isActive}
         style={[styles.rowItem]}>
         <>
-          <View>
-            <View style={styles.labelWrapper}>
-              {item?.label?.color && item?.label?.title.length > 0 && (
-                <View
-                  style={[styles.label, {backgroundColor: item.label.color}]}>
-                  {item.label.title && (
-                    <Text style={styles.labelText}>{item.label.title}</Text>
-                  )}
-                </View>
-              )}
-            </View>
-            {item?.imageUrl && (
-              <>
-                {imageLoad && (
-                  <View style={styles.loader}>
-                    <ActivityIndicator
-                      color={Colors.lightprimary}
-                      size="large"
-                    />
-                  </View>
+          <View style={styles.labelWrapper}>
+            {item?.label?.color && item?.label?.title.length > 0 && (
+              <View style={[styles.label, {backgroundColor: item.label.color}]}>
+                {item.label.title && (
+                  <Text style={styles.labelText}>{item.label.title}</Text>
                 )}
-                <Image
-                  source={{uri: item?.imageUrl}}
-                  style={styles.image}
-                  onLoadStart={() => {
-                    setImageLoad(prev => !prev);
-                  }}
-                  onLoadEnd={() => {
-                    setImageLoad(prev => !prev);
-                  }}
-                />
-              </>
-            )}
-
-            <View style={styles.taskRow}>
-              <CheckBox
-                value={isDone}
-                onValueChange={onCheckDone}
-                tintColors={{
-                  true: '#4CAF50',
-                  false: '#aaa',
-                }}
-                boxType="circle"
-                style={styles.checkbox}
-              />
-              <Text
-                style={[
-                  styles.taskText,
-                  {textDecorationLine: isDone ? 'line-through' : 'none'},
-                ]}>
-                {item.title}
-              </Text>
-              <TouchableOpacity disabled={disable} onPress={showCardModal}>
-                <Icon
-                  name="resize-outline"
-                  iconFamily="Ionicons"
-                  size={18}
-                  color={Colors.fontDark}
-                />
-              </TouchableOpacity>
-            </View>
-            {item?.startDate && (
-              <View style={styles.dateChip}>
-                <Icon
-                  name="clock-outline"
-                  iconFamily="MaterialCommunityIcons"
-                  size={16}
-                  color={Colors.fontDark}
-                />
-                <View>
-                  <Text style={styles.dateText}>
-                    {format(new Date(startDate), 'dd MMM yyyy')}
-                    {item?.endDate
-                      ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
-                      : ''}
-                  </Text>
-                </View>
               </View>
             )}
           </View>
-        </>
-
-        {/* {!item?.imageUrl && (
-          <View>
-            <View style={styles.labelWrapper}>
-              {item?.label?.color && item?.label?.title.length > 0 && (
-                <View
-                  style={[styles.label, {backgroundColor: item.label.color}]}>
-                  {item.label.title && (
-                    <Text style={styles.labelText}>{item.label.title}</Text>
-                  )}
+          {item?.imageUrl && (
+            <>
+              {imageLoad && (
+                <View style={styles.loader}>
+                  <ActivityIndicator color={Colors.lightprimary} size="large" />
                 </View>
               )}
-            </View>
+              <Image
+                source={{uri: item?.imageUrl}}
+                style={styles.image}
+                onLoadStart={() => {
+                  setImageLoad(prev => !prev);
+                }}
+                onLoadEnd={() => {
+                  setImageLoad(prev => !prev);
+                }}
+              />
+            </>
+          )}
 
-            <View style={styles.taskRowSpace}>
-              <View style={styles.checkboxAndTextWrapper}>
-                <CheckBox
-                  value={isDone}
-                  onValueChange={onCheckDone}
-                  tintColors={{
-                    true: '#4CAF50',
-                    false: '#aaa',
-                  }}
-                  boxType="circle"
-                  style={styles.checkbox}
-                />
-                <Text
-                  style={{
-                    color: isDone ? Colors.fontDark : Colors.black,
-                    textDecorationLine: isDone ? 'line-through' : 'none',
-                  }}>
-                  {item.title}
+          <View style={styles.taskRow}>
+            <CheckBox
+              value={isDone}
+              onValueChange={onCheckDone}
+              tintColors={{
+                true: '#4CAF50',
+                false: '#aaa',
+              }}
+              boxType="circle"
+              style={styles.checkbox}
+            />
+            <Text
+              style={[
+                styles.taskText,
+                {textDecorationLine: isDone ? 'line-through' : 'none'},
+              ]}>
+              {item.title}
+            </Text>
+            <TouchableOpacity disabled={disable} onPress={showCardModal}>
+              <Icon
+                name="resize-outline"
+                iconFamily="Ionicons"
+                size={18}
+                color={Colors.fontDark}
+              />
+            </TouchableOpacity>
+          </View>
+          {item?.startDate && startDate && (
+            <View style={styles.dateChip}>
+              <Icon
+                name="clock-outline"
+                iconFamily="MaterialCommunityIcons"
+                size={16}
+                color={Colors.fontDark}
+              />
+              <View>
+                <Text style={styles.dateText}>
+                  {format(startDate, 'dd MMM yyyy')}
+                  {endDate ? ` - ${format(endDate, 'dd MMM yyyy')}` : ''}
                 </Text>
               </View>
-              <TouchableOpacity disabled={disable} onPress={showCardModal}>
-                <Icon
-                  name="resize-outline"
-                  iconFamily="Ionicons"
-                  size={18}
-                  color={Colors.fontDark}
-                />
-              </TouchableOpacity>
             </View>
-
-            {item?.startDate && (
-              <View style={styles.dateChip}>
-                <Icon
-                  name="clock-outline"
-                  iconFamily="MaterialCommunityIcons"
-                  size={16}
-                  color={Colors.fontDark}
-                />
-                <View>
-                  <Text style={styles.dateText}>
-                    {format(new Date(startDate), 'dd MMM yyyy')}
-                    {item?.endDate
-                      ? ` - ${format(new Date(endDate), 'dd MMM yyyy')}`
-                      : ''}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-        )} */}
+          )}
+        </>
       </AnimatedTouchable>
 
       {/* BottomSheet For the Card  */}
@@ -655,7 +585,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               />
 
               <TextInput
-                ref={descriptionInputRef}
                 placeholder="Enter description"
                 placeholderTextColor={Colors.placeholdertext}
                 style={styles.descriptionInput}
@@ -664,9 +593,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 onChangeText={setCardDescription}
               />
 
-              <TouchableOpacity
-                disabled={cardDescription.length == 0}
-                onPress={onUpdateCardDescription}>
+              <TouchableOpacity onPress={onUpdateCardDescription}>
                 <Text
                   style={
                     cardDescription?.length == 0
@@ -770,9 +697,12 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                       fontSize: 12,
                       marginBottom: 5,
                     }}>
-                    {!startDate
-                      ? 'Start Date Not Selected'
-                      : format(new Date(startDate), 'dd MMM yyyy')}
+                    {
+                      !startDate
+                        ? 'Start Date Not Selected'
+                        : format(startDate, 'dd MMM yyyy')
+                      // : format(new Date(startDate), 'dd MMM yyyy')}
+                    }
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -781,7 +711,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 title="Select Start Date"
                 mode="date"
                 modal
-                // minimumDate={new Date()}
                 open={openStartDate}
                 date={startDate || date}
                 onConfirm={date => onConfirmDate(date, 'start')}
@@ -812,9 +741,12 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                       fontSize: 12,
                       marginBottom: 5,
                     }}>
-                    {!endDate
-                      ? 'endDate Date Not Selected'
-                      : format(new Date(endDate), 'dd MMM yyyy')}
+                    {
+                      !endDate
+                        ? 'endDate Date Not Selected'
+                        : format(endDate, 'dd MMM yyyy')
+                      // : format(new Date(endDate), 'dd MMM yyyy')
+                    }
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1038,8 +970,8 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 200,
-    borderRadius: 4,
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
     backgroundColor: '#f3f3f3',
   },
 
@@ -1063,7 +995,6 @@ const styles = StyleSheet.create({
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 5,
     gap: 10,
   },
   taskRowSpace: {
@@ -1108,7 +1039,7 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#fff',
     borderRadius: 10,
-    resizeMode: 'contain',
+    marginVertical: 2,
   },
   inputRow: {
     flexDirection: 'row',

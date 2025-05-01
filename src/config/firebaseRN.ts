@@ -104,7 +104,7 @@ export const createBoard = async (
 
     await addUserToBoard(docRef.id, user.uid, 'creator');
 
-    dispatch(addBoard(boardData));
+    // dispatch(addBoard(boardData));
   } catch (error) {
     console.error('Error creating board: ', error);
   }

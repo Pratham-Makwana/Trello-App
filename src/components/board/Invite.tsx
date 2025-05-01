@@ -42,7 +42,6 @@ const Invite = () => {
   }, [search]);
 
   const onAddUser = async (user: User) => {
-    console.log('==> user', user?.notificationToken);
 
     try {
       if (user?.uid) {
@@ -61,7 +60,7 @@ const Invite = () => {
           await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
           setTimeout(() => {
             goBack();
-          }, 1000);
+          }, 300);
         } else {
           Toast.show({
             type: 'error',
@@ -118,6 +117,3 @@ const Invite = () => {
 export default Invite;
 
 const styles = StyleSheet.create({});
-
-// B5OrKfLq0YUhqeL0ejJiXEnB6fM2 other user
-// sb1xCz7yEaZNp9WKm4JgFnIKTRm1 current user

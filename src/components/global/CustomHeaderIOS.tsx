@@ -9,6 +9,7 @@ import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {leaveBoard} from '@config/firebaseRN';
 import {closeBoard} from '@store/board/boardSlice';
+import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 
 interface CustomHeaderIOSProps {
   title: string;
@@ -23,7 +24,14 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board, boardId}) => {
   const dispatch = useAppDispatch();
 
   const onLeaveBoard = async () => {
-    leaveBoard(boardId, user!.uid);
+    await leaveBoard(boardId, user!.uid);
+    if (currentBoard?.createdBy) {
+      sendNotificationToOtherUser(
+        currentBoard?.createdBy,
+        'Board Update',
+        `${user?.username} has left the board "${currentBoard?.title}`,
+      );
+    }
     dispatch(closeBoard(boardId));
     resetAndNavigate('UserBottomTab');
   };

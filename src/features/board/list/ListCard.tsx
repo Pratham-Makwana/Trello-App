@@ -26,6 +26,7 @@ import {
   uploadToCloudinary,
 } from '@config/firebaseRN';
 import Toast from 'react-native-toast-message';
+// import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -38,6 +39,11 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const [newTask, setNewTask] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
+
+  const hapticOptions = {
+    enableVibrateFallback: true,
+    ignoreAndroidSystemSettings: false,
+  };
 
   useEffect(() => {
     if (!taskList?.list_id) return;
@@ -148,9 +154,14 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
 
         <DraggableFlatList
           data={memoizedTasks}
-          // renderItem={ListItem}
           renderItem={params => <ListItem {...params} disable={disable} />}
           keyExtractor={item => item.id}
+          // onDragBegin={() => {
+          //   ReactNativeHapticFeedback.trigger('selection', hapticOptions);
+          // }}
+          // onPlaceholderIndexChange={() => {
+          //   ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+          // }}
           onDragEnd={disable ? () => {} : onTaskCardDrop}
           containerStyle={{
             paddingBottom: 4,

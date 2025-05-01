@@ -6,14 +6,9 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import {useUser} from '@hooks/useUser';
-import // auth,
-// updateUserProfile,
-//  uploadToCloudinary
-'@config/firebase';
 import auth from '@react-native-firebase/auth';
 import Icon from '@components/global/Icon';
 import {
@@ -29,7 +24,6 @@ import {
   launchImageLibrary,
 } from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
-import {updateProfile} from 'firebase/auth';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {
   signOut,
@@ -38,6 +32,8 @@ import {
 } from '@config/firebaseRN';
 import {Colors} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
+
+
 const Profile = () => {
   const {user: currentUser, logout, setUser} = useUser();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
@@ -188,7 +184,10 @@ const Profile = () => {
           backgroundColor: DefaultTheme.colors.background,
           borderRadius: 12,
         }}
-        enablePanDownToClose>
+        enablePanDownToClose
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustPan">
         <BottomSheetView>
           <EditUsernameSheet onClose={() => bottomSheetRef.current?.close()} />
         </BottomSheetView>

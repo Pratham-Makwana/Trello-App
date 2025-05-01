@@ -38,20 +38,28 @@ const Navigation = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth(), async user => {
-      setTimeout(() => {
-        if (user) {
-          const serializedUser = {
-            uid: user?.uid,
-            username: user?.displayName || null,
-            email: user?.email || null,
-            photoURL: user?.photoURL || null,
-          };
+
+      if (user) {
+        const isEmailVerified = user.emailVerified;
+        const serializedUser = {
+          uid: user.uid,
+          username: user.displayName || null,
+          email: user.email || null,
+          photoURL: user.photoURL || null,
+        };
+
+        if (isEmailVerified) {
           setUser(serializedUser);
           setInitializing(false);
         } else {
-          setInitializing(false);
+          setTimeout(() => {
+            setUser(serializedUser);
+            setInitializing(false);
+          }, 300);
         }
-      }, 300);
+      } else {
+        setInitializing(false);
+      }
     });
     return () => unsubscribe();
   }, []);
