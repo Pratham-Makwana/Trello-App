@@ -9,11 +9,9 @@ import {
 } from 'react-native';
 import React, {useState} from 'react';
 import {useAppSelector} from '@store/reduxHook';
-
 import {Colors} from '@utils/Constant';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {
-  listenToPendingInvites,
   acceptInvite,
   declineInvite,
 } from '@config/firebaseRN';
@@ -120,7 +118,6 @@ const InviteScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.screenTitle}>Invitations</Text>
       <FlatList
         data={invites}
         keyExtractor={item => item.id}

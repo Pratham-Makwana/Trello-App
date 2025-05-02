@@ -42,6 +42,8 @@ import {User} from '@utils/Constant';
 import {setMembers} from '@store/member/memberSlice';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {useUser} from '@hooks/useUser';
+import CustomLoading from '@components/global/CustomLoading';
+import Toast from 'react-native-toast-message';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -51,6 +53,7 @@ type ListItemProps = RenderItemParams<TaskItem> & {
 
 const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const {user} = useUser();
+  const [loadLoader, setLoadLoader] = useState(false);
   const [imageLoad, setImageLoad] = useState(false);
   const [cardTitle, setCardTitle] = useState(item.title);
   let dummyCardDescription = item?.description;
@@ -92,6 +95,8 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
     state.board.boards.find(b => b.boardId === item.board_id),
   );
 
+  const isBoardCreator = currentBoard?.createdBy === user?.uid;
+
   const members = useAppSelector(state => state.member.members);
 
   useEffect(() => {
@@ -103,6 +108,21 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       color: item?.label?.color || labelColors[0],
     });
     setAssignedUsers(item?.assigned_to);
+    setStartDate(
+      item?.startDate
+        ? new Date(
+            item.startDate.seconds * 1000 +
+              item.startDate.nanoseconds / 1000000,
+          )
+        : null,
+    );
+    setEndDate(
+      item?.endDate
+        ? new Date(
+            item?.endDate.seconds * 1000 + item?.endDate.nanoseconds / 1000000,
+          )
+        : null,
+    );
   }, [item]);
 
   const loadGetListsByBoardId = async () => {
@@ -115,14 +135,25 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   };
 
   const onDeleteBoardCard = async (item: TaskItem) => {
-    try {
-      await deleteCard(item);
-      runOnJS(() => {
-        bottomSheetModalRef.current?.close();
-      })();
-    } catch (error) {
-      console.log('Error deleting card:', error);
-    }
+    Alert.alert(
+      'Delete Card?',
+      'Are you sure you want to delete this card? This action cannot be undone.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoadLoader(true);
+            await deleteCard(item);
+            setLoadLoader(false);
+            runOnJS(() => {
+              bottomSheetModalRef.current?.close();
+            })();
+          },
+        },
+      ],
+    );
   };
 
   const renderBackdrop = useCallback(
@@ -209,23 +240,23 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const onMoveCard = async () => {
     if (!selectedList) return;
 
+    setLoadLoader(true);
     await moveCardToList({
       item,
       selectedList,
       selectedPosition,
       availablePositions,
       onSuccess: () => {
+        setLoadLoader(false);
         bottomSheetModalCardRef.current?.close();
         setSelectedList(null);
         setSelectedPosition(null);
       },
-      onError: err => console.error('Error moving card:', err),
+      onError: err => console.log('Error moving card:', err),
     });
   };
 
   const onConfirmDate = async (date: Date, type: 'start' | 'end') => {
-    console.log('==> date', date);
-
     if (type === 'start') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -236,10 +267,21 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         return;
       }
 
-      await updateCart({
+      let updatedItem = {
         ...item,
         startDate: date,
-      });
+      };
+
+      if (endDate && date > new Date(endDate)) {
+        updatedItem.endDate = null;
+        setEndDate(null);
+      }
+
+      await updateCart(updatedItem);
+      // await updateCart({
+      //   ...item,
+      //   startDate: date,
+      // });
       setStartDate(date);
       setOpenStartDate(false);
     } else {
@@ -269,6 +311,16 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   };
 
   const onAssignUser = async (user: User) => {
+    if (user?.role == 'creator') {
+      Toast.show({
+        type: 'info',
+        text1: 'Action Not Allowed',
+        text2: "You can't assign a task to the board creator",
+        position: 'bottom',
+      });
+      return;
+    }
+
     const assignedUser = {
       uid: user.uid,
       username: user.username,
@@ -419,6 +471,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         enableOverDrag={false}
         enablePanDownToClose>
         <BottomSheetScrollView style={styles.container}>
+          {loadLoader && <CustomLoading />}
           <View
             style={{
               paddingTop: 10,
@@ -482,6 +535,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             )}
 
             {/* Assign User */}
+
             <View
               style={{
                 backgroundColor: '#fff',
@@ -489,24 +543,41 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 paddingVertical: 8,
                 marginBottom: 10,
               }}>
-              <TouchableOpacity
-                disabled={disable}
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-                onPress={() => bottomSheetAssignCard.current?.present()}>
-                <Text
+              {isBoardCreator ? (
+                <TouchableOpacity
+                  disabled={disable}
                   style={{
-                    color: Colors.fontDark,
-                    fontSize: 14,
-                    fontWeight: '500',
-                  }}>
-                  Assign to Member
-                </Text>
-                <Icon name="chevron-forward" iconFamily="Ionicons" size={20} />
-              </TouchableOpacity>
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => bottomSheetAssignCard.current?.present()}>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 14,
+                      fontWeight: '500',
+                    }}>
+                    Assign to Member
+                  </Text>
+                  <Icon
+                    name="chevron-forward"
+                    iconFamily="Ionicons"
+                    size={20}
+                  />
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text
+                    style={{
+                      color: Colors.fontDark,
+                      fontSize: 14,
+                      fontWeight: '500',
+                    }}>
+                    Assign to Member
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View
@@ -550,25 +621,27 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                         numberOfLines={1}>
                         {user.username || user.email}
                       </Text>
-                      <TouchableOpacity
-                        disabled={disable}
-                        style={{
-                          marginTop: 5,
-                          backgroundColor: '#FFCDD2',
-                          height: 20,
-                          width: 20,
-                          borderRadius: 10,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        onPress={() => onRemoveUser(user)}>
-                        <Icon
-                          name="remove"
-                          iconFamily="MaterialIcons"
-                          size={20}
-                          color="red"
-                        />
-                      </TouchableOpacity>
+                      {isBoardCreator && (
+                        <TouchableOpacity
+                          disabled={disable}
+                          style={{
+                            marginTop: 5,
+                            backgroundColor: '#FFCDD2',
+                            height: 20,
+                            width: 20,
+                            borderRadius: 10,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          onPress={() => onRemoveUser(user)}>
+                          <Icon
+                            name="remove"
+                            iconFamily="MaterialIcons"
+                            size={20}
+                            color="red"
+                          />
+                        </TouchableOpacity>
+                      )}
                     </View>
                   ))}
                 </ScrollView>
@@ -682,28 +755,56 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 }}
                 onPress={() => setOpenStartDate(true)}>
                 <View
-                  style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                  <Text
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                  <View
                     style={{
-                      color: Colors.fontDark,
-                      fontSize: 12,
-                      marginBottom: 5,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
                     }}>
-                    Start Date
-                  </Text>
-                  <Text
-                    style={{
-                      color: Colors.fontDark,
-                      fontSize: 12,
-                      marginBottom: 5,
-                    }}>
-                    {
-                      !startDate
-                        ? 'Start Date Not Selected'
-                        : format(startDate, 'dd MMM yyyy')
-                      // : format(new Date(startDate), 'dd MMM yyyy')}
-                    }
-                  </Text>
+                    <Text
+                      style={{
+                        color: Colors.fontDark,
+                        fontSize: 12,
+                        marginBottom: 5,
+                      }}>
+                      Start Date
+                    </Text>
+                    <Text
+                      style={{
+                        color: Colors.fontDark,
+                        fontSize: 12,
+                        marginBottom: 5,
+                      }}>
+                      {!startDate
+                        ? 'Date Not Selected'
+                        : format(startDate, 'dd MMM yyyy')}
+                    </Text>
+                  </View>
+                  {startDate && (
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: 'pink',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: 5,
+                      }}
+                      onPress={async () => {
+                        setStartDate(null);
+                        await updateCart({...item, startDate: null});
+                      }}>
+                      <Icon
+                        name="remove"
+                        size={22}
+                        iconFamily="Ionicons"
+                        color={'red'}
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </TouchableOpacity>
 
@@ -726,28 +827,56 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 }}
                 onPress={() => setOpenEndDate(true)}>
                 <View
-                  style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-                  <Text
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                  <View
                     style={{
-                      color: Colors.fontDark,
-                      fontSize: 12,
-                      marginBottom: 5,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
                     }}>
-                    End Date
-                  </Text>
-                  <Text
-                    style={{
-                      color: Colors.fontDark,
-                      fontSize: 12,
-                      marginBottom: 5,
-                    }}>
-                    {
-                      !endDate
-                        ? 'endDate Date Not Selected'
-                        : format(endDate, 'dd MMM yyyy')
-                      // : format(new Date(endDate), 'dd MMM yyyy')
-                    }
-                  </Text>
+                    <Text
+                      style={{
+                        color: Colors.fontDark,
+                        fontSize: 12,
+                        marginBottom: 5,
+                      }}>
+                      End Date
+                    </Text>
+                    <Text
+                      style={{
+                        color: Colors.fontDark,
+                        fontSize: 12,
+                        marginBottom: 5,
+                      }}>
+                      {!endDate
+                        ? 'Date Not Selected'
+                        : format(endDate, 'dd MMM yyyy')}
+                    </Text>
+                  </View>
+                  {endDate && (
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: 'pink',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        borderRadius: 5,
+                      }}
+                      onPress={async () => {
+                        setEndDate(null);
+                        await updateCart({...item, endDate: null});
+                      }}>
+                      <Icon
+                        name="remove"
+                        size={22}
+                        iconFamily="Ionicons"
+                        color={'red'}
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </TouchableOpacity>
 
@@ -786,88 +915,94 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         enableOverDrag={false}
         enablePanDownToClose>
         <BottomSheetView>
-          <FlatList
-            keyExtractor={item => item.list_id}
-            data={BoardList}
-            ListHeaderComponent={() => (
-              <View style={styles.headerContainer}>
-                <Text style={styles.boardTitle}>{currentBoard?.title}</Text>
-                <TouchableOpacity
-                  disabled={
-                    !selectedList ||
-                    selectedPosition === null ||
-                    (selectedList.list_id === item.list_id &&
-                      selectedPosition === item.position)
-                  }
-                  onPress={onMoveCard}
-                  style={[
-                    styles.moveButton,
-                    (!selectedList ||
+          {loadLoader && <CustomLoading />}
+
+          <View>
+            <FlatList
+              keyExtractor={item => item.list_id}
+              data={BoardList}
+              ListHeaderComponent={() => (
+                <View style={styles.headerContainer}>
+                  <Text style={styles.boardTitle}>{currentBoard?.title}</Text>
+                  <TouchableOpacity
+                    disabled={
+                      !selectedList ||
                       selectedPosition === null ||
                       (selectedList.list_id === item.list_id &&
-                        selectedPosition === item.position)) &&
-                      styles.moveButtonDisabled,
-                  ]}>
-                  <Text
+                        selectedPosition === item.position)
+                    }
+                    onPress={onMoveCard}
                     style={[
-                      styles.moveButtonText,
+                      styles.moveButton,
                       (!selectedList ||
                         selectedPosition === null ||
                         (selectedList.list_id === item.list_id &&
                           selectedPosition === item.position)) &&
-                        styles.moveButtonTextDisabled,
-                    ]}>
-                    Move
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            contentContainerStyle={{marginVertical: 20}}
-            renderItem={({item}) => (
-              <MoveList
-                item={item}
-                key={item.id}
-                isSelected={item.list_id === selectedList?.list_id}
-                onSelectList={onSelectList}
-              />
-            )}
-            ListEmptyComponent={() => (
-              <Text
-                style={{
-                  textAlign: 'center',
-                  color: Colors.fontDark,
-                  fontSize: 16,
-                }}>
-                No Lists Found
-              </Text>
-            )}
-          />
-          {selectedList && (
-            <View style={styles.positionContainer}>
-              <Text style={styles.positionLabel}>Select Position</Text>
-              <FlatList
-                horizontal
-                data={availablePositions}
-                keyExtractor={item => item.toString()}
-                renderItem={({item: pos}) => (
-                  <TouchableOpacity
-                    onPress={() => setSelectedPosition(pos)}
-                    style={[
-                      styles.positionButton,
-                      selectedPosition === pos && styles.positionButtonSelected,
+                        styles.moveButtonDisabled,
                     ]}>
                     <Text
                       style={[
-                        styles.positionText,
-                        selectedPosition === pos && styles.positionTextSelected,
+                        styles.moveButtonText,
+                        (!selectedList ||
+                          selectedPosition === null ||
+                          (selectedList.list_id === item.list_id &&
+                            selectedPosition === item.position)) &&
+                          styles.moveButtonTextDisabled,
                       ]}>
-                      {pos}
+                      Move
                     </Text>
                   </TouchableOpacity>
-                )}
-              />
-            </View>
-          )}
+                </View>
+              )}
+              contentContainerStyle={{marginVertical: 20}}
+              renderItem={({item}) => (
+                <MoveList
+                  item={item}
+                  key={item.id}
+                  isSelected={item.list_id === selectedList?.list_id}
+                  onSelectList={onSelectList}
+                />
+              )}
+              ListEmptyComponent={() => (
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    color: Colors.fontDark,
+                    fontSize: 16,
+                  }}>
+                  No Lists Found
+                </Text>
+              )}
+            />
+            {selectedList && (
+              <View style={styles.positionContainer}>
+                <Text style={styles.positionLabel}>Select Position</Text>
+                <FlatList
+                  horizontal
+                  data={availablePositions}
+                  keyExtractor={item => item.toString()}
+                  renderItem={({item: pos}) => (
+                    <TouchableOpacity
+                      onPress={() => setSelectedPosition(pos)}
+                      style={[
+                        styles.positionButton,
+                        selectedPosition === pos &&
+                          styles.positionButtonSelected,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.positionText,
+                          selectedPosition === pos &&
+                            styles.positionTextSelected,
+                        ]}>
+                        {pos}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            )}
+          </View>
         </BottomSheetView>
       </BottomSheetModal>
 
@@ -947,6 +1082,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             contentContainerStyle={{gap: 8, paddingBottom: 20}}
             style={{marginVertical: 12, paddingHorizontal: 10}}
           />
+          <Toast />
         </BottomSheetView>
       </BottomSheetModal>
     </>

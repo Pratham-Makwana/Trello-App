@@ -5,7 +5,7 @@ import {Colors} from '@utils/Constant';
 interface CustomLoadingProps {
   transparent?: boolean;
 }
-const CustomLoading: FC<CustomLoadingProps> = ({transparent = true}) => {
+const CustomLoading: FC<CustomLoadingProps> = ({transparent = false}) => {
   return (
     <View
       style={[

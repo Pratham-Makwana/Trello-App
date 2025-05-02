@@ -133,7 +133,7 @@ const AuthModal: FC<{
         <TouchableOpacity
           key={index}
           style={styles.modalBtn}
-          activeOpacity={0.8}
+          activeOpacity={0.5}
           onPress={() => item.type === 'Google' && handleGoogleLogin()}>
           <Image source={item.icon} style={styles.imgBtn} />
           <CustomText

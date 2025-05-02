@@ -2,9 +2,7 @@ import {CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET} from '@env';
 import auth from '@react-native-firebase/auth';
 import firestore, {deleteDoc} from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
-import {addBoard} from '@store/board/boardSlice';
 import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
-import {ro} from 'date-fns/locale';
 
 export const db = firestore();
 export const userRef = db.collection('users');
@@ -483,7 +481,7 @@ export const deleteBoardList = async (
 
     await listRef.doc(listId).delete();
   } catch (error) {
-    console.error(' Error deleting board list:', error);
+    console.log(' Error deleting board list:', error);
   }
 };
 

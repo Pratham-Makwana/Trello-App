@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   StatusBar,
   StyleSheet,
@@ -52,7 +53,7 @@ const BoardCard = () => {
   const {boardDetails} = route.params as {boardDetails: Board};
   const {user} = useUser();
   const [loading, setLoading] = useState(false);
-  const [loadChangePosition, setLoadchangePosition] = useState(false);
+  const [loadLoader, setLoadLoader] = useState(false);
   const [board, setBoard] = useState<Board | any>();
   const [active, setActive] = useState(false);
   const [taskList, setTaskList] = useState<Array<TaskList | FakeTaskList>>([
@@ -104,13 +105,30 @@ const BoardCard = () => {
   };
 
   const onDeleteBoardList = async () => {
-    await deleteBoardList(
-      selectedList!.list_id,
-      selectedList!.board_id,
-      selectedList!.position,
+    Alert.alert(
+      'Delete List',
+      'Are you sure you want to delete this list? All tasks in this list will also be removed.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setLoadLoader(true);
+            await deleteBoardList(
+              selectedList!.list_id,
+              selectedList!.board_id,
+              selectedList!.position,
+            );
+            setTaskList(
+              taskList.filter(item => item.list_id != selectedList!.list_id),
+            );
+            setLoadLoader(false);
+            bottomSheetModalRef.current?.close();
+          },
+        },
+      ],
     );
-    setTaskList(taskList.filter(item => item.list_id != selectedList!.list_id));
-    bottomSheetModalRef.current?.close();
   };
 
   const renderBackdrop = useCallback(
@@ -185,7 +203,7 @@ const BoardCard = () => {
   const onListChangePosition = async (newPosition: number) => {
     if (!selectedList || selectedList.position === newPosition) return;
 
-    setLoadchangePosition(true);
+    setLoadLoader(true);
 
     const currentList = selectedList;
     const currentPosition = currentList.position;
@@ -221,7 +239,7 @@ const BoardCard = () => {
     for (const list of updatedLists) {
       await updateBoardList(list, list.title, list.position);
     }
-    setLoadchangePosition(false);
+    setLoadLoader(false);
     bottomSheetModalRef.current?.close();
   };
 
@@ -320,7 +338,7 @@ const BoardCard = () => {
             enableOverDrag={false}
             enablePanDownToClose>
             <BottomSheetView style={styles.container}>
-              {loadChangePosition && <CustomLoading />}
+              {loadLoader && <CustomLoading />}
               <View style={styles.cancleBtnContainer}>
                 <TouchableOpacity
                   activeOpacity={0.8}

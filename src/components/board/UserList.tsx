@@ -1,4 +1,11 @@
-import {Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import React, {FC} from 'react';
 import {Colors, User} from '@utils/Constant';
 import Icon from '@components/global/Icon';
@@ -6,23 +13,25 @@ import {RFValue} from 'react-native-responsive-fontsize';
 
 interface UserListProps {
   onPress?: (user: User) => void;
+  onRemove?: (user: User) => void;
   member: User;
   addUser?: boolean;
+  removeUser?: boolean;
 }
 
-const UserList: FC<UserListProps> = ({member, onPress, addUser = false}) => {
+const UserList: FC<UserListProps> = ({
+  member,
+  onPress,
+  addUser = false,
+  onRemove,
+  removeUser = false,
+}) => {
   return (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => onPress?.(member)}
-      style={addUser ? styles.btnContainer : {}}
-      >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+      style={addUser ? styles.rowSpace : {}}>
+      <View style={styles.rowSpace}>
         <View style={styles.flexRowGap}>
           <Image source={{uri: member.photoURL}} style={styles.profileImage} />
           <View>
@@ -38,6 +47,13 @@ const UserList: FC<UserListProps> = ({member, onPress, addUser = false}) => {
           }}>
           {member.role}
         </Text>
+        {removeUser && member?.role == 'member' && (
+          <Pressable
+            onPress={() => onRemove?.(member)}
+            style={styles.removeBtn}>
+            <Icon name="remove" size={22} iconFamily="Ionicons" color={'red'} />
+          </Pressable>
+        )}
       </View>
 
       {addUser && (
@@ -55,7 +71,7 @@ const UserList: FC<UserListProps> = ({member, onPress, addUser = false}) => {
 export default UserList;
 
 const styles = StyleSheet.create({
-  btnContainer: {
+  rowSpace: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -76,5 +92,13 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 40,
     backgroundColor: '#ccc',
+  },
+  removeBtn: {
+    backgroundColor: 'pink',
+    height: 30,
+    width: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 15,
   },
 });

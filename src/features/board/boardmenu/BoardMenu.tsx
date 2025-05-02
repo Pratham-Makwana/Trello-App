@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
@@ -40,19 +40,29 @@ const BoardMenu = () => {
   const {boardId, board} = route.params;
   const [boardData, setBoardData] = useState<Board | any>();
   const {user} = useUser();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useAppDispatch();
   const members = useAppSelector(state => state.member.members);
   const [isClose, setIsClose] = useState(false);
+  const previousMembersRef = useRef<User[]>([]);
 
-  useEffect(() => {
-    const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
-      dispatch(setMembers(members));
-      setIsLoading(false);
-    });
+  // useEffect(() => {
+  //   const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
+  //     if (
+  //       JSON.stringify(previousMembersRef.current) !== JSON.stringify(members)
+  //     ) {
+  //       console.log('==> boardmenu members', members);
 
-    return () => unsubscribe();
-  }, []);
+  //       previousMembersRef.current = members;
+  //       dispatch(setMembers(members));
+  //       setIsLoading(prev => (prev ? false : prev));
+  //     }
+
+  //     // dispatch(setMembers(members));
+  //   });
+
+  //   return () => unsubscribe();
+  // }, []);
 
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
@@ -145,9 +155,40 @@ const BoardMenu = () => {
     setBoardData(updated);
     await updateBoardInfo(updated);
   };
+
+  const handleRemoveUser = (user: User) => {
+    Alert.alert(
+      'Remove From Board',
+      `Are you sure want to remove ${
+        user?.username || 'user'
+      } from this board?`,
+      [
+        {text: 'Cancle', style: 'cancel'},
+        {
+          text: 'OK',
+          onPress: async () => {
+            console.log(boardData);
+
+            setIsClose(true);
+            await leaveBoard(boardId, user!.uid);
+            if (user?.uid) {
+              sendNotificationToOtherUser(
+                user?.uid,
+                'Removed from Board',
+                `You've been removed from the ${
+                  boardData?.title || 'board'
+                } by the creator. You no longer have access to this board.`,
+              );
+            }
+            setIsClose(false);
+          },
+        },
+      ],
+    );
+  };
   return (
     <View>
-      {isClose && <CustomLoading transparent={false} />}
+      {isClose && <CustomLoading />}
       <View style={styles.container}>
         <Text style={styles.label}>Board Name</Text>
         {isLoading && (
@@ -210,7 +251,13 @@ const BoardMenu = () => {
           <FlatList
             data={members}
             keyExtractor={item => item.uid}
-            renderItem={({item}) => <UserList member={item} />}
+            renderItem={({item}) => (
+              <UserList
+                member={item}
+                removeUser={true}
+                onRemove={handleRemoveUser}
+              />
+            )}
             contentContainerStyle={{gap: 8}}
             style={{marginVertical: 12}}
           />
