@@ -21,18 +21,18 @@ const LOGIN_OPTION = [
     type: 'Google',
     icon: require('@assets/images/login/google.png'),
   },
-  {
-    type: 'apple',
-    icon: require('@assets/images/login/apple.png'),
-  },
-  {
-    type: 'microsoft',
-    icon: require('@assets/images/login/microsoft.png'),
-  },
-  {
-    type: 'slack',
-    icon: require('@assets/images/login/slack.png'),
-  },
+  // {
+  //   type: 'apple',
+  //   icon: require('@assets/images/login/apple.png'),
+  // },
+  // {
+  //   type: 'microsoft',
+  //   icon: require('@assets/images/login/microsoft.png'),
+  // },
+  // {
+  //   type: 'slack',
+  //   icon: require('@assets/images/login/slack.png'),
+  // },
 ];
 
 const AuthModal: FC<{

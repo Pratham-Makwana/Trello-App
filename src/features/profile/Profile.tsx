@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useUser} from '@hooks/useUser';
 import auth from '@react-native-firebase/auth';
@@ -32,16 +33,38 @@ import {
 } from '@config/firebaseRN';
 import {Colors} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
-
+import CustomLoading from '@components/global/CustomLoading';
+import CustomModal from '@components/global/CustomModal';
 
 const Profile = () => {
   const {user: currentUser, logout, setUser} = useUser();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
   const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const confirmCloseAccount = () => {
+    Alert.alert(
+      'Close Account',
+      'Are you sure you want to close your account? This action will sign you out.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes, Close',
+          style: 'destructive',
+          onPress: () => handleCloseAccount(),
+        },
+      ],
+      {cancelable: true},
+    );
+  };
 
   const handleCloseAccount = async () => {
     try {
+      setLoading(true);
       const googleUser = await GoogleSignin.getCurrentUser();
       if (googleUser) {
         await GoogleSignin.revokeAccess();
@@ -51,6 +74,8 @@ const Profile = () => {
       logout();
     } catch (error) {
       console.log('Error closing account:', error);
+    } finally {
+      setLoading(false);
     }
   };
   const onCancleModal = () => {
@@ -131,6 +156,7 @@ const Profile = () => {
 
   return (
     <ScrollView style={styles.container}>
+      {loading && <CustomModal loading />}
       <View style={styles.profileImageSection}>
         {isUploading ? (
           <View style={[styles.profileImage, styles.loadingContainer]}>
@@ -164,7 +190,7 @@ const Profile = () => {
 
       <TouchableOpacity
         style={styles.closeAccountButton}
-        onPress={handleCloseAccount}>
+        onPress={confirmCloseAccount}>
         <Icon
           name="log-out-outline"
           iconFamily="Ionicons"

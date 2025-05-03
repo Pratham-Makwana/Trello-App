@@ -25,7 +25,7 @@ const DropdownPlus = () => {
               }}></DropdownMenu.ItemIcon>
           </DropdownMenu.Item>
           {/* card */}
-          <DropdownMenu.Item key="card">
+          {/* <DropdownMenu.Item key="card">
             <DropdownMenu.ItemTitle>Create a card</DropdownMenu.ItemTitle>
             <DropdownMenu.ItemIcon
               androidIconName="menu"
@@ -33,17 +33,17 @@ const DropdownPlus = () => {
                 name: 'square.topthird.inset.filled',
                 pointSize: 24,
               }}></DropdownMenu.ItemIcon>
-          </DropdownMenu.Item>
+          </DropdownMenu.Item> */}
         </DropdownMenu.Group>
 
-        <DropdownMenu.Item key="templates" onSelect={() => {}}>
+        {/* <DropdownMenu.Item key="templates" onSelect={() => {}}>
           <DropdownMenu.ItemTitle>Browse Templates</DropdownMenu.ItemTitle>
           <DropdownMenu.ItemIcon
             ios={{
               name: 'square.on.square.dashed',
               pointSize: 24,
             }}></DropdownMenu.ItemIcon>
-        </DropdownMenu.Item>
+        </DropdownMenu.Item> */}
       </DropdownMenu.Content>
     </DropdownMenu.Root>
   );

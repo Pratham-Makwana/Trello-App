@@ -5,7 +5,7 @@ import {useAppDispatch} from '@store/reduxHook';
 import {navigate} from '@utils/NavigationUtils';
 import {useUser} from '@hooks/useUser';
 import {saveNotification} from './firebaseNotification';
-import notifee from '@notifee/react-native';
+import notifee, {EventType} from '@notifee/react-native';
 
 export const useNotificationHandlers = () => {
   const dispatch = useAppDispatch();
@@ -17,6 +17,8 @@ export const useNotificationHandlers = () => {
     }
     // Foreground
     const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log("==> remote", remoteMessage);
+      
       const notification = remoteMessage.notification;
 
       if (notification?.title && user?.uid) {
@@ -35,9 +37,20 @@ export const useNotificationHandlers = () => {
             ios: {
               sound: 'default',
             },
+            data: remoteMessage.data,
           };
 
           await notifee.displayNotification(notifeeNotification);
+
+          notifee.onForegroundEvent(({type, detail}) => {
+            console.log("==> details", detail);
+            
+            if (type === EventType.PRESS && detail.notification?.data?.screen) {
+              navigate('UserBottomTab', {
+                screen: detail?.notification?.data?.screen,
+              });
+            }
+          });
         } catch (err) {
           console.log('Notification Save Error', err);
         }

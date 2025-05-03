@@ -39,11 +39,12 @@ import DatePicker from 'react-native-date-picker';
 import {format} from 'date-fns';
 import UserList from '../UserList';
 import {User} from '@utils/Constant';
-import {setMembers} from '@store/member/memberSlice';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
 import {useUser} from '@hooks/useUser';
 import CustomLoading from '@components/global/CustomLoading';
 import Toast from 'react-native-toast-message';
+import DatePickerInput from '@components/ui/DatePickerInput';
+import CustomCloseButton from '@components/ui/CustomCloseButton';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -171,9 +172,19 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
 
   const onUpdateCardTitle = async () => {
     try {
+      if (cardTitle?.trim().length <= 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Title is required',
+          text2: 'Please enter a title before proceeding.',
+          position: 'top',
+          visibilityTime: 3000,
+        });
+        return;
+      }
       const updatedCard = {
         ...item,
-        title: cardTitle,
+        title: cardTitle.trim(),
       };
       await updateCart(updatedCard);
     } catch (error) {
@@ -188,6 +199,13 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       };
 
       await updateCart(updatedCard);
+      Toast.show({
+        type: 'success',
+        text1: 'Description Added',
+        text2: 'The task description was added successfully.',
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
     } catch (error) {
       console.log('Error deleting card:', error);
     }
@@ -278,10 +296,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       }
 
       await updateCart(updatedItem);
-      // await updateCart({
-      //   ...item,
-      //   startDate: date,
-      // });
       setStartDate(date);
       setOpenStartDate(false);
     } else {
@@ -311,23 +325,13 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   };
 
   const onAssignUser = async (user: User) => {
-    if (user?.role == 'creator') {
-      Toast.show({
-        type: 'info',
-        text1: 'Action Not Allowed',
-        text2: "You can't assign a task to the board creator",
-        position: 'bottom',
-      });
-      return;
-    }
-
     const assignedUser = {
       uid: user.uid,
       username: user.username,
       photoURL: user.photoURL,
     };
 
-    if (user?.uid) {
+    if (user?.uid && user.role !== 'creator') {
       await sendNotificationToOtherUser(
         user?.uid,
         `Assigned to a task on ${currentBoard?.title}`,
@@ -362,17 +366,15 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
     await updateCart(updatedCard);
   };
 
-  useEffect(() => {
-    const unsubscribe = listenToBoardMembers(
-      item?.board_id,
-      (members: User[]) => {
-        dispatch(setMembers(members));
-      },
-    );
+  const removeStartDate = async () => {
+    setStartDate(null);
+    await updateCart({...item, startDate: null});
+  };
 
-    return () => unsubscribe();
-  }, []);
-
+  const removeEndDate = async () => {
+    setEndDate(null);
+    await updateCart({...item, endDate: null});
+  };
   return (
     <>
       <AnimatedTouchable
@@ -429,6 +431,14 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               ]}>
               {item.title}
             </Text>
+            {item.assigned_to.length > 0 && (
+              <Icon
+                name="person-circle-outline"
+                size={18}
+                color={'#000'}
+                iconFamily="Ionicons"
+              />
+            )}
             <TouchableOpacity disabled={disable} onPress={showCardModal}>
               <Icon
                 name="resize-outline"
@@ -472,25 +482,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         enablePanDownToClose>
         <BottomSheetScrollView style={styles.container}>
           {loadLoader && <CustomLoading />}
-          <View
-            style={{
-              paddingTop: 10,
-              alignItems: 'center',
-            }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={onCancleModal}
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: '#B4B4B4',
-                borderRadius: 50,
-                padding: 5,
-              }}>
-              <Icon name="close" iconFamily="Ionicons" size={22} />
-            </TouchableOpacity>
-          </View>
-
+          <CustomCloseButton onClose={onCancleModal} />
           <View style={styles.contentContainer}>
             {!item?.imageUrl && (
               <View
@@ -536,103 +528,60 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
 
             {/* Assign User */}
 
-            <View
-              style={{
-                backgroundColor: '#fff',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                marginBottom: 10,
-              }}>
-              {isBoardCreator ? (
-                <TouchableOpacity
-                  disabled={disable}
+            <View style={styles.commonContainer}>
+              <TouchableOpacity
+                disabled={disable}
+                style={styles.rowSpace}
+                onPress={() => {
+                  if (!isBoardCreator) {
+                    console.log('==> called');
+
+                    Toast.show({
+                      type: 'error',
+                      text1: 'Access Denied',
+                      text2: 'You do not have permission to assign members.',
+                      position: 'top',
+                      visibilityTime: 3000,
+                    });
+                  } else {
+                    bottomSheetAssignCard.current?.present();
+                  }
+                }}>
+                <Text
                   style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                  onPress={() => bottomSheetAssignCard.current?.present()}>
-                  <Text
-                    style={{
-                      color: Colors.fontDark,
-                      fontSize: 14,
-                      fontWeight: '500',
-                    }}>
-                    Assign to Member
-                  </Text>
-                  <Icon
-                    name="chevron-forward"
-                    iconFamily="Ionicons"
-                    size={20}
-                  />
-                </TouchableOpacity>
-              ) : (
-                <View>
-                  <Text
-                    style={{
-                      color: Colors.fontDark,
-                      fontSize: 14,
-                      fontWeight: '500',
-                    }}>
-                    Assign to Member
-                  </Text>
-                </View>
-              )}
+                    color: Colors.fontDark,
+                    fontSize: 14,
+                    fontWeight: '500',
+                  }}>
+                  Assign to Member
+                </Text>
+                <Icon
+                  name="chevron-forward"
+                  iconFamily="Ionicons"
+                  size={20}
+                  color={Colors.black}
+                />
+              </TouchableOpacity>
             </View>
 
-            <View
-              style={{
-                backgroundColor: '#fff',
-                padding: 16,
-                borderRadius: 8,
-                marginHorizontal: 16,
-                marginBottom: 10,
-              }}>
+            <View style={styles.assignUserContainer}>
               {assignedUsers?.length === 0 ? (
-                <Text style={{fontSize: RFValue(12), color: Colors.fontDark}}>
-                  No member assigned.
-                </Text>
+                <Text style={styles.noMemberText}>No member assigned.</Text>
               ) : (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {assignedUsers.map((user, index) => (
-                    <View
-                      key={index}
-                      style={{
-                        alignItems: 'center',
-                        marginRight: 16,
-                      }}>
+                    <View key={index} style={styles.userItem}>
                       <Image
                         source={{uri: user.photoURL}}
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          marginBottom: 4,
-                          backgroundColor: '#ccc',
-                        }}
+                        style={styles.userImage}
                       />
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          color: Colors.fontDark,
-                          maxWidth: 60,
-                          textAlign: 'center',
-                        }}
-                        numberOfLines={1}>
+                      <Text style={styles.usernameText} numberOfLines={1}>
                         {user.username || user.email}
                       </Text>
                       {isBoardCreator && (
                         <TouchableOpacity
                           disabled={disable}
-                          style={{
-                            marginTop: 5,
-                            backgroundColor: '#FFCDD2',
-                            height: 20,
-                            width: 20,
-                            borderRadius: 10,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
+                          style={styles.removeButton}
                           onPress={() => onRemoveUser(user)}>
                           <Icon
                             name="remove"
@@ -679,13 +628,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             </View>
 
             {/* Label Title */}
-            <View
-              style={{
-                backgroundColor: '#fff',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                marginBottom: 16,
-              }}>
+            <View style={styles.commonContainer}>
               <Text
                 style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
                 Label Title
@@ -708,18 +651,16 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             </View>
 
             {/* Color Picker */}
-            <View
-              style={{
-                backgroundColor: '#fff',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
-                marginBottom: 16,
-              }}>
+            <View style={[styles.commonContainer]}>
               <Text
                 style={{color: Colors.fontDark, fontSize: 12, marginBottom: 5}}>
                 Select Color
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{paddingHorizontal: 8, flexDirection : 'row'}}
+                style={{marginTop: 4}}>
                 {labelColors.map(color => (
                   <TouchableOpacity
                     key={color}
@@ -731,11 +672,12 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                     style={[
                       styles.btnContainer,
                       {
-                        borderWidth: labels?.color === color ? 2 : undefined,
+                        borderWidth: labels?.color === color ? 2 : 0,
                         borderColor:
                           labels?.color === color
                             ? Colors.lightprimary
                             : 'transparent',
+                        marginRight: 8,
                       },
                     ]}>
                     <View style={[styles.Color, {backgroundColor: color}]} />
@@ -746,148 +688,23 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
 
             {/* Date Picker for Start and End Date */}
             <View>
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#fff',
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  marginBottom: 16,
-                }}
-                onPress={() => setOpenStartDate(true)}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}>
-                    <Text
-                      style={{
-                        color: Colors.fontDark,
-                        fontSize: 12,
-                        marginBottom: 5,
-                      }}>
-                      Start Date
-                    </Text>
-                    <Text
-                      style={{
-                        color: Colors.fontDark,
-                        fontSize: 12,
-                        marginBottom: 5,
-                      }}>
-                      {!startDate
-                        ? 'Date Not Selected'
-                        : format(startDate, 'dd MMM yyyy')}
-                    </Text>
-                  </View>
-                  {startDate && (
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: 'pink',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: 5,
-                      }}
-                      onPress={async () => {
-                        setStartDate(null);
-                        await updateCart({...item, startDate: null});
-                      }}>
-                      <Icon
-                        name="remove"
-                        size={22}
-                        iconFamily="Ionicons"
-                        color={'red'}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <DatePicker
-                title="Select Start Date"
-                mode="date"
-                modal
+              <DatePickerInput
+                title="Start Date"
+                date={startDate}
+                onDateChange={date => onConfirmDate(date, 'start')}
+                onRemove={removeStartDate}
                 open={openStartDate}
-                date={startDate || date}
-                onConfirm={date => onConfirmDate(date, 'start')}
-                onCancel={() => setOpenStartDate(false)}
+                setOpen={setOpenStartDate}
+                isStartDate={true}
               />
-
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#fff',
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  marginBottom: 16,
-                }}
-                onPress={() => setOpenEndDate(true)}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}>
-                    <Text
-                      style={{
-                        color: Colors.fontDark,
-                        fontSize: 12,
-                        marginBottom: 5,
-                      }}>
-                      End Date
-                    </Text>
-                    <Text
-                      style={{
-                        color: Colors.fontDark,
-                        fontSize: 12,
-                        marginBottom: 5,
-                      }}>
-                      {!endDate
-                        ? 'Date Not Selected'
-                        : format(endDate, 'dd MMM yyyy')}
-                    </Text>
-                  </View>
-                  {endDate && (
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: 'pink',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: 5,
-                      }}
-                      onPress={async () => {
-                        setEndDate(null);
-                        await updateCart({...item, endDate: null});
-                      }}>
-                      <Icon
-                        name="remove"
-                        size={22}
-                        iconFamily="Ionicons"
-                        color={'red'}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <DatePicker
-                title="Select End Date"
-                mode="date"
-                modal
+              <DatePickerInput
+                title="End Date"
+                date={endDate}
+                onDateChange={date => onConfirmDate(date, 'end')}
+                onRemove={removeEndDate}
                 open={openEndDate}
-                date={endDate || date}
-                onConfirm={date => onConfirmDate(date, 'end')}
-                onCancel={() => setOpenEndDate(false)}
+                setOpen={setOpenEndDate}
+                isStartDate={false}
               />
             </View>
 
@@ -898,6 +715,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               <Text style={styles.deleteBtnText}>Close Card</Text>
             </TouchableOpacity>
           </View>
+          <Toast />
         </BottomSheetScrollView>
       </BottomSheetModal>
 
@@ -916,7 +734,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         enablePanDownToClose>
         <BottomSheetView>
           {loadLoader && <CustomLoading />}
-
           <View>
             <FlatList
               keyExtractor={item => item.list_id}
@@ -1018,26 +835,10 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         }}
         enableOverDrag={false}
         enablePanDownToClose>
-        <BottomSheetView style={styles.container}>
-          <View
-            style={{
-              paddingTop: 10,
-              alignItems: 'center',
-              paddingBottom: 16,
-            }}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => bottomSheetAssignCard.current?.close()}
-              style={{
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: '#B4B4B4',
-                borderRadius: 50,
-                padding: 5,
-              }}>
-              <Icon name="close" iconFamily="Ionicons" size={22} />
-            </TouchableOpacity>
-          </View>
+        <BottomSheetScrollView style={styles.container}>
+          <CustomCloseButton
+            onClose={() => bottomSheetAssignCard.current?.close()}
+          />
           <FlatList
             data={members}
             keyExtractor={item => item.uid}
@@ -1045,35 +846,15 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               <UserList member={item} onPress={onAssignUser} />
             )}
             ListHeaderComponent={() => (
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  backgroundColor: Colors.lightprimary,
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: 5,
-                  }}>
+              <View style={styles.flatListHeaderContainer}>
+                <View style={styles.flatListHeaderContent}>
                   <Icon
                     name="people-outline"
                     iconFamily="Ionicons"
                     size={18}
                     color={Colors.white}
                   />
-                  <Text
-                    style={{
-                      color: Colors.white,
-                      fontSize: RFValue(13),
-                      fontWeight: '500',
-                    }}>
+                  <Text style={styles.flatListHeaderText}>
                     Assigned Members
                   </Text>
                 </View>
@@ -1083,7 +864,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             style={{marginVertical: 12, paddingHorizontal: 10}}
           />
           <Toast />
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
     </>
   );
@@ -1128,12 +909,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  commonContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  taskRowSpace: {
+  rowSpace: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1239,6 +1026,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#eee',
   },
+
+  flatListHeaderContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: Colors.lightprimary,
+    borderRadius: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  flatListHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+  },
+  flatListHeaderText: {
+    color: Colors.white,
+    fontSize: RFValue(13),
+    fontWeight: '500',
+  },
   boardTitle: {
     color: '#000',
     fontSize: 18,
@@ -1307,5 +1115,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
     zIndex: 1,
+  },
+  assignUserContainer: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 10,
+  },
+  noMemberText: {
+    fontSize: RFValue(12),
+    color: Colors.fontDark,
+  },
+  userItem: {
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  userImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 4,
+    backgroundColor: '#ccc',
+  },
+  usernameText: {
+    fontSize: 12,
+    color: Colors.fontDark,
+    maxWidth: 60,
+    textAlign: 'center',
+  },
+  removeButton: {
+    marginTop: 5,
+    backgroundColor: '#FFCDD2',
+    height: 20,
+    width: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

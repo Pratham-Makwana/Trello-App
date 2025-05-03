@@ -1,6 +1,9 @@
 import {CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET} from '@env';
 import auth from '@react-native-firebase/auth';
-import firestore, {deleteDoc} from '@react-native-firebase/firestore';
+import firestore, {
+  deleteDoc,
+  FirebaseFirestoreTypes,
+} from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import {Board, FakeTaskList, TaskItem, TaskList, User} from '@utils/Constant';
 
@@ -100,7 +103,7 @@ export const createBoard = async (
 
     await docRef.set(boardData);
 
-    await addUserToBoard(docRef.id, user.uid, 'creator');
+    await addUserToBoard(docRef.id, user.uid, 'creator', 'edit');
 
     // dispatch(addBoard(boardData));
   } catch (error) {
@@ -123,6 +126,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
 
     const userBoardData = userBoardSnapshot.docs[0].data();
     const role = userBoardData?.role;
+    const mode = userBoardData?.mode;
     const boardDoc = await boardRef.doc(boardId).get();
 
     if (!boardDoc.exists) {
@@ -145,6 +149,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
     const boardInfo = {
       ...boardData,
       role,
+      mode,
       userInfo: {
         username: creatorData?.username || 'Unknown',
         email: creatorData?.email || '',
@@ -240,7 +245,7 @@ export const listenToBoardMembers = (
     const members: User[] = [];
 
     snapshot.docs.forEach(doc => {
-      const {userId, role} = doc.data();
+      const {userId, role, mode} = doc.data();
       const userDocRef = userRef.doc(userId);
 
       const unsub = userDocRef.onSnapshot(userSnapshot => {
@@ -249,9 +254,9 @@ export const listenToBoardMembers = (
 
           const index = members.findIndex(m => m.uid === userId);
           if (index !== -1) {
-            members[index] = {...userData, role};
+            members[index] = {...userData, role, mode};
           } else {
-            members.push({...userData, role});
+            members.push({...userData, role, mode});
           }
 
           callback([...members]);
@@ -272,6 +277,7 @@ export const addUserToBoard = async (
   boardId: string,
   userId: string,
   role: string,
+  mode: string,
 ) => {
   try {
     const joinId = `${userId}_${boardId}`;
@@ -288,6 +294,7 @@ export const addUserToBoard = async (
       boardId,
       userId,
       role,
+      mode,
       addedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -618,25 +625,343 @@ export const deleteCard = async (item: TaskItem) => {
   }
 };
 
+// export const listenToCardsList = (
+//   listId: string,
+//   callback: (cards: TaskItem[]) => void,
+// ) => {
+//   try {
+//     const cardRef = listRef.doc(listId).collection('cards');
+//     const listDocRef = listRef.doc(listId);
+
+//     const q = cardRef.orderBy('position');
+
+//     const unsubscribe = q.onSnapshot(async snapshot => {
+//       const cards: (TaskItem & {listTitle: string})[] = await Promise.all(
+//         snapshot.docs.map(async doc => {
+//           const cardData = doc.data() as TaskItem;
+//           const listDoc = await listDocRef.get();
+//           const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
+//           return {...cardData, id: doc.id, listTitle};
+//         }),
+//       );
+
+//       callback(cards);
+//     });
+
+//     return unsubscribe;
+//   } catch (error) {
+//     console.log('Error in listenToCardsList:', error);
+//   }
+// };
+
+type FilterOptions = {
+  assignedUserId?: string | null;
+  status?: 'completed' | 'incomplete' | null;
+  dueDate?: 'over due' | 'today' | 'tomorrow' | 'week' | 'month' | null;
+};
+
+// export const listenToCardsList = (
+//   listId: string,
+//   callback: (cards: TaskItem[]) => void,
+//   filters?: FilterOptions,
+// ) => {
+//   try {
+//     const cardRef = firestore()
+//       .collection('lists')
+//       .doc(listId)
+//       .collection('cards');
+//     let q: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> = cardRef;
+
+//     // Apply backend filters where possible
+//     if (filters?.assignedUserId) {
+//       q = q.where('assignedUserIds', 'array-contains', filters.assignedUserId);
+//     }
+
+//     if (filters?.status === 'completed') {
+//       q = q.where('done', '==', true);
+//     } else if (filters?.status === 'incomplete') {
+//       q = q.where('done', '==', false);
+//     }
+
+//     q = q.where('list_id', '==', listId);
+
+//     q = q.orderBy('position');
+
+//     const unsubscribe = q.onSnapshot(async snapshot => {
+//       const now = new Date();
+//       const todayStart = new Date(now.setHours(0, 0, 0, 0));
+//       const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+
+//       const cards: (TaskItem & {listTitle: string})[] = [];
+
+//       for (const doc of snapshot.docs) {
+//         const cardData = doc.data() as TaskItem;
+
+//         if (filters?.dueDate) {
+//           const end = cardData.endDate
+//             ? new Date(
+//                 cardData.endDate.seconds * 1000 +
+//                   cardData.endDate.nanoseconds / 1000000,
+//               )
+//             : null;
+
+//           if (!end) continue;
+
+//           const dueStart = new Date(end);
+//           dueStart.setHours(0, 0, 0, 0);
+
+//           const shouldInclude = (() => {
+//             switch (filters.dueDate) {
+//               case 'over due':
+//                 return end < new Date();
+//               case 'today':
+//                 return end >= todayStart && end <= todayEnd;
+//               case 'tomorrow': {
+//                 const tStart = new Date();
+//                 tStart.setDate(tStart.getDate() + 1);
+//                 tStart.setHours(0, 0, 0, 0);
+//                 const tEnd = new Date(tStart);
+//                 tEnd.setHours(23, 59, 59, 999);
+//                 return end >= tStart && end <= tEnd;
+//               }
+//               case 'week': {
+//                 const weekEnd = new Date();
+//                 weekEnd.setDate(now.getDate() + 7);
+//                 weekEnd.setHours(23, 59, 59, 999);
+//                 return dueStart >= now && dueStart <= weekEnd;
+//               }
+//               case 'month': {
+//                 const monthEnd = new Date();
+//                 monthEnd.setMonth(monthEnd.getMonth() + 1);
+//                 monthEnd.setHours(23, 59, 59, 999);
+//                 return dueStart >= now && dueStart <= monthEnd;
+//               }
+//               default:
+//                 return true;
+//             }
+//           })();
+
+//           if (!shouldInclude) continue;
+//         }
+
+//         // Retrieve the list title based on the listId
+//         const listDoc = await firestore().collection('lists').doc(listId).get();
+//         const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
+
+//         cards.push({...cardData, id: doc.id, listTitle});
+//       }
+
+//       callback(cards);
+//     });
+
+//     return unsubscribe;
+//   } catch (error) {
+//     console.log('Error in listenToCardsList:', error);
+//   }
+// };
+
+// export const listenToCardsList = (
+//   listId: string,
+//   callback: (cards: TaskItem[]) => void,
+//   filters?: FilterOptions,
+// ) => {
+//   try {
+//     const cardRef = firestore()
+//       .collection('lists')
+//       .doc(listId)
+//       .collection('cards');
+//     let q: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> =
+//       cardRef;
+
+//     if (filters?.assignedUserId) {
+//       q = q.where('assigned_to', 'array-contains', {
+//         uid: filters.assignedUserId,
+//       });
+//     }
+
+//     if (filters?.status === 'completed') {
+//       q = q.where('done', '==', true);
+//     } else if (filters?.status === 'incomplete') {
+//       q = q.where('done', '==', false);
+//     }
+
+//     q = q.where('list_id', '==', listId);
+//     q = q.orderBy('position');
+
+//     const unsubscribe = q.onSnapshot(async snapshot => {
+//       const now = new Date();
+//       const todayStart = new Date(now.setHours(0, 0, 0, 0));
+//       const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+
+//       const cards: (TaskItem & {listTitle: string})[] = [];
+
+//       for (const doc of snapshot.docs) {
+//         const cardData = doc.data() as TaskItem;
+
+//         if (filters?.assignedUserId) {
+//           const assignedIds = (cardData.assigned_to || []).map(
+//             user => user?.uid,
+//           );
+//           if (!assignedIds.includes(filters.assignedUserId)) {
+//             continue;
+//           }
+//         }
+
+//         if (filters?.dueDate) {
+//           const end = cardData.endDate
+//             ? new Date(
+//                 cardData.endDate.seconds * 1000 +
+//                   cardData.endDate.nanoseconds / 1000000,
+//               )
+//             : null;
+
+//           if (!end) continue;
+
+//           const dueStart = new Date(end);
+//           dueStart.setHours(0, 0, 0, 0);
+
+//           const shouldInclude = (() => {
+//             switch (filters.dueDate) {
+//               case 'over due':
+//                 return end < new Date();
+//               case 'today':
+//                 return end >= todayStart && end <= todayEnd;
+//               case 'tomorrow': {
+//                 const tStart = new Date();
+//                 tStart.setDate(tStart.getDate() + 1);
+//                 tStart.setHours(0, 0, 0, 0);
+//                 const tEnd = new Date(tStart);
+//                 tEnd.setHours(23, 59, 59, 999);
+//                 return end >= tStart && end <= tEnd;
+//               }
+//               case 'week': {
+//                 const weekEnd = new Date();
+//                 weekEnd.setDate(now.getDate() + 7);
+//                 weekEnd.setHours(23, 59, 59, 999);
+//                 return dueStart >= now && dueStart <= weekEnd;
+//               }
+//               case 'month': {
+//                 const monthEnd = new Date();
+//                 monthEnd.setMonth(monthEnd.getMonth() + 1);
+//                 monthEnd.setHours(23, 59, 59, 999);
+//                 return dueStart >= now && dueStart <= monthEnd;
+//               }
+//               default:
+//                 return true;
+//             }
+//           })();
+
+//           if (!shouldInclude) continue;
+//         }
+
+//         const listDoc = await firestore().collection('lists').doc(listId).get();
+//         const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
+
+//         cards.push({...cardData, id: doc.id, listTitle});
+//       }
+
+//       callback(cards);
+//     });
+
+//     return unsubscribe;
+//   } catch (error) {
+//     console.log('Error in listenToCardsList:', error);
+//   }
+// };
+
 export const listenToCardsList = (
   listId: string,
   callback: (cards: TaskItem[]) => void,
+  filters?: FilterOptions,
 ) => {
   try {
-    const cardRef = listRef.doc(listId).collection('cards');
-    const listDocRef = listRef.doc(listId);
+    const cardRef = firestore()
+      .collection('lists')
+      .doc(listId)
+      .collection('cards');
+    let q: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> =
+      cardRef;
 
-    const q = cardRef.orderBy('position');
+    if (filters?.status === 'completed') {
+      q = q.where('done', '==', true);
+    } else if (filters?.status === 'incomplete') {
+      q = q.where('done', '==', false);
+    }
+
+    q = q.where('list_id', '==', listId);
+    q = q.orderBy('position');
 
     const unsubscribe = q.onSnapshot(async snapshot => {
-      const cards: (TaskItem & {listTitle: string})[] = await Promise.all(
-        snapshot.docs.map(async doc => {
-          const cardData = doc.data() as TaskItem;
-          const listDoc = await listDocRef.get();
-          const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
-          return {...cardData, id: doc.id, listTitle};
-        }),
-      );
+      const now = new Date();
+      const todayStart = new Date(now.setHours(0, 0, 0, 0));
+      const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+
+      const cards: (TaskItem & {listTitle: string})[] = [];
+
+      for (const doc of snapshot.docs) {
+        const cardData = doc.data() as TaskItem;
+
+        if (filters?.assignedUserId) {
+          const assignedIds = (cardData.assigned_to || []).map(
+            user => user?.uid,
+          );
+          if (!assignedIds.includes(filters.assignedUserId)) {
+            continue;
+          }
+        }
+
+        if (filters?.dueDate) {
+          const end = cardData.endDate
+            ? new Date(
+                cardData.endDate.seconds * 1000 +
+                  cardData.endDate.nanoseconds / 1000000,
+              )
+            : null;
+
+          if (!end) continue;
+
+          const dueStart = new Date(end);
+          dueStart.setHours(0, 0, 0, 0);
+
+          const shouldInclude = (() => {
+            switch (filters.dueDate) {
+              case 'over due':
+                return end < new Date();
+              case 'today':
+                return end >= todayStart && end <= todayEnd;
+              case 'tomorrow': {
+                const tStart = new Date();
+                tStart.setDate(tStart.getDate() + 1);
+                tStart.setHours(0, 0, 0, 0);
+                const tEnd = new Date(tStart);
+                tEnd.setHours(23, 59, 59, 999);
+                return end >= tStart && end <= tEnd;
+              }
+              case 'week': {
+                const weekEnd = new Date();
+                weekEnd.setDate(now.getDate() + 7);
+                weekEnd.setHours(23, 59, 59, 999);
+                return dueStart >= now && dueStart <= weekEnd;
+              }
+              case 'month': {
+                const monthEnd = new Date();
+                monthEnd.setMonth(monthEnd.getMonth() + 1);
+                monthEnd.setHours(23, 59, 59, 999);
+                return dueStart >= now && dueStart <= monthEnd;
+              }
+              default:
+                return true;
+            }
+          })();
+
+          if (!shouldInclude) continue;
+        }
+
+        const listDoc = await firestore().collection('lists').doc(listId).get();
+        const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
+
+        cards.push({...cardData, id: doc.id, listTitle});
+      }
 
       callback(cards);
     });
@@ -669,6 +994,7 @@ export const sendBoardInvite = async (
   boardId: string,
   userId: string,
   invitedBy: string,
+  visibility: string | undefined,
 ) => {
   const inviteId = `${boardId}_${userId}`;
   try {
@@ -677,6 +1003,7 @@ export const sendBoardInvite = async (
       invitedTo: userId,
       invitedBy,
       status: 'pending',
+      visibility,
     });
   } catch (error) {
     console.log(' Error sending board invite:', error);
@@ -727,13 +1054,17 @@ export const acceptInvite = async (
   inviteId: string,
   boardId: string,
   userId: string,
+  visibility: string,
 ) => {
   try {
     await boardInvitationRef.doc(inviteId).update({
       status: 'accepted',
     });
-
-    await addUserToBoard(boardId, userId, 'member');
+    if (visibility == 'Workspace') {
+      await addUserToBoard(boardId, userId, 'member', 'edit');
+    } else {
+      await addUserToBoard(boardId, userId, 'member', 'view');
+    }
 
     await db.collection('board_invitations').doc(inviteId).delete();
   } catch (error) {
@@ -760,6 +1091,15 @@ export const leaveBoard = async (boardId: string, userId: string) => {
   } catch (error) {
     console.log('Error leaving board:', error);
   }
+};
+
+export const updateUserRole = async (boardId: string, userId: string, newMode : string) => {
+  try {
+    const joinDocRef = userBoardRef.doc(`${userId}_${boardId}`);
+    await joinDocRef.update({
+      mode: newMode ,
+    });
+  } catch (error) {}
 };
 
 export const uploadToCloudinary = async (image: {

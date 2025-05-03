@@ -4,7 +4,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import React, {FC, useEffect, useMemo, useState} from 'react';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
@@ -26,7 +25,9 @@ import {
   uploadToCloudinary,
 } from '@config/firebaseRN';
 import Toast from 'react-native-toast-message';
-// import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import CustomModal from '@components/global/CustomModal';
+import {useFilter} from '@context/FilterContext';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -37,8 +38,10 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const [listTitle, setListTitle] = useState(taskList?.title);
   const [adding, setAdding] = useState(false);
   const [newTask, setNewTask] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const memoizedTasks = useMemo(() => tasks, [tasks]);
+  const {filters} = useFilter();
 
   const hapticOptions = {
     enableVibrateFallback: true,
@@ -48,14 +51,18 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   useEffect(() => {
     if (!taskList?.list_id) return;
 
-    const unsubscribe = listenToCardsList(taskList?.list_id, cards => {
-      setTasks(cards);
-    });
+    const unsubscribe = listenToCardsList(
+      taskList?.list_id,
+      cards => {
+        setTasks(cards);
+      },
+      filters,
+    );
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [taskList?.list_id, filters]);
 
   useEffect(() => {
     const unsubscribeListTitle = listenToListInfo(
@@ -85,11 +92,21 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   };
 
   const onCardAdd = async () => {
+    if (newTask.trim().length <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Title is required',
+        text2: 'Please enter a title before proceeding.',
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
+      return;
+    }
     setAdding(false);
     await addCardList(
       taskList?.list_id,
       taskList?.board_id,
-      newTask,
+      newTask.trim(),
       tasks.length,
     );
     setNewTask('');
@@ -112,6 +129,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
 
           if (image?.uri) {
             try {
+              setIsUploading(true);
               const imageUrl = await uploadToCloudinary({
                 uri: image?.uri,
                 type: image?.type,
@@ -127,6 +145,8 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
               );
             } catch (error) {
               console.log('Error uploading or saving:', error);
+            } finally {
+              setIsUploading(false);
             }
           }
         }
@@ -136,6 +156,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
 
   return (
     <View style={styles.cardContainer}>
+      {isUploading && <CustomModal loading={isUploading} />}
       <View style={styles.card}>
         {/* List Header */}
         <View style={styles.header}>
@@ -156,12 +177,12 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           data={memoizedTasks}
           renderItem={params => <ListItem {...params} disable={disable} />}
           keyExtractor={item => item.id}
-          // onDragBegin={() => {
-          //   ReactNativeHapticFeedback.trigger('selection', hapticOptions);
-          // }}
-          // onPlaceholderIndexChange={() => {
-          //   ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
-          // }}
+          onDragBegin={() => {
+            ReactNativeHapticFeedback.trigger('impactHeavy', hapticOptions);
+          }}
+          onPlaceholderIndexChange={() => {
+            ReactNativeHapticFeedback.trigger('impactLight', hapticOptions);
+          }}
           onDragEnd={disable ? () => {} : onTaskCardDrop}
           containerStyle={{
             paddingBottom: 4,

@@ -16,8 +16,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {Colors} from '@utils/Constant';
 import {goBack, navigationRef} from '@utils/NavigationUtils';
-import {screenWidth} from '@utils/Scaling';
-import {Platform, StyleSheet} from 'react-native';
+import {Platform} from 'react-native';
 import {useEffect, useState} from 'react';
 import auth, {onAuthStateChanged} from '@react-native-firebase/auth';
 import Invite from '@components/board/Invite';
@@ -38,7 +37,6 @@ const Navigation = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth(), async user => {
-
       if (user) {
         const isEmailVerified = user.emailVerified;
         const serializedUser = {
@@ -240,22 +238,3 @@ const AuthStack = () => {
 };
 
 export default Navigation;
-
-const styles = StyleSheet.create({
-  btnContainer: {
-    width: screenWidth * 0.18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  btnTextDisabled: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textgrey,
-  },
-  btnText: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: Colors.lightprimary,
-  },
-});

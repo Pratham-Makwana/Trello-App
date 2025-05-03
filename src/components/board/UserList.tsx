@@ -13,19 +13,18 @@ import {RFValue} from 'react-native-responsive-fontsize';
 
 interface UserListProps {
   onPress?: (user: User) => void;
-  onRemove?: (user: User) => void;
   member: User;
   addUser?: boolean;
-  removeUser?: boolean;
+  selectedUserId?: string | null;
 }
 
 const UserList: FC<UserListProps> = ({
   member,
   onPress,
   addUser = false,
-  onRemove,
-  removeUser = false,
+  selectedUserId,
 }) => {
+  const isSelected = selectedUserId === member.uid;
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -47,12 +46,13 @@ const UserList: FC<UserListProps> = ({
           }}>
           {member.role}
         </Text>
-        {removeUser && member?.role == 'member' && (
-          <Pressable
-            onPress={() => onRemove?.(member)}
-            style={styles.removeBtn}>
-            <Icon name="remove" size={22} iconFamily="Ionicons" color={'red'} />
-          </Pressable>
+        {isSelected && (
+          <Icon
+            name="checkmark"
+            size={22}
+            iconFamily="Ionicons"
+            color={Colors.lightprimary}
+          />
         )}
       </View>
 

@@ -29,7 +29,7 @@ const OnBoarding = () => {
   const {top} = useSafeAreaInsets();
   const isDark = useGlobalColorScheme();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['33%'], []);
+  const snapPoints = useMemo(() => ['15%'], []);
   const [authType, setAuthType] = useState<ModalType | null>(null);
 
   const paddingStyle: ViewStyle = {

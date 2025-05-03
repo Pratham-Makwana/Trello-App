@@ -14,11 +14,13 @@ interface CustomHeaderAndroidProps {
   title: string;
   board?: Board;
   boardId: string;
+  showBottomSheet: () => void;
 }
 const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
   title,
   board,
   boardId,
+  showBottomSheet,
 }) => {
   const {user} = useUser();
   const currentBoard = useAppSelector(state =>
@@ -60,6 +62,14 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
       </View>
       {/* Icons  */}
       <View style={[styles.rowIconContainer]}>
+        <TouchableOpacity activeOpacity={0.8} onPress={showBottomSheet}>
+          <Icon
+            name="filter-circle-outline"
+            iconFamily="Ionicons"
+            size={26}
+            color={Colors.black}
+          />
+        </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => {

@@ -18,6 +18,9 @@ const Invite = () => {
     useRoute<RouteProp<{Invite: {boardId: string; title: string}}>>();
   const {boardId, title} = route.params;
   const currentUser = useAppSelector(state => state.user.currentUser);
+  const currentBoard = useAppSelector(state =>
+    state.board.boards.find(board => board.boardId === boardId),
+  );
 
   const [search, setSearch] = useState('');
 
@@ -42,14 +45,13 @@ const Invite = () => {
   }, [search]);
 
   const onAddUser = async (user: User) => {
-
     try {
       if (user?.uid) {
         const response = await sendNotificationToOtherUser(
           user?.uid,
           '📩 Board Invitation',
           `you've been invited to collaborate on a ${title} board. Tap to join and start working together!`,
-          'notification',
+          'invite',
         );
         if (response) {
           Toast.show({
@@ -57,7 +59,7 @@ const Invite = () => {
             text1: 'Invitation Sent 🎉',
             text2: `Your invitation to join the "${title}" board has been sent.`,
           });
-          await sendBoardInvite(boardId, user?.uid, currentUser!.uid);
+          await sendBoardInvite(boardId, user?.uid, currentUser!.uid, currentBoard?.workspace);
           setTimeout(() => {
             goBack();
           }, 300);

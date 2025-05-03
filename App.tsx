@@ -16,6 +16,7 @@ import messaging from '@react-native-firebase/messaging';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import notifee, {AndroidImportance} from '@notifee/react-native';
+import {FilterProvider} from '@context/FilterContext';
 
 function App(): React.JSX.Element {
   useEffect(() => {
@@ -69,7 +70,9 @@ function App(): React.JSX.Element {
       <GestureHandlerRootView style={{flex: 1}}>
         <BottomSheetModalProvider>
           <BoardProvider>
-            <Navigation />
+            <FilterProvider>
+              <Navigation />
+            </FilterProvider>
             <Toast />
           </BoardProvider>
         </BottomSheetModalProvider>

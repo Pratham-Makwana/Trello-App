@@ -39,6 +39,7 @@
     "react-native-dotenv": "^3.4.11",
     "react-native-draggable-flatlist": "^4.0.1",
     "react-native-gesture-handler": "^2.20.2",
+    "react-native-haptic-feedback": "2.2.0",
     "react-native-image-picker": "^7.2.3",
     "react-native-ios-context-menu": "^3.1.0",
     "react-native-ios-utilities": "^5.1.2",

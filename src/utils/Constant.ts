@@ -56,9 +56,8 @@ export const labelColors = [
   '#FF5733',
   '#3357FF',
   '#8E44AD',
-  '#C0392B',
-  '#2C3E50',
   '#27AE60',
+  '#2C3E50',
 ];
 export interface Board {
   boardId: string;
@@ -74,6 +73,7 @@ export interface Board {
     notificationToken: string;
   };
   role?: string;
+  mode?: string
 }
 
 export interface TaskList {
@@ -95,6 +95,7 @@ export interface User {
   photoURL: string;
   notificationToken?: string;
   role?: string;
+  mode? : string
 }
 
 export interface TaskItem {

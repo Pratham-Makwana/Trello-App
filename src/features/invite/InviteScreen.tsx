@@ -11,10 +11,7 @@ import React, {useState} from 'react';
 import {useAppSelector} from '@store/reduxHook';
 import {Colors} from '@utils/Constant';
 import {sendNotificationToOtherUser} from '@config/firebaseNotification';
-import {
-  acceptInvite,
-  declineInvite,
-} from '@config/firebaseRN';
+import {acceptInvite, declineInvite} from '@config/firebaseRN';
 import Toast from 'react-native-toast-message';
 
 export type Invite = {
@@ -24,6 +21,7 @@ export type Invite = {
   invitedBy: string;
   invitedTo: string;
   status: 'pending' | 'accepted' | 'rejected';
+  visibility: string;
 
   invitedByUserInfo: {
     uid: string;
@@ -47,13 +45,19 @@ const InviteScreen = () => {
         text2: `You can now access the board "${invite.boardName}" in the Boards screen.`,
       });
 
-      await acceptInvite(invite.id, invite.boardId, currentUser!.uid);
+      await acceptInvite(
+        invite.id,
+        invite.boardId,
+        currentUser!.uid,
+        invite.visibility,
+      );
 
       if (invite.invitedBy) {
         sendNotificationToOtherUser(
           invite.invitedBy,
           'Invite Accepted',
           `${currentUser?.username} has accepted your invitation to join the board "${invite.boardName}"`,
+          'notification',
         );
       }
     } catch (err) {
@@ -69,6 +73,7 @@ const InviteScreen = () => {
           invite.invitedBy,
           'Invite Rejected',
           `${currentUser?.username} has rejected your invitation to join the board "${invite.boardName}"`,
+          'notification',
         );
       }
     } catch (err) {

@@ -1,6 +1,7 @@
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Platform,
   StatusBar,
   StyleSheet,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DefaultTheme, useRoute} from '@react-navigation/native';
-import {Board, Colors, FakeTaskList, TaskList} from '@utils/Constant';
+import {Board, Colors, FakeTaskList, TaskList, User} from '@utils/Constant';
 import CustomHeaderIOS from '@components/global/CustomHeaderIOS';
 import CustomHeaderAndroid from '@components/global/CustomHeaderAndroid';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,6 +26,7 @@ import {
   deleteBoardList,
   getBoardInfo,
   listenToBoardLists,
+  listenToBoardMembers,
   listenToUpdateBoardInfo,
   updateBoardList,
 } from '@config/firebaseRN';
@@ -32,6 +34,7 @@ import Icon from '@components/global/Icon';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
+  BottomSheetScrollView,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import Carousel, {
@@ -46,6 +49,26 @@ import ListCard from '../list/ListCard';
 import {screenHeight, screenWidth} from '@utils/Scaling';
 import {useSharedValue} from 'react-native-reanimated';
 import CustomLoading from '@components/global/CustomLoading';
+import UserList from '@components/board/UserList';
+import {RFValue} from 'react-native-responsive-fontsize';
+import {useFilter} from '@context/FilterContext';
+import {setMembers} from '@store/member/memberSlice';
+
+const dueDateOptions: {
+  label: string;
+  value: 'over due' | 'today' | 'tomorrow' | 'week' | 'month';
+}[] = [
+  {label: 'Over Due', value: 'over due'},
+  {label: 'Today', value: 'today'},
+  {label: 'Tomorrow', value: 'tomorrow'},
+  {label: '1 Week', value: 'week'},
+  {label: '1 Month', value: 'month'},
+];
+
+const statusOptions: {label: string; value: 'completed' | 'incomplete'}[] = [
+  {label: 'Completed', value: 'completed'},
+  {label: 'Uncompleted', value: 'incomplete'},
+];
 
 const BoardCard = () => {
   const route = useRoute();
@@ -59,16 +82,34 @@ const BoardCard = () => {
   const [taskList, setTaskList] = useState<Array<TaskList | FakeTaskList>>([
     {list_id: undefined},
   ]);
+
   const [listTitle, setListTitle] = useState('');
   const [selectedList, setSelectedList] = useState<TaskList | null>(null);
   const ref = useRef<ICarouselInstance>(null);
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const bottomSheetFilterModalRef = useRef<BottomSheetModal>(null);
   const progress = useSharedValue<number>(0);
   const snapPoints = useMemo(() => ['70%'], []);
   let dummyTitle: string;
 
   const currentBoard = useAppSelector(state =>
     state.board.boards.find(b => b.boardId === boardDetails.boardId),
+  );
+
+  const {filters, setFilters} = useFilter();
+
+  const [searchText, setSearchText] = useState('');
+
+  const [selectedDue, setSelectedDue] = useState(filters.dueDate);
+  const [selectedUserId, setSelectedUserId] = useState(filters.assignedUserId);
+  const [selectedStatus, setSelectedStatus] = useState<
+    'completed' | 'incomplete' | null
+  >(null);
+
+  const members = useAppSelector(state => state.member.members);
+
+  const currentMember = useAppSelector(state =>
+    state.member.members.find(m => m.uid == user?.uid),
   );
 
   useEffect(() => {
@@ -100,8 +141,18 @@ const BoardCard = () => {
     });
   };
   const onSaveList = async (title: string | any) => {
+    if (title.trim().length <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Title is required',
+        text2: 'Please enter a title before proceeding.',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+      return;
+    }
     setActive(false);
-    await addBoardList(board?.boardId, title, taskList.length);
+    await addBoardList(board?.boardId, title.trim(), taskList.length);
   };
 
   const onDeleteBoardList = async () => {
@@ -145,8 +196,17 @@ const BoardCard = () => {
   );
 
   const onUpdateList = async () => {
-    bottomSheetModalRef.current?.close();
     if (selectedList) {
+      if (listTitle.trim().length <= 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Title is required',
+          text2: 'Please enter a title before proceeding.',
+          position: 'bottom',
+          visibilityTime: 3000,
+        });
+        return;
+      }
       await updateBoardList(selectedList, listTitle);
     }
   };
@@ -163,13 +223,13 @@ const BoardCard = () => {
   };
 
   const handleActive = () => {
-    if (board.workspace == 'Private' && board.role == 'member') {
-      console.log('Access Denied');
+    console.log('==> log', currentMember?.mode === 'view');
 
+    if (currentMember?.mode === 'view') {
       Toast.show({
         type: 'info',
         text1: 'Access Denied',
-        text2: 'You cannot add a list in a private workspace.',
+        text2: 'You cannot add a list in a workspace.',
       });
       return;
     }
@@ -198,6 +258,17 @@ const BoardCard = () => {
         unsubscribe();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = listenToBoardMembers(
+      boardDetails.boardId,
+      (members: User[]) => {
+        dispatch(setMembers(members));
+      },
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const onListChangePosition = async (newPosition: number) => {
@@ -242,161 +313,305 @@ const BoardCard = () => {
     setLoadLoader(false);
     bottomSheetModalRef.current?.close();
   };
+  const onClearFilter = () => {
+    setSelectedStatus(null);
+    setSelectedDue(null);
+    setSelectedUserId(null);
+
+    setFilters({
+      assignedUserId: null,
+      dueDate: null,
+      status: null,
+    });
+  };
+
+  const onSelectUser = (user: User) => {
+    setSelectedUserId(user.uid);
+  };
+
+  const onApplyFilter = () => {
+    setFilters({
+      assignedUserId: selectedUserId,
+      dueDate: selectedDue,
+      status: selectedStatus,
+    });
+    bottomSheetFilterModalRef.current?.close();
+  };
 
   return (
-    <LinearGradient colors={gradientColors} style={{flex: 1}}>
-      <StatusBar barStyle={'dark-content'} backgroundColor={'#fff'} />
-      {Platform.OS === 'ios' && (
-        <CustomHeaderIOS
-          title={currentBoard!.title}
-          // board={board}
-          boardId={currentBoard?.boardId || ''}
-        />
-      )}
-      {Platform.OS === 'android' && (
-        <CustomHeaderAndroid
-          title={currentBoard?.title || 'Untitled'}
-          // board={board}
-          boardId={currentBoard?.boardId || ''}
-        />
-      )}
-      {loading && <CustomModal loading={loading} />}
-      {board && (
-        <SafeAreaView style={{flex: 1}}>
-          <Carousel
-            ref={ref}
-            height={screenHeight * 0.8}
-            width={screenWidth}
-            data={taskList}
-            autoPlay={false}
-            loop={false}
-            onProgressChange={progress}
-            renderItem={({
-              index,
-              item,
-            }: {
-              index: number;
-              item: TaskList | FakeTaskList;
-            }) => {
-              return (
-                <>
-                  {item.list_id && (
-                    <ListCard
-                      disable={
-                        board.role == 'member' && board.workspace == 'Private'
-                      }
-                      key={item.list_id}
-                      taskList={item}
-                      showModal={() => showModal(item)}
-                    />
-                  )}
-                  {item.list_id === undefined && (
-                    <View key={index} style={styles.listView}>
-                      {!active && (
-                        <TouchableOpacity
-                          style={styles.listAddBtn}
-                          activeOpacity={0.8}
-                          onPress={handleActive}>
-                          <CustomText
-                            variant="h4"
-                            fontFamily="Montserrat-SemiBold">
-                            Add List
-                          </CustomText>
-                        </TouchableOpacity>
-                      )}
-                      {active && (
-                        <ListTitleInput
-                          onCancle={() => setActive(false)}
-                          onSave={onSaveList}
-                        />
-                      )}
-                    </View>
-                  )}
-                </>
-              );
-            }}
+    <>
+      <LinearGradient colors={gradientColors} style={{flex: 1}}>
+        <StatusBar barStyle={'dark-content'} backgroundColor={'#fff'} />
+        {Platform.OS === 'ios' && (
+          <CustomHeaderIOS
+            title={currentBoard!.title}
+            // board={board}
+            boardId={currentBoard?.boardId || ''}
           />
-          <Pagination.Basic
-            progress={progress}
-            data={taskList}
-            dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
-            size={8}
-            activeDotStyle={{backgroundColor: '#fff'}}
-            containerStyle={{gap: 10, marginTop: 10}}
-            onPress={onPressPagination}
+        )}
+        {Platform.OS === 'android' && (
+          <CustomHeaderAndroid
+            showBottomSheet={() => bottomSheetFilterModalRef.current?.present()}
+            title={currentBoard?.title || 'Untitled'}
+            // board={board}
+            boardId={currentBoard?.boardId || ''}
           />
-          <BottomSheetModal
-            ref={bottomSheetModalRef}
-            index={0}
-            snapPoints={snapPoints}
-            handleComponent={null}
-            backdropComponent={renderBackdrop}
-            handleStyle={{
-              backgroundColor: DefaultTheme.colors.background,
-              borderRadius: 12,
-            }}
-            enableOverDrag={false}
-            enablePanDownToClose>
-            <BottomSheetView style={styles.container}>
-              {loadLoader && <CustomLoading />}
-              <View style={styles.cancleBtnContainer}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={onCancleModal}
-                  style={styles.cancleBtn}>
-                  <Icon name="close" iconFamily="Ionicons" size={22} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.textInputContainer}>
-                <Text style={styles.labelText}>list name</Text>
-                <TextInput
-                  style={{fontSize: 16, color: Colors.fontDark}}
-                  returnKeyType="done"
-                  enterKeyHint="done"
-                  onEndEditing={onUpdateList}
-                  value={listTitle}
-                  onChangeText={e => setListTitle(e)}
-                />
-              </View>
-
-              <View style={styles.positionContainer}>
-                <Text style={styles.labelText}>Change List Position</Text>
-                <View style={styles.positionList}>
-                  {taskList
-                    .filter(list => list.list_id !== undefined)
-                    .map((item, idx) => (
-                      <TouchableOpacity
+        )}
+        {loading && <CustomModal loading={loading} />}
+        {board && (
+          <SafeAreaView style={{flex: 1}}>
+            <Carousel
+              ref={ref}
+              height={screenHeight * 0.8}
+              width={screenWidth}
+              data={taskList}
+              autoPlay={false}
+              loop={false}
+              onProgressChange={progress}
+              renderItem={({
+                index,
+                item,
+              }: {
+                index: number;
+                item: TaskList | FakeTaskList;
+              }) => {
+                return (
+                  <>
+                    {item.list_id && (
+                      <ListCard
+                        disable={currentMember?.mode === 'view'}
                         key={item.list_id}
-                        style={[
-                          styles.positionBtn,
-                          selectedList?.position === idx + 1 &&
-                            styles.positionBtnActive,
-                        ]}
-                        onPress={() => onListChangePosition(idx + 1)}>
-                        <Text
-                          style={[
-                            styles.positionText,
-                            selectedList?.position === idx + 1 &&
-                              styles.positionTextActive,
-                          ]}>
-                          {idx + 1}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                        taskList={item}
+                        showModal={() => showModal(item)}
+                      />
+                    )}
+                    {item.list_id === undefined && (
+                      <View key={index} style={styles.listView}>
+                        {!active && (
+                          <TouchableOpacity
+                            style={styles.listAddBtn}
+                            activeOpacity={0.8}
+                            onPress={handleActive}>
+                            <CustomText
+                              variant="h4"
+                              fontFamily="Montserrat-SemiBold">
+                              Add List
+                            </CustomText>
+                          </TouchableOpacity>
+                        )}
+                        {active && (
+                          <ListTitleInput
+                            onCancle={() => setActive(false)}
+                            onSave={onSaveList}
+                          />
+                        )}
+                      </View>
+                    )}
+                  </>
+                );
+              }}
+            />
+            <Pagination.Basic
+              progress={progress}
+              data={taskList}
+              dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
+              size={8}
+              activeDotStyle={{backgroundColor: '#fff'}}
+              containerStyle={{gap: 10, marginTop: 10}}
+              onPress={onPressPagination}
+            />
+            <BottomSheetModal
+              ref={bottomSheetModalRef}
+              index={0}
+              snapPoints={snapPoints}
+              handleComponent={null}
+              backdropComponent={renderBackdrop}
+              handleStyle={{
+                backgroundColor: DefaultTheme.colors.background,
+                borderRadius: 12,
+              }}
+              enableOverDrag={false}
+              enablePanDownToClose>
+              <BottomSheetView style={styles.container}>
+                {loadLoader && <CustomLoading />}
+                <View style={styles.cancleBtnContainer}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={onCancleModal}
+                    style={styles.cancleBtn}>
+                    <Icon name="close" iconFamily="Ionicons" size={22} />
+                  </TouchableOpacity>
                 </View>
-              </View>
 
+                <View style={styles.textInputContainer}>
+                  <Text style={styles.labelText}>list name</Text>
+                  <TextInput
+                    style={{fontSize: 16, color: Colors.fontDark}}
+                    returnKeyType="done"
+                    enterKeyHint="done"
+                    onEndEditing={onUpdateList}
+                    value={listTitle}
+                    onChangeText={e => setListTitle(e)}
+                  />
+                </View>
+
+                <View style={styles.positionContainer}>
+                  <Text style={styles.labelText}>Change List Position</Text>
+                  <View style={styles.positionList}>
+                    {taskList
+                      .filter(list => list.list_id !== undefined)
+                      .map((item, idx) => (
+                        <TouchableOpacity
+                          key={item.list_id}
+                          style={[
+                            styles.positionBtn,
+                            selectedList?.position === idx + 1 &&
+                              styles.positionBtnActive,
+                          ]}
+                          onPress={() => onListChangePosition(idx + 1)}>
+                          <Text
+                            style={[
+                              styles.positionText,
+                              selectedList?.position === idx + 1 &&
+                                styles.positionTextActive,
+                            ]}>
+                            {idx + 1}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={onDeleteBoardList}>
+                  <Text style={styles.deleteBtnText}>Close Board</Text>
+                </TouchableOpacity>
+              </BottomSheetView>
+              <Toast />
+            </BottomSheetModal>
+          </SafeAreaView>
+        )}
+      </LinearGradient>
+      <BottomSheetModal
+        ref={bottomSheetFilterModalRef}
+        index={0}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        handleStyle={{
+          backgroundColor: DefaultTheme.colors.background,
+          borderRadius: 12,
+        }}
+        enableOverDrag={false}
+        enablePanDownToClose>
+        <BottomSheetView style={{flex: 1}}>
+          <View style={[styles.container, {padding: 10}]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingHorizontal: 10,
+                marginBottom: 10,
+              }}>
               <TouchableOpacity
-                style={styles.deleteBtn}
-                onPress={onDeleteBoardList}>
-                <Text style={styles.deleteBtnText}>Close Board</Text>
+                onPress={onClearFilter}
+                style={{
+                  backgroundColor: Colors.lightprimary,
+                  padding: 8,
+                  borderRadius: 5,
+                }}>
+                <Text style={{color: Colors.white, fontSize: RFValue(12)}}>
+                  Clear Filter
+                </Text>
               </TouchableOpacity>
-            </BottomSheetView>
-          </BottomSheetModal>
-        </SafeAreaView>
-      )}
-    </LinearGradient>
+              <TouchableOpacity
+                onPress={onApplyFilter}
+                style={{
+                  backgroundColor: Colors.lightprimary,
+                  padding: 8,
+                  borderRadius: 5,
+                }}>
+                <Text style={{color: Colors.white, fontSize: RFValue(12)}}>
+                  Apply
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.sectionTitle}>Due Date</Text>
+            <View style={styles.row}>
+              {dueDateOptions.map(({label, value}) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.chip,
+                    selectedDue === value && styles.chipSelected,
+                  ]}
+                  onPress={() => setSelectedDue(value)}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedDue === value && styles.chipTextSelected,
+                    ]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sectionTitle}>Status</Text>
+            <View style={styles.row}>
+              {statusOptions.map(({label, value}) => (
+                <TouchableOpacity
+                  key={value}
+                  style={[
+                    styles.chip,
+                    selectedStatus === value && styles.chipSelected,
+                  ]}
+                  onPress={() => setSelectedStatus(value)}>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedStatus === value && styles.chipTextSelected,
+                    ]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sectionTitle}>Members</Text>
+            <TextInput
+              style={styles.search}
+              placeholder="Search members..."
+              placeholderTextColor={Colors.placeholdertext}
+              value={searchText}
+              onChangeText={text => setSearchText(text.trim())}
+            />
+
+            <FlatList
+              style={{maxHeight: 150}}
+              data={members.filter(
+                member =>
+                  member.username
+                    .toLowerCase()
+                    .includes(searchText.toLowerCase()) ||
+                  member.email.toLowerCase().includes(searchText.toLowerCase()),
+              )}
+              keyExtractor={item => item.uid}
+              ItemSeparatorComponent={() => <View style={{height: 10}} />}
+              renderItem={({item}) => {
+                return (
+                  <UserList
+                    member={item}
+                    onPress={onSelectUser}
+                    selectedUserId={selectedUserId}
+                  />
+                );
+              }}
+            />
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
+    </>
   );
 };
 
@@ -477,7 +692,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   positionBtnActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: Colors.lightprimary,
+    borderWidth: 0,
   },
   positionText: {
     color: Colors.fontDark,
@@ -485,5 +701,60 @@ const styles = StyleSheet.create({
   positionTextActive: {
     color: '#fff',
     fontWeight: '600',
+  },
+
+  sectionTitle: {
+    color: Colors.darkprimary,
+    fontWeight: 'bold',
+    fontSize: RFValue(16),
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  chipSelected: {
+    backgroundColor: '#007AFF',
+  },
+  chipText: {
+    color: Colors.darkprimary,
+  },
+  chipTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  search: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginBottom: 8,
+    color: Colors.black,
+  },
+  memberItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  memberItemSelected: {
+    backgroundColor: '#e0f0ff',
+  },
+  memberText: {
+    fontSize: 14,
+  },
+  memberTextSelected: {
+    fontWeight: 'bold',
+    color: '#007AFF',
   },
 });
