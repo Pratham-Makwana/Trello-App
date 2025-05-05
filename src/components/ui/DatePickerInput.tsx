@@ -13,6 +13,7 @@ interface DatePickerInputProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   isStartDate: boolean;
+  disable: boolean;
 }
 
 const DatePickerInput: React.FC<DatePickerInputProps> = ({
@@ -23,10 +24,12 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
   open,
   setOpen,
   isStartDate,
+  disable,
 }) => {
   return (
     <View>
       <TouchableOpacity
+        disabled={disable}
         style={{
           backgroundColor: '#fff',
           paddingHorizontal: 16,

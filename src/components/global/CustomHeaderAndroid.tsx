@@ -73,50 +73,18 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => {
-            if (
-              currentBoard?.workspace == 'Private' &&
-              currentBoard?.role == 'member'
-            ) {
-              Alert.alert(
-                'Leave Board',
-                'Are you sure want to leave this board?',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      onLeaveBoard();
-                    },
-                  },
-                ],
-              );
-              return;
-            }
             navigate(
               'BoardMenu',
               {boardId: boardId},
               // {boardId: board?.boardId}
             );
           }}>
-          {currentBoard?.workspace == 'Private' &&
-          currentBoard?.role == 'member' ? (
-            <Icon
-              name="log-out-outline"
-              iconFamily="Ionicons"
-              size={26}
-              color={Colors.black}
-            />
-          ) : (
-            <Icon
-              name="dots-horizontal"
-              iconFamily="MaterialCommunityIcons"
-              size={26}
-              color={Colors.black}
-            />
-          )}
+          <Icon
+            name="dots-horizontal"
+            iconFamily="MaterialCommunityIcons"
+            size={26}
+            color={Colors.black}
+          />
         </TouchableOpacity>
       </View>
     </View>

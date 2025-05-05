@@ -12,11 +12,7 @@ import {
 import {useUser} from '@hooks/useUser';
 import auth from '@react-native-firebase/auth';
 import Icon from '@components/global/Icon';
-import {
-  BottomSheetBackdrop,
-  BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import {BottomSheetModal, BottomSheetView} from '@gorhom/bottom-sheet';
 import {runOnJS} from 'react-native-reanimated';
 import {DefaultTheme} from '@react-navigation/native';
 import EditUsernameSheet from '@components/profile/EditUsernameSheet';
@@ -33,8 +29,8 @@ import {
 } from '@config/firebaseRN';
 import {Colors} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
-import CustomLoading from '@components/global/CustomLoading';
 import CustomModal from '@components/global/CustomModal';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 
 const Profile = () => {
   const {user: currentUser, logout, setUser} = useUser();
@@ -83,17 +79,10 @@ const Profile = () => {
       bottomSheetRef.current?.close();
     })();
   };
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={onCancleModal}
-      />
-    ),
-    [],
+
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(onCancleModal),
+    [onCancleModal],
   );
 
   const onOpenGallery = async () => {

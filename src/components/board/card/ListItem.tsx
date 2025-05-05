@@ -45,6 +45,8 @@ import CustomLoading from '@components/global/CustomLoading';
 import Toast from 'react-native-toast-message';
 import DatePickerInput from '@components/ui/DatePickerInput';
 import CustomCloseButton from '@components/ui/CustomCloseButton';
+import AssignMemberListHeader from './AssignMemberListHeader';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -56,6 +58,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const {user} = useUser();
   const [loadLoader, setLoadLoader] = useState(false);
   const [imageLoad, setImageLoad] = useState(false);
+  const [searchText, setSearchText] = useState('');
   const [cardTitle, setCardTitle] = useState(item.title);
   let dummyCardDescription = item?.description;
   const [cardDescription, setCardDescription] = useState(item.description);
@@ -69,7 +72,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const [selectedList, setSelectedList] = useState<any | null>(null);
   const [availablePositions, setAvailablePositions] = useState<number[]>([]);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
-  const [date, setDate] = useState(new Date());
   const [startDate, setStartDate] = useState<Date | null>(
     item?.startDate
       ? new Date(
@@ -99,6 +101,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   const isBoardCreator = currentBoard?.createdBy === user?.uid;
 
   const members = useAppSelector(state => state.member.members);
+  const currentMember = members.find((item: User) => item.uid === user!.uid);
 
   useEffect(() => {
     setIsDone(item?.done);
@@ -156,18 +159,16 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       ],
     );
   };
+  const onCancleModal = () => {
+    setCardDescription(dummyCardDescription);
+    runOnJS(() => {
+      bottomSheetModalRef.current?.close();
+    })();
+  };
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={onCancleModal}
-      />
-    ),
-    [],
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(onCancleModal),
+    [onCancleModal],
   );
 
   const onUpdateCardTitle = async () => {
@@ -210,12 +211,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       console.log('Error deleting card:', error);
     }
   };
-  const onCancleModal = () => {
-    setCardDescription(dummyCardDescription);
-    runOnJS(() => {
-      bottomSheetModalRef.current?.close();
-    })();
-  };
+
   const onCheckDone = async (newValue: boolean) => {
     setIsDone(newValue);
     try {
@@ -236,13 +232,9 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
     })();
   };
   const showModal = async () => {
-    const isUserAssigned = item.assigned_to.findIndex(u => u.uid == user?.uid);
-
-    if (isUserAssigned !== -1 || !disable) {
-      runOnJS(() => {
-        bottomSheetModalRef.current?.present();
-      })();
-    }
+    runOnJS(() => {
+      bottomSheetModalRef.current?.present();
+    })();
   };
 
   const onSelectList = async (list: List) => {
@@ -331,11 +323,23 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
       photoURL: user.photoURL,
     };
 
+    const alreadyAssigned = item.assigned_to.some(u => u.uid === user.uid);
+    if (alreadyAssigned) {
+      Toast.show({
+        type: 'info',
+        text1: `${user.username} is already assigned to this card.`,
+        position: 'bottom',
+      });
+      return;
+    }
+
     if (user?.uid && user.role !== 'creator') {
       await sendNotificationToOtherUser(
         user?.uid,
         `Assigned to a task on ${currentBoard?.title}`,
         `You’ve been assigned to the card "${item?.title}" in the "${item?.listTitle}" list of the board "${currentBoard?.title}".`,
+        'BoardCard',
+        {boardId: currentBoard?.boardId},
       );
     }
 
@@ -423,6 +427,10 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               }}
               boxType="circle"
               style={styles.checkbox}
+              disabled={
+                currentMember?.mode === 'view' &&
+                !item.assigned_to?.some(user => user.uid === currentMember?.uid)
+              }
             />
             <Text
               style={[
@@ -484,6 +492,21 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
           {loadLoader && <CustomLoading />}
           <CustomCloseButton onClose={onCancleModal} />
           <View style={styles.contentContainer}>
+            {currentMember?.mode === 'view' && (
+              <View
+                style={{
+                  backgroundColor: '#1465de',
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  marginBottom: 5,
+                }}>
+                <Text style={{color: 'white', fontWeight: '500'}}>
+                  You are in view-only mode. You cannot make changes to this
+                  board.
+                </Text>
+              </View>
+            )}
+
             {!item?.imageUrl && (
               <View
                 style={{
@@ -509,6 +532,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                   onEndEditing={onUpdateCardTitle}
                   placeholder="Card Title"
                   placeholderTextColor={Colors.placeholdertext}
+                  editable={currentMember?.mode !== 'view'}
                 />
               </View>
             )}
@@ -534,8 +558,6 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 style={styles.rowSpace}
                 onPress={() => {
                   if (!isBoardCreator) {
-                    console.log('==> called');
-
                     Toast.show({
                       type: 'error',
                       text1: 'Access Denied',
@@ -613,6 +635,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 multiline
                 value={cardDescription}
                 onChangeText={setCardDescription}
+                editable={currentMember?.mode !== 'view'}
               />
 
               <TouchableOpacity onPress={onUpdateCardDescription}>
@@ -647,6 +670,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                   setLabels(updatedLabels);
                   onUpdateCardLabel(updatedLabels);
                 }}
+                editable={currentMember?.mode !== 'view'}
               />
             </View>
 
@@ -659,10 +683,14 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{paddingHorizontal: 8, flexDirection : 'row'}}
+                contentContainerStyle={{
+                  paddingHorizontal: 8,
+                  flexDirection: 'row',
+                }}
                 style={{marginTop: 4}}>
                 {labelColors.map(color => (
                   <TouchableOpacity
+                    disabled={currentMember?.mode === 'view'}
                     key={color}
                     onPress={() => {
                       const updatedLabels = {...labels, color};
@@ -696,6 +724,7 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 open={openStartDate}
                 setOpen={setOpenStartDate}
                 isStartDate={true}
+                disable={currentMember?.mode === 'view'}
               />
               <DatePickerInput
                 title="End Date"
@@ -705,11 +734,12 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                 open={openEndDate}
                 setOpen={setOpenEndDate}
                 isStartDate={false}
+                disable={currentMember?.mode === 'view'}
               />
             </View>
 
             <TouchableOpacity
-              disabled={disable}
+              disabled={currentMember?.mode === 'view'}
               style={styles.deleteBtn}
               onPress={() => onDeleteBoardCard(item)}>
               <Text style={styles.deleteBtnText}>Close Card</Text>
@@ -835,36 +865,35 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
         }}
         enableOverDrag={false}
         enablePanDownToClose>
-        <BottomSheetScrollView style={styles.container}>
+        <BottomSheetView style={styles.container}>
           <CustomCloseButton
             onClose={() => bottomSheetAssignCard.current?.close()}
           />
+
+          <View style={styles.searchContainer}></View>
           <FlatList
-            data={members}
+            data={members.filter(
+              member =>
+                member.username
+                  .toLowerCase()
+                  .includes(searchText.toLowerCase()) ||
+                member.email.toLowerCase().includes(searchText.toLowerCase()),
+            )}
             keyExtractor={item => item.uid}
             renderItem={({item}) => (
               <UserList member={item} onPress={onAssignUser} />
             )}
-            ListHeaderComponent={() => (
-              <View style={styles.flatListHeaderContainer}>
-                <View style={styles.flatListHeaderContent}>
-                  <Icon
-                    name="people-outline"
-                    iconFamily="Ionicons"
-                    size={18}
-                    color={Colors.white}
-                  />
-                  <Text style={styles.flatListHeaderText}>
-                    Assigned Members
-                  </Text>
-                </View>
-              </View>
-            )}
+            ListHeaderComponent={
+              <AssignMemberListHeader
+                searchText={searchText}
+                setSearchText={setSearchText}
+              />
+            }
             contentContainerStyle={{gap: 8, paddingBottom: 20}}
             style={{marginVertical: 12, paddingHorizontal: 10}}
           />
           <Toast />
-        </BottomSheetScrollView>
+        </BottomSheetView>
       </BottomSheetModal>
     </>
   );
@@ -1152,5 +1181,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  search: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginBottom: 8,
+    color: Colors.black,
+  },
+  searchContainer: {
+    paddingHorizontal: 10,
+    marginTop: 10,
   },
 });

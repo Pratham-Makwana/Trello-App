@@ -57,7 +57,9 @@ const BoardScreen = () => {
       <TouchableOpacity
         style={[styles.boardList]}
         activeOpacity={0.8}
-        onPress={() => navigate('BoardCard', {boardDetails: item})}>
+        onPress={() =>
+          navigate('BoardCard', {boardDetails: item, boardId: item.boardId})
+        }>
         <LinearGradient colors={gradientColors} style={styles.colorBlock} />
         <Text style={styles.titleText}>{item.title}</Text>
       </TouchableOpacity>

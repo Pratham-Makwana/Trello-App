@@ -24,6 +24,7 @@ import CustomeText from '@components/ui/CustomText';
 
 import AuthModal from '@components/auth/AuthModal';
 import {navigate} from '@utils/NavigationUtils';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 
 const OnBoarding = () => {
   const {top} = useSafeAreaInsets();
@@ -43,22 +44,14 @@ const OnBoarding = () => {
     setAuthType(type);
     bottomSheetModalRef.current?.present();
   };
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={() => bottomSheetModalRef.current?.close()}
-      />
-    ),
-    [],
-  );
 
   const closeModal = () => {
     bottomSheetModalRef.current?.close();
   };
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(closeModal),
+    [closeModal],
+  );
 
   return (
     <>

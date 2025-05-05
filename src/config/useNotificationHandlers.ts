@@ -17,8 +17,6 @@ export const useNotificationHandlers = () => {
     }
     // Foreground
     const unsubscribe = messaging().onMessage(async remoteMessage => {
-      console.log("==> remote", remoteMessage);
-      
       const notification = remoteMessage.notification;
 
       if (notification?.title && user?.uid) {
@@ -41,21 +39,29 @@ export const useNotificationHandlers = () => {
           };
 
           await notifee.displayNotification(notifeeNotification);
-
-          notifee.onForegroundEvent(({type, detail}) => {
-            console.log("==> details", detail);
-            
-            if (type === EventType.PRESS && detail.notification?.data?.screen) {
-              navigate('UserBottomTab', {
-                screen: detail?.notification?.data?.screen,
-              });
-            }
-          });
         } catch (err) {
           console.log('Notification Save Error', err);
         }
       }
     });
+
+    const unsubscribeForeground = notifee.onForegroundEvent(
+      ({type, detail}) => {
+        if (type === EventType.PRESS && detail.notification?.data?.screen) {
+          const {screen, boardId} = detail.notification.data;
+
+          if (boardId) {
+            if (typeof screen === 'string') {
+              navigate(screen, {boardId: boardId});
+            }
+          } else {
+            navigate('UserBottomTab', {
+              screen: screen,
+            });
+          }
+        }
+      },
+    );
 
     // When the app is in background, and user taps a notification:
     messaging().onNotificationOpenedApp(async remoteMessage => {
@@ -87,6 +93,9 @@ export const useNotificationHandlers = () => {
         if (screen) navigate('UserBottomTab', {screen});
       });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubscribeForeground();
+    };
   }, [dispatch, user?.uid]);
 };

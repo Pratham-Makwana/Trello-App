@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import Icon from '@components/global/Icon';
 import {Board, Colors, User} from '@utils/Constant';
 
@@ -22,6 +22,7 @@ import {
   leaveBoard,
   listenToBoardMembers,
   updateUserRole,
+  userBoardRef,
 } from '@config/firebaseRN';
 import UserList from '@components/board/UserList';
 import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
@@ -39,6 +40,7 @@ import {
   BottomSheetModal,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 
 const roles = ['edit', 'view'];
 const BoardMenu = () => {
@@ -54,17 +56,13 @@ const BoardMenu = () => {
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
 
+  const currentMember = members.find((item: User) => item.uid === user!.uid);
+
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
       boardId,
       user!.uid,
       updatedBoard => {
-        if (
-          updatedBoard?.role == 'member' &&
-          updatedBoard?.workspace == 'Private'
-        ) {
-          goBack();
-        }
         dispatch(updateBoard(updatedBoard));
         setBoardData(updatedBoard);
       },
@@ -141,21 +139,43 @@ const BoardMenu = () => {
       });
       return;
     }
+
+    setIsClose(true);
     const updated = {...boardData, workspace: visibility};
     setBoardData(updated);
     await updateBoardInfo(updated);
-  };
 
-  const handleRemoveUser = (user: User) => {
-    const currentUser = members.find((item: User) => item.uid === user!.uid);
-    if (currentUser?.role !== 'creator') {
+    const updates = members.map(async member => {
+      if (member.uid === boardData.createdBy) return;
+
+      const joinDocRef = userBoardRef.doc(`${member.uid}_${boardData.boardId}`);
+      const newMode = visibility === 'Workspace' ? 'edit' : 'view';
+
+      await joinDocRef.update({
+        mode: newMode,
+      });
+    });
+
+    try {
+      await Promise.all(updates);
+      Toast.show({
+        type: 'success',
+        text1: 'Visibility updated',
+        text2: 'Board visibility and member access updated successfully.',
+      });
+    } catch (error) {
+      console.error('Error updating member modes:', error);
       Toast.show({
         type: 'error',
-        text1: 'You are not allowed to Remove User',
-        position: 'bottom',
+        text1: 'Update Failed',
+        text2: 'Could not update member access levels.',
       });
-      return;
+    } finally {
+      setIsClose(false);
     }
+  };
+
+  const handleRemoveUser = () => {
     Alert.alert(
       'Remove From Board',
       `Are you sure want to remove ${
@@ -166,17 +186,19 @@ const BoardMenu = () => {
         {
           text: 'OK',
           onPress: async () => {
-            console.log(boardData);
-
             setIsClose(true);
-            await leaveBoard(boardId, user!.uid);
-            if (user?.uid) {
+            if (selectedMember?.uid) {
+              await leaveBoard(boardId, selectedMember.uid);
+              bottomSheetRef.current?.close();
+            }
+            if (selectedMember?.uid) {
               sendNotificationToOtherUser(
-                user?.uid,
+                selectedMember?.uid,
                 'Removed from Board',
                 `You've been removed from the ${
                   boardData?.title || 'board'
                 } by the creator. You no longer have access to this board.`,
+                'notification',
               );
             }
             setIsClose(false);
@@ -187,47 +209,33 @@ const BoardMenu = () => {
   };
 
   const handleUserPress = (member: User) => {
-    const currentUser = members.find((item: User) => item.uid === user!.uid);
-    const isCreator =
-      member.role === 'creator' &&
-      member.uid == currentUser?.uid &&
-      member.uid === boardData?.createdBy;
-
-    if (isCreator) {
-      return;
-    }
-
-    if (
-      currentUser?.role === 'member'
-      //  || currentUser?.role === 'creator'
-    ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Access Denied',
-        text2: 'You do not have permission to change user roles.',
-      });
-      return;
-    }
-
-    const isTargetMemberCreator =
-      member.role === 'creator' && member.uid === boardData?.createdBy;
-    if (isTargetMemberCreator) {
-      Toast.show({
-        type: 'error',
-        text1: 'Access Denied',
-        text2: 'You cannot change the role of the board creator.',
-      });
-      return;
-    }
-
     setSelectedMember(member);
-
     bottomSheetRef.current?.present();
   };
 
   const onChangeRole = async (newRole: string) => {
     if (!selectedMember) return;
-    if (selectedMember.role === newRole) return;
+    if (selectedMember.mode === newRole) return;
+
+    if (currentMember?.role === 'member') {
+      Toast.show({
+        type: 'error',
+        text1: 'Permission Denied',
+        text2: 'You do not have permission to change user roles.',
+        position: 'top',
+      });
+      return;
+    }
+
+    if (selectedMember?.role === 'creator') {
+      Toast.show({
+        type: 'error',
+        text1: 'Action Denied',
+        text2: 'You cannot change your own role as the board creator.',
+        text2Style: {color: Colors.fontDark},
+      });
+      return;
+    }
 
     try {
       setIsClose(true);
@@ -239,25 +247,16 @@ const BoardMenu = () => {
       setIsClose(false);
     }
   };
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={() => bottomSheetRef.current?.close()}
-      />
-    ),
-    [],
+
+  const onCancleModal = () => {
+    bottomSheetRef.current?.close();
+  };
+
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(onCancleModal),
+    [onCancleModal],
   );
 
-  const onRemoveUser = async () => {
-    if (selectedMember?.uid) {
-      await leaveBoard(boardId, selectedMember.uid);
-      bottomSheetRef.current?.close();
-    }
-  };
   return (
     <View>
       {isClose && <CustomLoading />}
@@ -281,10 +280,7 @@ const BoardMenu = () => {
             enterKeyHint="done"
             onEndEditing={onUpdateBoard}
             editable={
-              !(
-                boardData?.role === 'member' &&
-                boardData?.workspace === 'Workspace'
-              )
+              !(boardData?.role === 'member' && currentMember?.mode === 'view')
             }
           />
         )}
@@ -333,7 +329,7 @@ const BoardMenu = () => {
 
         <TouchableOpacity
           disabled={
-            boardData?.role === 'member' && boardData?.workspace === 'Workspace'
+            boardData?.role === 'member' && currentMember?.mode === 'view'
           }
           style={styles.inviteBtn}
           onPress={() =>
@@ -360,8 +356,7 @@ const BoardMenu = () => {
             return (
               <TouchableOpacity
                 disabled={
-                  boardData?.role === 'member' &&
-                  boardData?.workspace === 'Workspace'
+                  boardData?.role === 'member' && currentMember?.mode === 'view'
                 }
                 activeOpacity={0.8}
                 key={index}
@@ -453,11 +448,17 @@ const BoardMenu = () => {
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity style={styles.deleteBtn} onPress={onRemoveUser}>
-                <Text style={styles.deleteBtnText}>Remove User</Text>
-              </TouchableOpacity>
+              {currentMember?.role === 'creator' &&
+                selectedMember.role === 'member' && (
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={handleRemoveUser}>
+                    <Text style={styles.deleteBtnText}>Remove User</Text>
+                  </TouchableOpacity>
+                )}
             </View>
           )}
+          <Toast />
         </BottomSheetView>
       </BottomSheetModal>
     </View>
@@ -545,12 +546,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     shadowOffset: {
-      width: 1,
-      height: 1,
+      width: 2,
+      height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 0.5,
-    elevation: 1,
+    shadowOpacity: 0.5,
+    shadowRadius: 1,
+    elevation: 2,
   },
   deleteBtnText: {
     color: '#B22222',

@@ -28,6 +28,8 @@ import Toast from 'react-native-toast-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import CustomModal from '@components/global/CustomModal';
 import {useFilter} from '@context/FilterContext';
+import {RFValue} from 'react-native-responsive-fontsize';
+import AddCardInputFooter from '@components/board/card/AddCardInputFooter';
 
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
@@ -121,9 +123,21 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
       },
       async (response: ImagePickerResponse) => {
         if (response.didCancel) {
-          console.log('User cancelled image picker');
+          Toast.show({
+            type: 'info',
+            text1: 'Image selection cancelled',
+            text2: 'You didn’t select any image.',
+            position: 'top',
+          });
         } else if (response.errorCode) {
-          console.log('ImagePicker Error: ', response.errorMessage);
+          Toast.show({
+            type: 'error',
+            text1: 'Image Picker Error',
+            text2:
+              response.errorMessage ||
+              'Something went wrong while picking the image.',
+            position: 'top',
+          });
         } else {
           const image = response.assets?.[0];
 
@@ -171,6 +185,19 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           </TouchableOpacity>
         </View>
 
+        {filters && Object.values(filters).some(val => !!val) && (
+          <Text
+            style={{
+              paddingHorizontal: 8,
+              paddingBottom: 4,
+              fontSize: RFValue(10),
+              color: Colors.fontDark,
+            }}>
+            {memoizedTasks.length} result{memoizedTasks.length !== 1 ? 's' : ''}{' '}
+            found
+          </Text>
+        )}
+
         {/* Render Card Tasks */}
 
         <DraggableFlatList
@@ -186,20 +213,17 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           onDragEnd={disable ? () => {} : onTaskCardDrop}
           containerStyle={{
             paddingBottom: 4,
-            maxHeight: '80%',
+            maxHeight: '85%',
           }}
           contentContainerStyle={{gap: 4}}
+          ListFooterComponent={() => (
+            <AddCardInputFooter
+              adding={adding}
+              newTask={newTask}
+              setNewTask={setNewTask}
+            />
+          )}
         />
-
-        {adding && (
-          <TextInput
-            style={styles.input}
-            value={newTask}
-            onChangeText={setNewTask}
-            autoCapitalize="none"
-            autoFocus
-          />
-        )}
 
         <View
           style={{
@@ -218,7 +242,7 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
                     Toast.show({
                       type: 'info',
                       text1: 'Access Denied',
-                      text2: 'You cannot add a card in a private workspace.',
+                      text2: 'You cannot add a card in a workspace.',
                     });
                     return;
                   }
@@ -317,8 +341,6 @@ const styles = StyleSheet.create({
     flex: 1,
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
-    // padding: 20,
-    // gap: 16,
   },
 
   contentContainer: {

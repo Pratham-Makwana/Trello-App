@@ -4,7 +4,6 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {useEffect} from 'react';
 import {
   requestNotificationPermission,
-  setupBackgroundAndForegroundHandlers,
 } from '@config/firebaseNotification';
 import {Provider} from 'react-redux';
 import store from '@store/store';

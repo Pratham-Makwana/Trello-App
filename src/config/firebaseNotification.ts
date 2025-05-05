@@ -37,60 +37,12 @@ export const hasNotificationPermission = async () => {
   return false;
 };
 
-export const setupBackgroundAndForegroundHandlers = () => {
-  // Foreground handler
-  // messaging().onMessage(async remoteMessage => {
-  //   const dispatch = useAppDispatch();
-  //   if (remoteMessage?.notification?.title) {
-  //     console.log('==> Foreground handler ', remoteMessage);
-
-  //     Toast.show({
-  //       type: 'info',
-  //       text1: remoteMessage.notification?.title,
-  //       text2: remoteMessage.notification?.body,
-  //     });
-  //     dispatch(
-  //       addNotification({
-  //         id: remoteMessage.messageId ?? 'unknown-id',
-  //         title: remoteMessage.notification?.title,
-  //         body: remoteMessage.notification?.body || '',
-  //       }),
-  //     );
-  //   }
-  // });
-
-  // Background & Quit state
-  messaging().setBackgroundMessageHandler(async remoteMessage => {
-    console.log('Background message:', remoteMessage);
-  });
-
-  messaging().onNotificationOpenedApp(remoteMessage => {
-    const screen = remoteMessage?.data?.screen;
-
-    if (typeof screen === 'string') {
-      navigate(screen);
-    }
-  });
-
-  messaging()
-    .getInitialNotification()
-    .then(remoteMessage => {
-      if (remoteMessage) {
-        const screen = remoteMessage?.data?.screen;
-        if (typeof screen === 'string') {
-          navigate('UserBottomTab', {
-            screen,
-          });
-        }
-      }
-    });
-};
-
 export const sendNotificationToOtherUser = async (
   userId: string,
   title: string,
   body: string,
   screen?: string,
+  data?: any,
 ) => {
   try {
     const isPermissionGranted = await hasNotificationPermission();
@@ -114,6 +66,7 @@ export const sendNotificationToOtherUser = async (
         title,
         body,
         screen,
+        data,
       }),
     });
 

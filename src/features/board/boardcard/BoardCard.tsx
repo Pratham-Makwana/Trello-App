@@ -53,6 +53,7 @@ import UserList from '@components/board/UserList';
 import {RFValue} from 'react-native-responsive-fontsize';
 import {useFilter} from '@context/FilterContext';
 import {setMembers} from '@store/member/memberSlice';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 
 const dueDateOptions: {
   label: string;
@@ -73,7 +74,11 @@ const statusOptions: {label: string; value: 'completed' | 'incomplete'}[] = [
 const BoardCard = () => {
   const route = useRoute();
   const dispatch = useAppDispatch();
-  const {boardDetails} = route.params as {boardDetails: Board};
+  const {boardDetails, boardId} = route.params as {
+    boardDetails: Board;
+    boardId: string;
+  };
+
   const {user} = useUser();
   const [loading, setLoading] = useState(false);
   const [loadLoader, setLoadLoader] = useState(false);
@@ -93,7 +98,7 @@ const BoardCard = () => {
   let dummyTitle: string;
 
   const currentBoard = useAppSelector(state =>
-    state.board.boards.find(b => b.boardId === boardDetails.boardId),
+    state.board.boards.find(b => b.boardId === boardId),
   );
 
   const {filters, setFilters} = useFilter();
@@ -113,12 +118,16 @@ const BoardCard = () => {
   );
 
   useEffect(() => {
-    if (!currentBoard) resetAndNavigate('UserBottomTab');
+    if (!currentBoard) {
+      setLoadLoader(true);
+      resetAndNavigate('UserBottomTab');
+      setLoadLoader(false);
+    }
   }, [currentBoard]);
 
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
-      boardDetails.boardId,
+      boardId,
       user!.uid,
       updatedBoard => {
         setBoard(updatedBoard);
@@ -182,18 +191,6 @@ const BoardCard = () => {
     );
   };
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        opacity={0.2}
-        appearsOnIndex={0}
-        disappearsOnIndex={-1}
-        {...props}
-        onPress={onCancleModal}
-      />
-    ),
-    [],
-  );
 
   const onUpdateList = async () => {
     if (selectedList) {
@@ -215,6 +212,11 @@ const BoardCard = () => {
     bottomSheetModalRef.current?.close();
   };
 
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(onCancleModal),
+    [onCancleModal],
+  );
+
   const showModal = (list: TaskList | any) => {
     setSelectedList(list);
     setListTitle(list.title);
@@ -223,8 +225,6 @@ const BoardCard = () => {
   };
 
   const handleActive = () => {
-    console.log('==> log', currentMember?.mode === 'view');
-
     if (currentMember?.mode === 'view') {
       Toast.show({
         type: 'info',
@@ -239,7 +239,7 @@ const BoardCard = () => {
   useEffect(() => {
     const loadBoardInfo = async () => {
       setLoading(true);
-      const data = await getBoardInfo(boardDetails?.boardId, user!.uid);
+      const data = await getBoardInfo(boardId, user!.uid);
       dispatch(updateBoard(data));
       setBoard(data);
       setLoading(false);
@@ -249,7 +249,7 @@ const BoardCard = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = listenToBoardLists(boardDetails.boardId, lists => {
+    const unsubscribe = listenToBoardLists(boardId, lists => {
       setTaskList([...lists, {list_id: undefined}]);
     });
 
@@ -261,12 +261,9 @@ const BoardCard = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = listenToBoardMembers(
-      boardDetails.boardId,
-      (members: User[]) => {
-        dispatch(setMembers(members));
-      },
-    );
+    const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
+      dispatch(setMembers(members));
+    });
 
     return () => unsubscribe();
   }, []);
@@ -360,6 +357,19 @@ const BoardCard = () => {
         {loading && <CustomModal loading={loading} />}
         {board && (
           <SafeAreaView style={{flex: 1}}>
+            {currentMember?.mode === 'view' && (
+              <View
+                style={{
+                  backgroundColor: '#1465de',
+                  paddingVertical: 5,
+                  paddingHorizontal: 8,
+                }}>
+                <Text style={{color: 'white', fontWeight: '500'}}>
+                  You are in view-only mode. You cannot make changes to this
+                  board.
+                </Text>
+              </View>
+            )}
             <Carousel
               ref={ref}
               height={screenHeight * 0.8}
@@ -411,15 +421,24 @@ const BoardCard = () => {
                 );
               }}
             />
-            <Pagination.Basic
-              progress={progress}
-              data={taskList}
-              dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
-              size={8}
-              activeDotStyle={{backgroundColor: '#fff'}}
-              containerStyle={{gap: 10, marginTop: 10}}
-              onPress={onPressPagination}
-            />
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 20,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}>
+              <Pagination.Basic
+                progress={progress}
+                data={taskList}
+                dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
+                size={8}
+                activeDotStyle={{backgroundColor: '#fff'}}
+                containerStyle={{gap: 10, marginTop: 10}}
+                onPress={onPressPagination}
+              />
+            </View>
             <BottomSheetModal
               ref={bottomSheetModalRef}
               index={0}
@@ -716,24 +735,32 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#eee',
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#F0F4FA',
+    borderRadius: 16,
     marginRight: 8,
     marginBottom: 8,
     borderWidth: 1,
+    borderColor: '#d0d8e0',
   },
+
   chipSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#1465de',
+    borderColor: '#1465de',
   },
+
   chipText: {
-    color: Colors.darkprimary,
+    color: '#333',
+    fontSize: 14,
   },
+
   chipTextSelected: {
     color: '#fff',
     fontWeight: '600',
+    fontSize: 14,
   },
+
   search: {
     borderColor: '#ccc',
     borderWidth: 1,
