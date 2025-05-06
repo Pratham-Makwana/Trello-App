@@ -4,12 +4,8 @@ import {BlurView} from '@react-native-community/blur';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from './Icon';
 import {Board, Colors} from '@utils/Constant';
-import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
-import {useUser} from '@hooks/useUser';
-import {useAppDispatch, useAppSelector} from '@store/reduxHook';
-import {leaveBoard} from '@config/firebaseRN';
-import {closeBoard} from '@store/board/boardSlice';
-import {sendNotificationToOtherUser} from '@config/firebaseNotification';
+import {goBack, navigate} from '@utils/NavigationUtils';
+import {useAppSelector} from '@store/reduxHook';
 
 interface CustomHeaderIOSProps {
   title: string;
@@ -17,34 +13,13 @@ interface CustomHeaderIOSProps {
   boardId: string;
 }
 const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board, boardId}) => {
-  const {user} = useUser();
-  const currentBoard = useAppSelector(state =>
-    state.board.boards.find(b => b.boardId === boardId),
-  );
-  const dispatch = useAppDispatch();
+  const members = useAppSelector(state => state.member.members);
+  const currentBoardOwner = members.find(member => member.role === 'creator');
 
-  const onLeaveBoard = async () => {
-    await leaveBoard(boardId, user!.uid);
-    if (currentBoard?.createdBy) {
-      sendNotificationToOtherUser(
-        currentBoard?.createdBy,
-        'Board Update',
-        `${user?.username} has left the board "${currentBoard?.title}`,
-      );
-    }
-    dispatch(closeBoard(boardId));
-    resetAndNavigate('UserBottomTab');
-  };
   const {top} = useSafeAreaInsets();
 
   return (
     <View style={[styles.blurContainer, {paddingTop: top}]}>
-      {/*
-             BlurView is supported on both iOS and Android.
-             If you also need to support Android, the BlurView must be
-             absolutely positioned behind your unblurred views, and it
-             cannot contain any child views.
-           */}
       <BlurView blurType={'dark'} blurAmount={60} style={[styles.blurView]} />
       <View style={styles.mainContainer}>
         <View style={styles.icon}>
@@ -60,7 +35,7 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board, boardId}) => {
           <View style={styles.contentContainer}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.text}>
-              {currentBoard?.userInfo?.username || 'Person'}'s Workspace
+              {currentBoardOwner?.username || 'Person'}'s Workspace
             </Text>
           </View>
         </View>
@@ -69,46 +44,18 @@ const CustomHeaderIOS: FC<CustomHeaderIOSProps> = ({title, board, boardId}) => {
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => {
-              if (
-                currentBoard?.workspace == 'Private' &&
-                currentBoard?.role == 'member'
-              ) {
-                Alert.alert('Are you sure want to leave this board?', '', [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      onLeaveBoard();
-                    },
-                  },
-                ]);
-                return;
-              }
               navigate(
                 'BoardMenu',
                 {boardId: boardId},
                 // {boardId: board?.boardId}
               );
             }}>
-            {currentBoard?.workspace == 'Private' &&
-            currentBoard?.role == 'member' ? (
-              <Icon
-                name="log-out-outline"
-                iconFamily="Ionicons"
-                size={26}
-                color={Colors.black}
-              />
-            ) : (
-              <Icon
-                name="dots-horizontal"
-                iconFamily="MaterialCommunityIcons"
-                size={26}
-                color={Colors.black}
-              />
-            )}
+            <Icon
+              name="dots-horizontal"
+              iconFamily="MaterialCommunityIcons"
+              size={26}
+              color={Colors.black}
+            />
           </TouchableOpacity>
         </View>
       </View>

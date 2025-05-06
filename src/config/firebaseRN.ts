@@ -167,22 +167,36 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
 export const listenToUpdateBoardInfo = (
   boardId: string,
   userId: string,
-  callback: (board: Board) => void,
+  callback: (board: Board ) => void,
 ) => {
   const docRef = boardRef.doc(boardId);
-  const joinId = `${userId}_${boardId}`;
-  const userBoard = userBoardRef.doc(joinId);
+  // const joinId = `${userId}_${boardId}`;
+  // const userBoard = userBoardRef.doc(joinId);
 
   const unsubscribe = docRef.onSnapshot(async snapshot => {
     if (snapshot.exists) {
       const boardData = snapshot.data() as Board;
 
-      const userBoardDoc = await userBoard.get();
-      const role = userBoardDoc.exists ? userBoardDoc.data()?.role : 'creator';
+      const creatorDoc = await userRef.doc(boardData.createdBy).get();
+
+      if (!creatorDoc.exists) {
+        console.log('Board creator not found');
+        return null;
+      }
+
+      const creatorData = creatorDoc.data();
+
+      // const userBoardDoc = await userBoard.get();
+      // const role = userBoardDoc.exists ? userBoardDoc.data()?.role : 'creator';
 
       const updatedBoard = {
         ...boardData,
-        role: role,
+        userInfo: {
+          username: creatorData?.username || 'Unknown',
+          email: creatorData?.email || '',
+          userId: creatorData?.uid,
+        },
+        // role: role,
       };
 
       callback(updatedBoard);
@@ -302,8 +316,62 @@ export const addUserToBoard = async (
   }
 };
 
+// export const listenToUserBoards = (
+//   userId: string,
+//   callback: (boards: Board[]) => void,
+// ) => {
+//   const queryRef = userBoardRef.where('userId', '==', userId);
+
+//   let boardUnsubscribes: (() => void)[] = [];
+
+//   const unsubscribe = queryRef.onSnapshot(snapshot => {
+//     if (snapshot.empty) {
+//       boardUnsubscribes.forEach(unsub => unsub());
+//       boardUnsubscribes = [];
+//       callback([]);
+//       return;
+//     }
+
+//     boardUnsubscribes.forEach(unsub => unsub());
+//     boardUnsubscribes = [];
+
+//     console.log("==> ", snapshot.docs.map(doc => doc.data()));
+    
+
+//     const boardIds = snapshot.docs.map(doc => doc.data().boardId);
+
+//     const boards: Board[] = [];
+
+//     boardIds.forEach(boardId => {
+//       const boardDocRef = boardRef.doc(boardId);
+
+//       const unsub = boardDocRef.onSnapshot(boardSnapshot => {
+//         if (boardSnapshot.exists) {
+//           const boardData = boardSnapshot.data() as Board;
+
+//           const index = boards.findIndex(b => b.boardId === boardId);
+//           if (index !== -1) {
+//             boards[index] = {...boardData};
+//           } else {
+//             boards.push({...boardData});
+//           }
+//           callback([...boards]);
+//         }
+//       });
+
+//       boardUnsubscribes.push(unsub);
+//     });
+//   });
+
+//   return () => {
+//     unsubscribe();
+//     boardUnsubscribes.forEach(unsub => unsub());
+//   };
+// };
+
 export const listenToUserBoards = (
   userId: string,
+  filterType: 'owner' | 'member' | undefined,
   callback: (boards: Board[]) => void,
 ) => {
   const queryRef = userBoardRef.where('userId', '==', userId);
@@ -321,11 +389,24 @@ export const listenToUserBoards = (
     boardUnsubscribes.forEach(unsub => unsub());
     boardUnsubscribes = [];
 
-    const boardIds = snapshot.docs.map(doc => doc.data().boardId);
+    const filteredBoardIds: string[] = [];
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      const role = data.role;
+
+      if (
+        filterType === 'owner' && role === 'creator' ||
+        filterType === 'member' && role !== 'creator' ||
+        filterType === undefined
+      ) {
+        filteredBoardIds.push(data.boardId);
+      }
+    });
 
     const boards: Board[] = [];
 
-    boardIds.forEach(boardId => {
+    filteredBoardIds.forEach(boardId => {
       const boardDocRef = boardRef.doc(boardId);
 
       const unsub = boardDocRef.onSnapshot(boardSnapshot => {
@@ -351,6 +432,7 @@ export const listenToUserBoards = (
     boardUnsubscribes.forEach(unsub => unsub());
   };
 };
+
 
 //  =================== Board List ==========================
 
@@ -625,249 +707,12 @@ export const deleteCard = async (item: TaskItem) => {
   }
 };
 
-// export const listenToCardsList = (
-//   listId: string,
-//   callback: (cards: TaskItem[]) => void,
-// ) => {
-//   try {
-//     const cardRef = listRef.doc(listId).collection('cards');
-//     const listDocRef = listRef.doc(listId);
-
-//     const q = cardRef.orderBy('position');
-
-//     const unsubscribe = q.onSnapshot(async snapshot => {
-//       const cards: (TaskItem & {listTitle: string})[] = await Promise.all(
-//         snapshot.docs.map(async doc => {
-//           const cardData = doc.data() as TaskItem;
-//           const listDoc = await listDocRef.get();
-//           const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
-//           return {...cardData, id: doc.id, listTitle};
-//         }),
-//       );
-
-//       callback(cards);
-//     });
-
-//     return unsubscribe;
-//   } catch (error) {
-//     console.log('Error in listenToCardsList:', error);
-//   }
-// };
 
 type FilterOptions = {
   assignedUserId?: string | null;
   status?: 'completed' | 'incomplete' | null;
   dueDate?: 'over due' | 'today' | 'tomorrow' | 'week' | 'month' | null;
 };
-
-// export const listenToCardsList = (
-//   listId: string,
-//   callback: (cards: TaskItem[]) => void,
-//   filters?: FilterOptions,
-// ) => {
-//   try {
-//     const cardRef = firestore()
-//       .collection('lists')
-//       .doc(listId)
-//       .collection('cards');
-//     let q: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> = cardRef;
-
-//     // Apply backend filters where possible
-//     if (filters?.assignedUserId) {
-//       q = q.where('assignedUserIds', 'array-contains', filters.assignedUserId);
-//     }
-
-//     if (filters?.status === 'completed') {
-//       q = q.where('done', '==', true);
-//     } else if (filters?.status === 'incomplete') {
-//       q = q.where('done', '==', false);
-//     }
-
-//     q = q.where('list_id', '==', listId);
-
-//     q = q.orderBy('position');
-
-//     const unsubscribe = q.onSnapshot(async snapshot => {
-//       const now = new Date();
-//       const todayStart = new Date(now.setHours(0, 0, 0, 0));
-//       const todayEnd = new Date(now.setHours(23, 59, 59, 999));
-
-//       const cards: (TaskItem & {listTitle: string})[] = [];
-
-//       for (const doc of snapshot.docs) {
-//         const cardData = doc.data() as TaskItem;
-
-//         if (filters?.dueDate) {
-//           const end = cardData.endDate
-//             ? new Date(
-//                 cardData.endDate.seconds * 1000 +
-//                   cardData.endDate.nanoseconds / 1000000,
-//               )
-//             : null;
-
-//           if (!end) continue;
-
-//           const dueStart = new Date(end);
-//           dueStart.setHours(0, 0, 0, 0);
-
-//           const shouldInclude = (() => {
-//             switch (filters.dueDate) {
-//               case 'over due':
-//                 return end < new Date();
-//               case 'today':
-//                 return end >= todayStart && end <= todayEnd;
-//               case 'tomorrow': {
-//                 const tStart = new Date();
-//                 tStart.setDate(tStart.getDate() + 1);
-//                 tStart.setHours(0, 0, 0, 0);
-//                 const tEnd = new Date(tStart);
-//                 tEnd.setHours(23, 59, 59, 999);
-//                 return end >= tStart && end <= tEnd;
-//               }
-//               case 'week': {
-//                 const weekEnd = new Date();
-//                 weekEnd.setDate(now.getDate() + 7);
-//                 weekEnd.setHours(23, 59, 59, 999);
-//                 return dueStart >= now && dueStart <= weekEnd;
-//               }
-//               case 'month': {
-//                 const monthEnd = new Date();
-//                 monthEnd.setMonth(monthEnd.getMonth() + 1);
-//                 monthEnd.setHours(23, 59, 59, 999);
-//                 return dueStart >= now && dueStart <= monthEnd;
-//               }
-//               default:
-//                 return true;
-//             }
-//           })();
-
-//           if (!shouldInclude) continue;
-//         }
-
-//         // Retrieve the list title based on the listId
-//         const listDoc = await firestore().collection('lists').doc(listId).get();
-//         const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
-
-//         cards.push({...cardData, id: doc.id, listTitle});
-//       }
-
-//       callback(cards);
-//     });
-
-//     return unsubscribe;
-//   } catch (error) {
-//     console.log('Error in listenToCardsList:', error);
-//   }
-// };
-
-// export const listenToCardsList = (
-//   listId: string,
-//   callback: (cards: TaskItem[]) => void,
-//   filters?: FilterOptions,
-// ) => {
-//   try {
-//     const cardRef = firestore()
-//       .collection('lists')
-//       .doc(listId)
-//       .collection('cards');
-//     let q: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> =
-//       cardRef;
-
-//     if (filters?.assignedUserId) {
-//       q = q.where('assigned_to', 'array-contains', {
-//         uid: filters.assignedUserId,
-//       });
-//     }
-
-//     if (filters?.status === 'completed') {
-//       q = q.where('done', '==', true);
-//     } else if (filters?.status === 'incomplete') {
-//       q = q.where('done', '==', false);
-//     }
-
-//     q = q.where('list_id', '==', listId);
-//     q = q.orderBy('position');
-
-//     const unsubscribe = q.onSnapshot(async snapshot => {
-//       const now = new Date();
-//       const todayStart = new Date(now.setHours(0, 0, 0, 0));
-//       const todayEnd = new Date(now.setHours(23, 59, 59, 999));
-
-//       const cards: (TaskItem & {listTitle: string})[] = [];
-
-//       for (const doc of snapshot.docs) {
-//         const cardData = doc.data() as TaskItem;
-
-//         if (filters?.assignedUserId) {
-//           const assignedIds = (cardData.assigned_to || []).map(
-//             user => user?.uid,
-//           );
-//           if (!assignedIds.includes(filters.assignedUserId)) {
-//             continue;
-//           }
-//         }
-
-//         if (filters?.dueDate) {
-//           const end = cardData.endDate
-//             ? new Date(
-//                 cardData.endDate.seconds * 1000 +
-//                   cardData.endDate.nanoseconds / 1000000,
-//               )
-//             : null;
-
-//           if (!end) continue;
-
-//           const dueStart = new Date(end);
-//           dueStart.setHours(0, 0, 0, 0);
-
-//           const shouldInclude = (() => {
-//             switch (filters.dueDate) {
-//               case 'over due':
-//                 return end < new Date();
-//               case 'today':
-//                 return end >= todayStart && end <= todayEnd;
-//               case 'tomorrow': {
-//                 const tStart = new Date();
-//                 tStart.setDate(tStart.getDate() + 1);
-//                 tStart.setHours(0, 0, 0, 0);
-//                 const tEnd = new Date(tStart);
-//                 tEnd.setHours(23, 59, 59, 999);
-//                 return end >= tStart && end <= tEnd;
-//               }
-//               case 'week': {
-//                 const weekEnd = new Date();
-//                 weekEnd.setDate(now.getDate() + 7);
-//                 weekEnd.setHours(23, 59, 59, 999);
-//                 return dueStart >= now && dueStart <= weekEnd;
-//               }
-//               case 'month': {
-//                 const monthEnd = new Date();
-//                 monthEnd.setMonth(monthEnd.getMonth() + 1);
-//                 monthEnd.setHours(23, 59, 59, 999);
-//                 return dueStart >= now && dueStart <= monthEnd;
-//               }
-//               default:
-//                 return true;
-//             }
-//           })();
-
-//           if (!shouldInclude) continue;
-//         }
-
-//         const listDoc = await firestore().collection('lists').doc(listId).get();
-//         const listTitle = listDoc.exists ? listDoc.data()?.title || '' : '';
-
-//         cards.push({...cardData, id: doc.id, listTitle});
-//       }
-
-//       callback(cards);
-//     });
-
-//     return unsubscribe;
-//   } catch (error) {
-//     console.log('Error in listenToCardsList:', error);
-//   }
-// };
 
 export const listenToCardsList = (
   listId: string,
@@ -1093,11 +938,15 @@ export const leaveBoard = async (boardId: string, userId: string) => {
   }
 };
 
-export const updateUserRole = async (boardId: string, userId: string, newMode : string) => {
+export const updateUserRole = async (
+  boardId: string,
+  userId: string,
+  newMode: string,
+) => {
   try {
     const joinDocRef = userBoardRef.doc(`${userId}_${boardId}`);
     await joinDocRef.update({
-      mode: newMode ,
+      mode: newMode,
     });
   } catch (error) {}
 };

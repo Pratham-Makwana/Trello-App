@@ -4,11 +4,7 @@ import {screenWidth} from '@utils/Scaling';
 import {Board, Colors} from '@utils/Constant';
 import Icon from './Icon';
 import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
-import {useAppDispatch, useAppSelector} from '@store/reduxHook';
-import {leaveBoard} from '@config/firebaseRN';
-import {useUser} from '@hooks/useUser';
-import {closeBoard} from '@store/board/boardSlice';
-import {sendNotificationToOtherUser} from '@config/firebaseNotification';
+import {useAppSelector} from '@store/reduxHook';
 
 interface CustomHeaderAndroidProps {
   title: string;
@@ -22,25 +18,9 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
   boardId,
   showBottomSheet,
 }) => {
-  const {user} = useUser();
-  const currentBoard = useAppSelector(state =>
-    state.board.boards.find(b => b.boardId === boardId),
-  );
+  const members = useAppSelector(state => state.member.members);
+  const currentBoardOwner = members.find(member => member.role === 'creator');
 
-  const dispatch = useAppDispatch();
-
-  const onLeaveBoard = async () => {
-    await leaveBoard(boardId, user!.uid);
-    if (currentBoard?.createdBy) {
-      sendNotificationToOtherUser(
-        currentBoard?.createdBy,
-        'Board Update',
-        `${user?.username} has left the board "${currentBoard?.title}`,
-      );
-    }
-    dispatch(closeBoard(boardId));
-    resetAndNavigate('UserBottomTab');
-  };
   return (
     <View style={styles.mainContainer}>
       <View style={styles.icon}>
@@ -56,7 +36,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
         <View style={styles.contentContainer}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.text}>
-            {currentBoard?.userInfo?.username || 'Person'}'s Workspace
+            {currentBoardOwner?.username || 'Person'}'s Workspace
           </Text>
         </View>
       </View>

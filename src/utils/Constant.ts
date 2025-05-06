@@ -70,10 +70,9 @@ export interface Board {
   userInfo?: {
     email: any;
     username: any;
-    notificationToken: string;
   };
   role?: string;
-  mode?: string
+  mode?: string;
 }
 
 export interface TaskList {
@@ -95,7 +94,7 @@ export interface User {
   photoURL: string;
   notificationToken?: string;
   role?: string;
-  mode? : string
+  mode?: string;
 }
 
 export interface TaskItem {

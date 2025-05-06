@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
@@ -17,21 +17,59 @@ import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {setBoards} from '@store/board/boardSlice';
 import auth from '@react-native-firebase/auth';
 import {listenToUserBoards} from '@config/firebaseRN';
+import BottomSheet, {
+  BottomSheetModal,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
+import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
+import {runOnJS} from 'react-native-reanimated';
+import {RFValue} from 'react-native-responsive-fontsize';
+import FilterButton from '@components/global/FilterButton';
 
 const BoardScreen = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const {user, setUser} = useUser();
   const boards = useAppSelector(state => state.board.boards);
   const dispatch = useAppDispatch();
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const [selectedBoardFilter, setSelectedBoardFilter] = useState<
+    string | undefined
+  >();
+  const [activeFilter, setActiveFilter] = useState<
+    'owner' | 'member' | undefined
+  >(undefined);
+
+  const snapPoints = useMemo(() => ['30%'], []);
+  const onCancleModal = () => {
+    runOnJS(() => bottomSheetModalRef.current?.close())();
+  };
+
+  const showModal = () => {
+    bottomSheetModalRef.current?.present();
+  };
+  const renderBackdrop = useMemo(
+    () => createBackdropRenderer(onCancleModal),
+    [onCancleModal],
+  );
+
+  const onApplyFilter = () => {
+    let filterType: 'owner' | 'member' | undefined = undefined;
+    if (selectedBoardFilter === 'Owned Boards') filterType = 'owner';
+    else if (selectedBoardFilter === 'Joined Boards') filterType = 'member';
+
+    setActiveFilter(filterType);
+    bottomSheetModalRef.current?.close();
+  };
 
   useEffect(() => {
-    const unsubscribe = listenToUserBoards(user!.uid, boards => {
+    setIsLoading(true);
+    const unsubscribe = listenToUserBoards(user!.uid, activeFilter, boards => {
       dispatch(setBoards(boards));
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [activeFilter]);
 
   useEffect(() => {
     const init = async () => {
@@ -72,13 +110,24 @@ const BoardScreen = () => {
         <Text style={styles.titleHeaderText}>YOUR WORKSPACES</Text>
       </View>
       <View style={styles.workspaceContent}>
-        <Icon
-          name="person-outline"
-          iconFamily="MaterialIcons"
-          size={24}
-          color={Colors.darkprimary}
-        />
-        <Text style={styles.userTitle}>{user?.username}'s workspace</Text>
+        <View style={styles.rowCenterGap}>
+          <Icon
+            name="person-outline"
+            iconFamily="MaterialIcons"
+            size={24}
+            color={Colors.darkprimary}
+          />
+          <Text style={styles.userTitle}>{user?.username}'s workspace</Text>
+        </View>
+        <TouchableOpacity style={styles.filterContainer} onPress={showModal}>
+          <Text style={styles.userTitle}>Filter</Text>
+          <Icon
+            name="filter-circle-outline"
+            iconFamily="Ionicons"
+            size={26}
+            color={Colors.black}
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -113,6 +162,57 @@ const BoardScreen = () => {
           )}
         />
       )}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        index={0}
+        snapPoints={snapPoints}
+        backdropComponent={renderBackdrop}
+        handleStyle={{
+          borderRadius: 12,
+        }}
+        enableOverDrag={false}
+        enablePanDownToClose>
+        <BottomSheetView style={{flex: 1, paddingHorizontal: 20}}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 10,
+            }}>
+            <FilterButton
+              onPress={() => {
+                setSelectedBoardFilter('');
+                setActiveFilter(undefined);
+              }}
+              label="Clear Filter"
+            />
+            <FilterButton onPress={onApplyFilter} label="Apply" />
+          </View>
+
+          <Text style={styles.sectionTitle}>Filter Boards</Text>
+          <View style={styles.row}>
+            {['Owned Boards', 'Joined Boards'].map(label => (
+              <TouchableOpacity
+                key={label}
+                style={[
+                  styles.chip,
+                  selectedBoardFilter === label && styles.chipSelected,
+                ]}
+                onPress={() => {
+                  setSelectedBoardFilter(label);
+                }}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedBoardFilter === label && styles.chipTextSelected,
+                  ]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BottomSheetView>
+      </BottomSheetModal>
     </View>
   );
 };
@@ -164,8 +264,19 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     paddingHorizontal: 10,
     flexDirection: 'row',
-    gap: 5,
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  rowCenterGap: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
   },
   userTitle: {
     color: Colors.darkprimary,
@@ -182,5 +293,44 @@ const styles = StyleSheet.create({
     color: Colors.darkprimary,
     fontSize: 16,
     textAlign: 'center',
+  },
+
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: Colors.darkprimary,
+    fontWeight: 'bold',
+    fontSize: RFValue(16),
+    marginBottom: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#F0F4FA',
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#d0d8e0',
+  },
+
+  chipSelected: {
+    backgroundColor: '#1465de',
+    borderColor: '#1465de',
+  },
+
+  chipText: {
+    color: '#333',
+    fontSize: 14,
+  },
+
+  chipTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

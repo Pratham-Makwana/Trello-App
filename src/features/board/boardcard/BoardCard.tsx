@@ -54,6 +54,7 @@ import {RFValue} from 'react-native-responsive-fontsize';
 import {useFilter} from '@context/FilterContext';
 import {setMembers} from '@store/member/memberSlice';
 import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
+import FilterButton from '@components/global/FilterButton';
 
 const dueDateOptions: {
   label: string;
@@ -190,7 +191,6 @@ const BoardCard = () => {
       ],
     );
   };
-
 
   const onUpdateList = async () => {
     if (selectedList) {
@@ -532,28 +532,8 @@ const BoardCard = () => {
                 paddingHorizontal: 10,
                 marginBottom: 10,
               }}>
-              <TouchableOpacity
-                onPress={onClearFilter}
-                style={{
-                  backgroundColor: Colors.lightprimary,
-                  padding: 8,
-                  borderRadius: 5,
-                }}>
-                <Text style={{color: Colors.white, fontSize: RFValue(12)}}>
-                  Clear Filter
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={onApplyFilter}
-                style={{
-                  backgroundColor: Colors.lightprimary,
-                  padding: 8,
-                  borderRadius: 5,
-                }}>
-                <Text style={{color: Colors.white, fontSize: RFValue(12)}}>
-                  Apply
-                </Text>
-              </TouchableOpacity>
+              <FilterButton onPress={onClearFilter} label="Clear Filter" />
+              <FilterButton onPress={onApplyFilter} label="Apply" />
             </View>
             <Text style={styles.sectionTitle}>Due Date</Text>
             <View style={styles.row}>

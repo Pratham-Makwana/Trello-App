@@ -47,16 +47,18 @@ const BoardMenu = () => {
   const route =
     useRoute<RouteProp<{BoardMenu: {boardId: string; board: Board}}>>();
   const {boardId, board} = route.params;
-  const [boardData, setBoardData] = useState<Board | any>();
+  // const [boardData, setBoardData] = useState<Board | any>();
   const {user} = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const dispatch = useAppDispatch();
   const members = useAppSelector(state => state.member.members);
+  const boards = useAppSelector(state => state.board.boards);
   const [isClose, setIsClose] = useState(false);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
 
   const currentMember = members.find((item: User) => item.uid === user!.uid);
+  const boardData = boards.find(board => board.boardId === boardId);
 
   useEffect(() => {
     const unsubscribe = listenToUpdateBoardInfo(
@@ -64,7 +66,7 @@ const BoardMenu = () => {
       user!.uid,
       updatedBoard => {
         dispatch(updateBoard(updatedBoard));
-        setBoardData(updatedBoard);
+        // setBoardData(updatedBoard);
       },
     );
 
@@ -119,13 +121,17 @@ const BoardMenu = () => {
   };
 
   const onUpdateBoard = async () => {
-    await updateBoardInfo(boardData);
+    if (boardData) {
+      await updateBoardInfo(boardData);
+    } else {
+      console.error('boardData is undefined');
+    }
   };
 
   const handleChangeBg = async (color: string[]) => {
     const updated = {...boardData, background: color};
 
-    await updateBoardInfo(updated);
+    await updateBoardInfo(updated as Board);
   };
 
   const onUpdateBoardVisibility = async (visibility: string) => {
@@ -142,13 +148,15 @@ const BoardMenu = () => {
 
     setIsClose(true);
     const updated = {...boardData, workspace: visibility};
-    setBoardData(updated);
-    await updateBoardInfo(updated);
+    // setBoardData(updated);
+    await updateBoardInfo(updated as Board);
 
     const updates = members.map(async member => {
-      if (member.uid === boardData.createdBy) return;
+      if (member.uid === boardData?.createdBy) return;
 
-      const joinDocRef = userBoardRef.doc(`${member.uid}_${boardData.boardId}`);
+      const joinDocRef = userBoardRef.doc(
+        `${member.uid}_${boardData?.boardId}`,
+      );
       const newMode = visibility === 'Workspace' ? 'edit' : 'view';
 
       await joinDocRef.update({
@@ -274,7 +282,11 @@ const BoardMenu = () => {
         {!isLoading && (
           <TextInput
             value={boardData?.title}
-            onChangeText={text => setBoardData({...boardData, title: text})}
+            // onChangeText={text => setBoardData({...boardData, title: text})}
+            onChangeText={text => {
+              if (!boardData) return;
+              dispatch(updateBoard({...boardData, title: text}));
+            }}
             style={{fontSize: 16, color: Colors.fontDark}}
             returnKeyType="done"
             enterKeyHint="done"
@@ -356,7 +368,8 @@ const BoardMenu = () => {
             return (
               <TouchableOpacity
                 disabled={
-                  boardData?.role === 'member' && currentMember?.mode === 'view'
+                  currentMember?.role === 'member' &&
+                  currentMember?.mode === 'view'
                 }
                 activeOpacity={0.8}
                 key={index}
@@ -405,12 +418,12 @@ const BoardMenu = () => {
         </View>
       </View>
 
-      {boardData?.role == 'creator' && (
+      {currentMember?.role == 'creator' && (
         <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteBoard}>
           <Text style={styles.deleteBtnText}>Close Board</Text>
         </TouchableOpacity>
       )}
-      {boardData?.role == 'member' && (
+      {currentMember?.role == 'member' && (
         <TouchableOpacity style={styles.deleteBtn} onPress={onLeaveBoard}>
           <Text style={styles.deleteBtnText}>Leave Board</Text>
         </TouchableOpacity>
