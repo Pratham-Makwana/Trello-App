@@ -262,7 +262,22 @@ const BoardCard = () => {
 
   useEffect(() => {
     const unsubscribe = listenToBoardMembers(boardId, (members: User[]) => {
-      dispatch(setMembers(members));
+      const sanitizedMembers = members.map(member => ({
+        ...member,
+        subscription: member.subscription
+          ? {
+              ...member.subscription,
+              expiryDate:
+                member.subscription.expiryDate &&
+                typeof member.subscription.expiryDate === 'object' &&
+                typeof member.subscription.expiryDate.toDate === 'function'
+                  ? member.subscription.expiryDate?.toDate().toISOString()
+                  : member.subscription.expiryDate || '',
+            }
+          : undefined,
+      }));
+  
+      dispatch(setMembers(sanitizedMembers));
     });
 
     return () => unsubscribe();

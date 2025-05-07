@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Feather from 'react-native-vector-icons/Feather';
 
 interface IconProps {
   color?: string;
@@ -13,7 +14,8 @@ interface IconProps {
     | 'Ionicons'
     | 'MaterialIcons'
     | 'MaterialCommunityIcons'
-    | 'FontAwesome';
+    | 'FontAwesome'
+    | 'Feather';
 }
 
 const Icon: FC<IconProps> = ({name, size, color, iconFamily}) => {
@@ -31,6 +33,9 @@ const Icon: FC<IconProps> = ({name, size, color, iconFamily}) => {
       )}
       {iconFamily === 'FontAwesome' && (
         <FontAwesome name={name} size={size} color={color} />
+      )}
+      {iconFamily === 'Feather' && (
+        <Feather name={name} size={size} color={color} />
       )}
     </>
   );

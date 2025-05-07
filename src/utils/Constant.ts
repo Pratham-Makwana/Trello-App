@@ -87,6 +87,13 @@ export interface TaskList {
 export interface FakeTaskList {
   list_id?: string;
 }
+
+export interface Subscription {
+  subscriptionType: 'monthly' | 'yearly';
+  subscriptionId: string;
+  expiryDate: Timestamp | string;
+  isPremium : boolean
+}
 export interface User {
   uid: string;
   email: string;
@@ -95,6 +102,7 @@ export interface User {
   notificationToken?: string;
   role?: string;
   mode?: string;
+  subscription?: Subscription;
 }
 
 export interface TaskItem {

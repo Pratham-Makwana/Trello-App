@@ -20,7 +20,6 @@ import {
   updateBoardInfo,
   deleteBoard,
   leaveBoard,
-  listenToBoardMembers,
   updateUserRole,
   userBoardRef,
 } from '@config/firebaseRN';
@@ -339,16 +338,15 @@ const BoardMenu = () => {
           />
         )}
 
-        <TouchableOpacity
-          disabled={
-            boardData?.role === 'member' && currentMember?.mode === 'view'
-          }
-          style={styles.inviteBtn}
-          onPress={() =>
-            navigate('Invite', {boardId, title: boardData?.title})
-          }>
-          <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
-        </TouchableOpacity>
+        {currentMember?.role !== 'member' && (
+          <TouchableOpacity
+            style={styles.inviteBtn}
+            onPress={() =>
+              navigate('Invite', {boardId, title: boardData?.title})
+            }>
+            <Text style={{fontSize: 16, color: Colors.grey}}>Invite...</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Change Color */}

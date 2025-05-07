@@ -13,6 +13,7 @@ import {useUser} from '@hooks/useUser';
 import auth from '@react-native-firebase/auth';
 
 import {updateUserProfile} from '@config/firebaseRN';
+import Icon from '@components/global/Icon';
 
 const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
   const {user: currentUser, setUser} = useUser();
@@ -44,31 +45,38 @@ const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
 
   return (
     <ScrollView
-      contentContainerStyle={[sheetStyles.container]}
+      contentContainerStyle={[styles.container]}
       keyboardShouldPersistTaps="handled">
-      <Text style={sheetStyles.title}>Edit Username</Text>
+      <Text style={styles.title}>Edit Username</Text>
       <TextInput
-        style={sheetStyles.input}
+        style={styles.input}
         placeholder="Enter new username"
         value={username}
         onChangeText={setUsername}
         editable={!loading}
       />
-      <View style={sheetStyles.buttonRow}>
+      <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[sheetStyles.button, sheetStyles.cancelButton]}
+          style={[styles.button, styles.cancelButton]}
           onPress={onClose}
           disabled={loading}>
-          <Text style={sheetStyles.buttonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[sheetStyles.button, sheetStyles.saveButton]}
+          style={[
+            styles.button,
+            styles.saveButton,
+            (!username.trim() || loading) && styles.disabledButton,
+          ]}
           onPress={handleSave}
           disabled={loading || !username.trim()}>
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={sheetStyles.buttonText}>Save</Text>
+            <View style={styles.saveButtonContent}>
+              <Icon name="check" size={16} color="#fff" iconFamily="Feather" />
+              <Text style={styles.saveButtonText}>Save</Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -78,7 +86,7 @@ const EditUsernameSheet = ({onClose}: {onClose: () => void}) => {
 
 export default EditUsernameSheet;
 
-const sheetStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     padding: 20,
     flexGrow: 1,
@@ -104,18 +112,44 @@ const sheetStyles = StyleSheet.create({
     marginBottom: 20,
   },
   button: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 6,
+    flex: 1,
+    height: 46,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+    marginHorizontal: 6,
   },
   cancelButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  cancelButtonText: {
+    color: '#555',
+    fontSize: 15,
+    fontWeight: '500',
   },
   saveButton: {
     backgroundColor: '#007bff',
   },
-  buttonText: {
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  saveButtonText: {
     color: '#fff',
+    fontSize: 15,
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#007bff',
+    opacity: 0.5,
   },
 });

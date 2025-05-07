@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -23,21 +23,57 @@ import {
 import Toast from 'react-native-toast-message';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {
+  listenToCurrentUserInfo,
   signOut,
   updateUserProfile,
   uploadToCloudinary,
 } from '@config/firebaseRN';
-import {Colors} from '@utils/Constant';
+import {Colors, User} from '@utils/Constant';
 import {RFValue} from 'react-native-responsive-fontsize';
-import CustomModal from '@components/global/CustomModal';
 import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
+import {PREMIUM_MEMBER_LIMIT} from '@components/board/Invite';
+import CustomLoading from '@components/global/CustomLoading';
+import {
+  formatSubscriptionType,
+  getRemainingDays,
+  isSubscriptionExpired,
+  updateIsPremiumStatus,
+} from '@utils/subscription/SubscriptionUtils';
+import ProfileItem from '@components/profile/ProfileItem';
+import {navigate} from '@utils/NavigationUtils';
+import CustomModal from '@components/global/CustomModal';
 
 const Profile = () => {
-  const {user: currentUser, logout, setUser} = useUser();
+  const {
+    user: currentUser,
+    logout,
+    setUser,
+  } = useUser() as {
+    user: User & {
+      subscription?: {
+        isPremium: boolean;
+        subscriptionType: string;
+        expiryDate: string;
+      };
+    };
+    logout: () => void;
+    setUser: (user: User) => void;
+  };
+
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ['70%'], []);
   const [isUploading, setIsUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const hasSubscription = !!currentUser?.subscription;
+
+  const isExpired = hasSubscription
+    ? isSubscriptionExpired(currentUser.subscription?.expiryDate)
+    : true;
+  const remainingDays =
+    hasSubscription && currentUser.subscription?.expiryDate
+      ? getRemainingDays(currentUser.subscription.expiryDate)
+      : 0;
 
   const confirmCloseAccount = () => {
     Alert.alert(
@@ -61,7 +97,7 @@ const Profile = () => {
   const handleCloseAccount = async () => {
     try {
       setLoading(true);
-      const googleUser = await GoogleSignin.getCurrentUser();
+      const googleUser = GoogleSignin.getCurrentUser();
       if (googleUser) {
         await GoogleSignin.revokeAccess();
         await GoogleSignin.signOut();
@@ -74,15 +110,16 @@ const Profile = () => {
       setLoading(false);
     }
   };
-  const onCancleModal = () => {
+
+  const onCancelModal = () => {
     runOnJS(() => {
       bottomSheetRef.current?.close();
     })();
   };
 
   const renderBackdrop = useMemo(
-    () => createBackdropRenderer(onCancleModal),
-    [onCancleModal],
+    () => createBackdropRenderer(onCancelModal),
+    [onCancelModal],
   );
 
   const onOpenGallery = async () => {
@@ -97,7 +134,7 @@ const Profile = () => {
           Toast.show({
             type: 'info',
             text1: 'Image Selection Cancelled ❌',
-            text2: 'You didn’t choose an image. Try again if needed.',
+            text2: "You didn't choose an image. Try again if needed.",
           });
         } else if (response.errorCode) {
           console.log('ImagePicker Error: ', response.errorMessage);
@@ -115,9 +152,6 @@ const Profile = () => {
 
               await updateUserProfile(currentUser!.uid, {photoURL: imageUrl});
 
-              // await updateProfile(auth.currentUser!, {
-              //   photoURL: imageUrl,
-              // });
               await auth().currentUser?.updateProfile({
                 photoURL: imageUrl,
               });
@@ -140,6 +174,160 @@ const Profile = () => {
           }
         }
       },
+    );
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    const unsubscribe = listenToCurrentUserInfo(
+      async updatedUser => {
+        setUser(updatedUser);
+        setLoading(false);
+
+        const subscription = updatedUser.subscription;
+        if (!subscription || !subscription.isPremium) return;
+
+        if (
+          updatedUser.subscription?.isPremium &&
+          isSubscriptionExpired(updatedUser?.subscription?.expiryDate)
+        ) {
+          await updateIsPremiumStatus(updatedUser.uid);
+        }
+      },
+      error => {
+        console.log('Realtime user subscription error:', error);
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const renderSubscriptionSection = () => {
+    if (!hasSubscription) {
+      return renderFreePlanSection();
+    }
+
+    return (
+      <View>
+        <View style={styles.subscriptionHeader}>
+          <Icon
+            name={isExpired ? 'star-outline' : 'crown'}
+            iconFamily={isExpired ? 'Ionicons' : 'MaterialCommunityIcons'}
+            size={22}
+            color={isExpired ? '#666' : Colors.lightprimary}
+          />
+          <Text style={styles.subscriptionTitle}>
+            {isExpired ? 'Expired Subscription' : 'Premium Subscription'}
+          </Text>
+        </View>
+
+        <View style={styles.subscriptionCard}>
+          <ProfileItem
+            label="Plan"
+            value={formatSubscriptionType(
+              currentUser.subscription?.subscriptionType || '',
+            )}
+          />
+          <ProfileItem
+            label="Status"
+            value={isExpired ? 'Inactive' : 'Active'}
+            valueStyle={isExpired ? styles.inactiveStatus : styles.activeStatus}
+          />
+          {!isExpired && (
+            <ProfileItem
+              label="Expires In"
+              value={`${remainingDays} days`}
+              valueStyle={remainingDays < 7 ? styles.expiringStatus : undefined}
+            />
+          )}
+          {isExpired && (
+            <TouchableOpacity
+              style={styles.renewSubscriptionButton}
+              onPress={() => navigate('SubscriptionScreen')}>
+              <Icon
+                name="refresh"
+                iconFamily="Ionicons"
+                size={18}
+                color="#fff"
+              />
+              <Text style={styles.renewSubscriptionText}>
+                Renew Subscription
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderFreePlanSection = () => {
+    return (
+      <View>
+        <View style={styles.subscriptionHeader}>
+          <Icon
+            name="star-outline"
+            iconFamily="Ionicons"
+            size={22}
+            color="#666"
+          />
+          <Text style={styles.subscriptionTitle}>Subscription</Text>
+        </View>
+
+        <View style={styles.freeSubscriptionCard}>
+          <View style={styles.freeStatusContainer}>
+            <Text style={styles.freeStatusText}>Free Plan</Text>
+            <Text style={styles.freeStatusDescription}>
+              You're currently on the free plan
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.upgradeToPremiumButton}
+            onPress={() => navigate('SubscriptionScreen')}>
+            <Icon
+              name="crown"
+              iconFamily="MaterialCommunityIcons"
+              size={18}
+              color="#fff"
+            />
+            <Text style={styles.upgradeToPremiumText}>Upgrade to Premium</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.premiumBenefitsTitle}>Premium Benefits:</Text>
+          <View style={styles.premiumBenefitsContainer}>
+            <View style={styles.benefitRow}>
+              <Icon
+                name="checkmark-circle"
+                iconFamily="Ionicons"
+                size={16}
+                color="#4CAF50"
+              />
+              <Text style={styles.benefitText}>
+                Up to {PREMIUM_MEMBER_LIMIT} members per board
+              </Text>
+            </View>
+            <View style={styles.benefitRow}>
+              <Icon
+                name="checkmark-circle"
+                iconFamily="Ionicons"
+                size={16}
+                color="#4CAF50"
+              />
+              <Text style={styles.benefitText}>Priority support</Text>
+            </View>
+            <View style={styles.benefitRow}>
+              <Icon
+                name="checkmark-circle"
+                iconFamily="Ionicons"
+                size={16}
+                color="#4CAF50"
+              />
+              <Text style={styles.benefitText}>Advanced board features</Text>
+            </View>
+          </View>
+        </View>
+      </View>
     );
   };
 
@@ -177,8 +365,10 @@ const Profile = () => {
         <ProfileItem label="E-mail" value={currentUser?.email || '—'} />
       </View>
 
+      {renderSubscriptionSection()}
+
       <TouchableOpacity
-        style={styles.closeAccountButton}
+        style={styles.logoutButton}
         onPress={confirmCloseAccount}>
         <Icon
           name="log-out-outline"
@@ -186,7 +376,7 @@ const Profile = () => {
           size={22}
           color={Colors.black}
         />
-        <Text style={styles.closeAccountText}>Log out</Text>
+        <Text style={styles.logoutText}>Log out</Text>
       </TouchableOpacity>
 
       <BottomSheetModal
@@ -210,33 +400,6 @@ const Profile = () => {
     </ScrollView>
   );
 };
-
-const ProfileItem = ({
-  label,
-  value,
-  showModal,
-}: {
-  label: string;
-  value: string;
-  showModal?: () => void;
-}) => (
-  <View style={styles.itemRow}>
-    <Text style={styles.itemLabel}>{label}</Text>
-    <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
-      <Text style={styles.itemValue}>{value || '—'}</Text>
-      {label === 'Username' && (
-        <TouchableOpacity onPress={showModal}>
-          <Icon
-            name="edit"
-            size={20}
-            color="#007bff"
-            iconFamily="MaterialIcons"
-          />
-        </TouchableOpacity>
-      )}
-    </View>
-  </View>
-);
 
 export default Profile;
 
@@ -275,21 +438,104 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  itemRow: {
+
+  subscriptionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#ddd',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
   },
-  itemLabel: {
-    fontWeight: '500',
+  subscriptionTitle: {
     color: '#333',
+    fontSize: 18,
+    fontWeight: '600',
   },
-  itemValue: {
+  subscriptionCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  freeSubscriptionCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  freeStatusContainer: {
+    marginBottom: 16,
+  },
+  freeStatusText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#555',
+    marginBottom: 4,
   },
-  closeAccountButton: {
+  freeStatusDescription: {
+    color: '#777',
+    fontSize: 14,
+  },
+  upgradeToPremiumButton: {
+    flexDirection: 'row',
+    backgroundColor: '#007bff',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  upgradeToPremiumText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  renewSubscriptionButton: {
+    flexDirection: 'row',
+    backgroundColor: '#007bff',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  renewSubscriptionText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  premiumBenefitsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  premiumBenefitsContainer: {
+    gap: 8,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  benefitText: {
+    color: '#555',
+    fontSize: 14,
+  },
+  logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -301,12 +547,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 1.2,
     elevation: 1,
-    padding: 5,
+    padding: 12,
     width: '100%',
-    marginTop: 20,
+    marginTop: 15,
+    marginBottom: 50,
     alignSelf: 'center',
   },
-  closeAccountText: {
+  logoutText: {
     fontSize: RFValue(14),
     color: 'red',
     fontWeight: '600',
@@ -315,5 +562,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#ccc',
+  },
+  activeStatus: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  inactiveStatus: {
+    color: '#F44336',
+    fontWeight: 'bold',
+  },
+  expiringStatus: {
+    color: '#FF9800',
+    fontWeight: 'bold',
   },
 });

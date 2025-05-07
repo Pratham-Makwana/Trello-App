@@ -25,6 +25,7 @@ import {useUser} from '@hooks/useUser';
 import {createBoard} from '@config/firebaseRN';
 import ForgotPasswordScreen from '@features/auth/ForgotPasswordScreen';
 import {useNotificationHandlers} from '@config/useNotificationHandlers';
+import SubscriptionScreen from '@features/subscription/SubscriptionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -199,6 +200,11 @@ const MainStack = () => {
         options={{
           headerShown: false,
         }}
+      />
+      <Stack.Screen
+        name="SubscriptionScreen"
+        component={SubscriptionScreen}
+        options={{headerShown: false}}
       />
     </Stack.Navigator>
   );

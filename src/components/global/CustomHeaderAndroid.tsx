@@ -5,6 +5,7 @@ import {Board, Colors} from '@utils/Constant';
 import Icon from './Icon';
 import {goBack, navigate, resetAndNavigate} from '@utils/NavigationUtils';
 import {useAppSelector} from '@store/reduxHook';
+import {useFilter} from '@context/FilterContext';
 
 interface CustomHeaderAndroidProps {
   title: string;
@@ -20,6 +21,7 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
 }) => {
   const members = useAppSelector(state => state.member.members);
   const currentBoardOwner = members.find(member => member.role === 'creator');
+  const {filters} = useFilter();
 
   return (
     <View style={styles.mainContainer}>
@@ -43,6 +45,24 @@ const CustomHeaderAndroid: FC<CustomHeaderAndroidProps> = ({
       {/* Icons  */}
       <View style={[styles.rowIconContainer]}>
         <TouchableOpacity activeOpacity={0.8} onPress={showBottomSheet}>
+          {(filters.assignedUserId ||
+            filters.dueDate ||
+            filters.status) && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  backgroundColor: Colors.lightprimary,
+                  borderRadius: 8,
+                  paddingHorizontal: 4,
+                  minWidth: 8,
+                  height: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              />
+            )}
           <Icon
             name="filter-circle-outline"
             iconFamily="Ionicons"

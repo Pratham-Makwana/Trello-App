@@ -30,7 +30,6 @@ import {
   fetchAvailablePositionsForList,
   moveCardToList,
   List,
-  listenToBoardMembers,
 } from '@config/firebaseRN';
 import CheckBox from '@react-native-community/checkbox';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';

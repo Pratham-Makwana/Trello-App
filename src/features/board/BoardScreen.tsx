@@ -25,6 +25,7 @@ import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer'
 import {runOnJS} from 'react-native-reanimated';
 import {RFValue} from 'react-native-responsive-fontsize';
 import FilterButton from '@components/global/FilterButton';
+import {useFilter} from '@context/FilterContext';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,8 +40,11 @@ const BoardScreen = () => {
     'owner' | 'member' | undefined
   >(undefined);
 
+  const {setFilters} = useFilter();
   const snapPoints = useMemo(() => ['30%'], []);
   const onCancleModal = () => {
+    setSelectedBoardFilter('');
+    setActiveFilter(undefined);
     runOnJS(() => bottomSheetModalRef.current?.close())();
   };
 
@@ -120,7 +124,22 @@ const BoardScreen = () => {
           <Text style={styles.userTitle}>{user?.username}'s workspace</Text>
         </View>
         <TouchableOpacity style={styles.filterContainer} onPress={showModal}>
-          <Text style={styles.userTitle}>Filter</Text>
+          {activeFilter && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                backgroundColor: Colors.lightprimary,
+                borderRadius: 8,
+                paddingHorizontal: 4,
+                minWidth: 8,
+                height: 8,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            />
+          )}
           <Icon
             name="filter-circle-outline"
             iconFamily="Ionicons"
@@ -182,6 +201,7 @@ const BoardScreen = () => {
             <FilterButton
               onPress={() => {
                 setSelectedBoardFilter('');
+                bottomSheetModalRef.current?.close();
                 setActiveFilter(undefined);
               }}
               label="Clear Filter"

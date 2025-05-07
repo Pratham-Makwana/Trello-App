@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {FC, useEffect, useMemo, useState} from 'react';
+import React, {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import Icon from '@components/global/Icon';
 import DraggableFlatList, {
@@ -45,6 +45,20 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const memoizedTasks = useMemo(() => tasks, [tasks]);
   const {filters} = useFilter();
 
+  const handleSetNewTask = useCallback((text: string) => {
+    setNewTask(text);
+  }, []);
+
+  const renderInputFooter = useMemo(
+    () => (
+      <AddCardInputFooter
+        adding={adding}
+        newTask={newTask}
+        setNewTask={handleSetNewTask}
+      />
+    ),
+    [adding, newTask, handleSetNewTask],
+  );
   const hapticOptions = {
     enableVibrateFallback: true,
     ignoreAndroidSystemSettings: false,
@@ -216,13 +230,8 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
             maxHeight: '85%',
           }}
           contentContainerStyle={{gap: 4}}
-          ListFooterComponent={() => (
-            <AddCardInputFooter
-              adding={adding}
-              newTask={newTask}
-              setNewTask={setNewTask}
-            />
-          )}
+          keyboardShouldPersistTaps="handled"
+          ListFooterComponent={renderInputFooter}
         />
 
         <View

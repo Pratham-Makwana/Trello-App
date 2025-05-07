@@ -1,5 +1,5 @@
 import {StyleSheet, Text, TextInput, View} from 'react-native';
-import React, {FC} from 'react';
+import React, {FC, memo, useEffect} from 'react';
 import {Colors} from '@utils/Constant';
 
 interface AddCardInputFooterProps {
@@ -8,23 +8,41 @@ interface AddCardInputFooterProps {
   setNewTask: (text: string) => void;
 }
 
-const AddCardInputFooter: FC<AddCardInputFooterProps> = React.memo(
-  ({adding, newTask, setNewTask}) => {
-    return (
-      <View>
-        {adding && (
-          <TextInput
-            style={styles.input}
-            value={newTask}
-            onChangeText={setNewTask}
-            autoCapitalize="none"
-            autoFocus
-          />
-        )}
-      </View>
-    );
-  },
-);
+// const AddCardInputFooter: FC<AddCardInputFooterProps> = React.memo(
+//   ({adding, newTask, setNewTask}) => {
+//     return (
+//       <View>
+//         {adding && (
+//           <TextInput
+//             style={styles.input}
+//             value={newTask}
+//             onChangeText={setNewTask}
+//             autoCapitalize="none"
+//             autoFocus
+//           />
+//         )}
+//       </View>
+//     );
+//   },
+// );
+const AddCardInputFooter: FC<AddCardInputFooterProps> = ({
+  adding,
+  newTask,
+  setNewTask,
+}) => {
+  return (
+    <View>
+      {adding && (
+        <TextInput
+          style={styles.input}
+          value={newTask}
+          onChangeText={setNewTask}
+          autoCapitalize="none"
+        />
+      )}
+    </View>
+  );
+};
 
 export default AddCardInputFooter;
 

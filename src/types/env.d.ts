@@ -8,4 +8,5 @@ declare module '@env' {
   export const webClientId: string;
   export const CLOUDINARY_CLOUD_NAME: string;
   export const CLOUDINARY_UPLOAD_PRESET: string;
+  export const RAZORPAY_KEY_ID: string
 }

@@ -39,6 +39,7 @@ export const createUser = async (
     photoURL: updatedUser?.photoURL,
     notificationToken: token,
     createdAt: new Date().toISOString(),
+    subscription: null,
   });
 };
 
@@ -77,6 +78,55 @@ export const checkUserExists = async (email: string) => {
   }
 };
 
+export const listenToCurrentUserInfo = (
+  callback: (user: User) => void,
+  onError?: (error: any) => void,
+) => {
+  const firebaseUser = auth().currentUser;
+  if (!firebaseUser) {
+    throw new Error('No user is currently signed in');
+  }
+
+  const uid = firebaseUser.uid;
+  const unsubscribe = userRef.doc(uid).onSnapshot(
+    doc => {
+      if (!doc.exists) {
+        onError?.(new Error(`User document for UID ${uid} not found`));
+        return;
+      }
+
+      const data = doc.data()!;
+      const user: User = {
+        uid,
+        email: data.email,
+        username: data.username,
+        photoURL: data.photoURL,
+        notificationToken: data.notificationToken,
+        role: data.role,
+        mode: data.mode,
+        subscription: data.subscription
+          ? {
+              isPremium: data.subscription.isPremium,
+              subscriptionType: data.subscription.subscriptionType,
+              subscriptionId: data.subscription.subscriptionId,
+              expiryDate:
+                typeof data.subscription.expiryDate === 'string'
+                  ? data.subscription.expiryDate
+                  : data.subscription.expiryDate.toDate().toISOString(),
+            }
+          : undefined,
+      };
+
+      callback(user);
+    },
+    error => {
+      onError?.(error);
+    },
+  );
+
+  return unsubscribe;
+};
+
 // ================ Board ==================
 
 export const createBoard = async (
@@ -93,7 +143,7 @@ export const createBoard = async (
 
     const boardData = {
       boardId: docRef.id,
-      title: boardName,
+      title: boardName.trim(),
       background: selectedColor,
       workspace: workspace,
       created_at: new Date().toISOString(),
@@ -167,7 +217,7 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
 export const listenToUpdateBoardInfo = (
   boardId: string,
   userId: string,
-  callback: (board: Board ) => void,
+  callback: (board: Board) => void,
 ) => {
   const docRef = boardRef.doc(boardId);
   // const joinId = `${userId}_${boardId}`;
@@ -316,59 +366,6 @@ export const addUserToBoard = async (
   }
 };
 
-// export const listenToUserBoards = (
-//   userId: string,
-//   callback: (boards: Board[]) => void,
-// ) => {
-//   const queryRef = userBoardRef.where('userId', '==', userId);
-
-//   let boardUnsubscribes: (() => void)[] = [];
-
-//   const unsubscribe = queryRef.onSnapshot(snapshot => {
-//     if (snapshot.empty) {
-//       boardUnsubscribes.forEach(unsub => unsub());
-//       boardUnsubscribes = [];
-//       callback([]);
-//       return;
-//     }
-
-//     boardUnsubscribes.forEach(unsub => unsub());
-//     boardUnsubscribes = [];
-
-//     console.log("==> ", snapshot.docs.map(doc => doc.data()));
-    
-
-//     const boardIds = snapshot.docs.map(doc => doc.data().boardId);
-
-//     const boards: Board[] = [];
-
-//     boardIds.forEach(boardId => {
-//       const boardDocRef = boardRef.doc(boardId);
-
-//       const unsub = boardDocRef.onSnapshot(boardSnapshot => {
-//         if (boardSnapshot.exists) {
-//           const boardData = boardSnapshot.data() as Board;
-
-//           const index = boards.findIndex(b => b.boardId === boardId);
-//           if (index !== -1) {
-//             boards[index] = {...boardData};
-//           } else {
-//             boards.push({...boardData});
-//           }
-//           callback([...boards]);
-//         }
-//       });
-
-//       boardUnsubscribes.push(unsub);
-//     });
-//   });
-
-//   return () => {
-//     unsubscribe();
-//     boardUnsubscribes.forEach(unsub => unsub());
-//   };
-// };
-
 export const listenToUserBoards = (
   userId: string,
   filterType: 'owner' | 'member' | undefined,
@@ -396,8 +393,8 @@ export const listenToUserBoards = (
       const role = data.role;
 
       if (
-        filterType === 'owner' && role === 'creator' ||
-        filterType === 'member' && role !== 'creator' ||
+        (filterType === 'owner' && role === 'creator') ||
+        (filterType === 'member' && role !== 'creator') ||
         filterType === undefined
       ) {
         filteredBoardIds.push(data.boardId);
@@ -405,6 +402,11 @@ export const listenToUserBoards = (
     });
 
     const boards: Board[] = [];
+
+    if (filteredBoardIds.length === 0) {
+      callback([]);
+      return;
+    }
 
     filteredBoardIds.forEach(boardId => {
       const boardDocRef = boardRef.doc(boardId);
@@ -432,7 +434,6 @@ export const listenToUserBoards = (
     boardUnsubscribes.forEach(unsub => unsub());
   };
 };
-
 
 //  =================== Board List ==========================
 
@@ -706,7 +707,6 @@ export const deleteCard = async (item: TaskItem) => {
     throw error;
   }
 };
-
 
 type FilterOptions = {
   assignedUserId?: string | null;
@@ -1116,5 +1116,22 @@ export const moveCardToList = async ({
     onSuccess();
   } catch (err) {
     onError(err);
+  }
+};
+
+export const updateUserSubscription = async (
+  userId: string,
+  subscriptionDetails: any,
+) => {
+  try {
+    await userRef.doc(userId).update({
+      subscription: {
+        ...subscriptionDetails,
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating subscription:', error);
+    throw error;
   }
 };
