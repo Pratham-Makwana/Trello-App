@@ -1,5 +1,5 @@
-import {StyleSheet, Text, TextInput, View} from 'react-native';
-import React, {FC, memo, useEffect} from 'react';
+import {StyleSheet, TextInput, View} from 'react-native';
+import React, {FC, useEffect, useRef} from 'react';
 import {Colors} from '@utils/Constant';
 
 interface AddCardInputFooterProps {
@@ -8,36 +8,32 @@ interface AddCardInputFooterProps {
   setNewTask: (text: string) => void;
 }
 
-// const AddCardInputFooter: FC<AddCardInputFooterProps> = React.memo(
-//   ({adding, newTask, setNewTask}) => {
-//     return (
-//       <View>
-//         {adding && (
-//           <TextInput
-//             style={styles.input}
-//             value={newTask}
-//             onChangeText={setNewTask}
-//             autoCapitalize="none"
-//             autoFocus
-//           />
-//         )}
-//       </View>
-//     );
-//   },
-// );
 const AddCardInputFooter: FC<AddCardInputFooterProps> = ({
   adding,
   newTask,
   setNewTask,
 }) => {
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (adding && inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [adding]);
+
   return (
-    <View>
+    <View style={styles.container}>
       {adding && (
         <TextInput
+          ref={inputRef}
           style={styles.input}
           value={newTask}
           onChangeText={setNewTask}
           autoCapitalize="none"
+          placeholder="Add a card..."
+          placeholderTextColor={Colors.fontDark}
         />
       )}
     </View>
@@ -47,9 +43,12 @@ const AddCardInputFooter: FC<AddCardInputFooterProps> = ({
 export default AddCardInputFooter;
 
 const styles = StyleSheet.create({
+  container: {
+    paddingBottom: 5,
+  },
   input: {
-    padding: 8,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 5,
     backgroundColor: '#fff',
     elevation: 1,
     shadowColor: '#000',
@@ -58,5 +57,6 @@ const styles = StyleSheet.create({
     shadowRadius: 1.2,
     borderRadius: 4,
     color: Colors.black,
+    fontSize: 14,
   },
 });

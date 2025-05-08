@@ -1,36 +1,42 @@
+import React, {FC, RefObject, useEffect, useRef, useState} from 'react';
 import {
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import React, {FC, useCallback, useEffect, useMemo, useState} from 'react';
-import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
-import Icon from '@components/global/Icon';
+import {RFValue} from 'react-native-responsive-fontsize';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import DraggableFlatList, {
   DragEndParams,
+  DraggableFlatListProps,
 } from 'react-native-draggable-flatlist';
+import Toast from 'react-native-toast-message';
+import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
+import {useFilter} from '@context/FilterContext';
+import CustomModal from '@components/global/CustomModal';
+import Icon from '@components/global/Icon';
 import ListItem from '@components/board/card/ListItem';
-import {DefaultTheme} from '@react-navigation/native';
+import {
+  addCardList,
+  listenToCardsList,
+  updateCart,
+  uploadToCloudinary,
+} from '@config/firebaseRN';
+import AddCardInputFooter from '@components/board/card/AddCardInputFooter';
 import {
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
-import {
-  listenToListInfo,
-  addCardList,
-  updateCart,
-  listenToCardsList,
-  uploadToCloudinary,
-} from '@config/firebaseRN';
-import Toast from 'react-native-toast-message';
-import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
-import CustomModal from '@components/global/CustomModal';
-import {useFilter} from '@context/FilterContext';
-import {RFValue} from 'react-native-responsive-fontsize';
-import AddCardInputFooter from '@components/board/card/AddCardInputFooter';
+import {screenHeight} from '@utils/Scaling';
 
+const hapticOptions = {
+  enableVibrateFallback: true,
+  ignoreAndroidSystemSettings: false,
+};
 interface CardListProps {
   taskList: TaskList | FakeTaskList | any;
   showModal: () => void;
@@ -42,91 +48,11 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
   const [newTask, setNewTask] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
-  const memoizedTasks = useMemo(() => tasks, [tasks]);
   const {filters} = useFilter();
 
-  const handleSetNewTask = useCallback((text: string) => {
-    setNewTask(text);
-  }, []);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  const renderInputFooter = useMemo(
-    () => (
-      <AddCardInputFooter
-        adding={adding}
-        newTask={newTask}
-        setNewTask={handleSetNewTask}
-      />
-    ),
-    [adding, newTask, handleSetNewTask],
-  );
-  const hapticOptions = {
-    enableVibrateFallback: true,
-    ignoreAndroidSystemSettings: false,
-  };
-
-  useEffect(() => {
-    if (!taskList?.list_id) return;
-
-    const unsubscribe = listenToCardsList(
-      taskList?.list_id,
-      cards => {
-        setTasks(cards);
-      },
-      filters,
-    );
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [taskList?.list_id, filters]);
-
-  useEffect(() => {
-    const unsubscribeListTitle = listenToListInfo(
-      taskList.list_id,
-      updatedList => {
-        setListTitle(updatedList.title);
-      },
-    );
-
-    return () => {
-      if (unsubscribeListTitle) unsubscribeListTitle();
-    };
-  }, []);
-
-  const onTaskCardDrop = async (params: DragEndParams<TaskItem>) => {
-    const newData = params.data.map((item: any, index: number) => {
-      return {...item, position: index + 1};
-    });
-    setTasks(newData);
-
-    try {
-      const updatePromises = newData.map(item => updateCart(item));
-      await Promise.all(updatePromises);
-    } catch (err) {
-      console.log('Error updating card positions:', err);
-    }
-  };
-
-  const onCardAdd = async () => {
-    if (newTask.trim().length <= 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Title is required',
-        text2: 'Please enter a title before proceeding.',
-        position: 'bottom',
-        visibilityTime: 3000,
-      });
-      return;
-    }
-    setAdding(false);
-    await addCardList(
-      taskList?.list_id,
-      taskList?.board_id,
-      newTask.trim(),
-      tasks.length,
-    );
-    setNewTask('');
-  };
+  const memoizedTasks = React.useMemo(() => tasks || [], [tasks]);
 
   const onOpenGallery = async () => {
     await launchImageLibrary(
@@ -182,8 +108,81 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
     );
   };
 
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      },
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      },
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  const onTaskCardDrop = async (params: DragEndParams<TaskItem>) => {
+    const newData = params.data.map((item: any, index: number) => {
+      return {...item, position: index + 1};
+    });
+    setTasks(newData);
+
+    try {
+      const updatePromises = newData.map(item => updateCart(item));
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.log('Error updating card positions:', err);
+    }
+  };
+
+  const onCardAdd = async () => {
+    if (newTask.trim().length <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Title is required',
+        text2: 'Please enter a title before proceeding.',
+        position: 'bottom',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+    setAdding(false);
+    await addCardList(
+      taskList?.list_id,
+      taskList?.board_id,
+      newTask.trim(),
+      tasks.length,
+    );
+    setNewTask('');
+  };
+  useEffect(() => {
+    if (!taskList?.list_id) return;
+
+    const unsubscribe = listenToCardsList(
+      taskList?.list_id,
+      cards => {
+        setTasks(cards);
+      },
+      filters,
+    );
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [taskList?.list_id, filters]);
+
   return (
-    <View style={styles.cardContainer}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.cardContainer}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
       {isUploading && <CustomModal loading={isUploading} />}
       <View style={styles.card}>
         {/* List Header */}
@@ -213,7 +212,6 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
         )}
 
         {/* Render Card Tasks */}
-
         <DraggableFlatList
           data={memoizedTasks}
           renderItem={params => <ListItem {...params} disable={disable} />}
@@ -227,84 +225,77 @@ const ListCard: FC<CardListProps> = ({taskList, showModal, disable}) => {
           onDragEnd={disable ? () => {} : onTaskCardDrop}
           containerStyle={{
             paddingBottom: 4,
-            maxHeight: '85%',
+            maxHeight: keyboardVisible && adding ? '60%' : '85%',
           }}
           contentContainerStyle={{gap: 4}}
-          keyboardShouldPersistTaps="handled"
-          ListFooterComponent={renderInputFooter}
         />
 
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            paddingHorizontal: 8,
-            marginVertical: 4,
-          }}>
-          {!adding && (
-            <>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={{flexDirection: 'row', alignItems: 'center'}}
-                onPress={() => {
-                  if (disable) {
-                    Toast.show({
-                      type: 'info',
-                      text1: 'Access Denied',
-                      text2: 'You cannot add a card in a workspace.',
-                    });
-                    return;
-                  }
-                  setAdding(true);
-                }}>
-                <Icon
-                  name="plus"
-                  iconFamily="MaterialCommunityIcons"
-                  size={16}
-                  color={Colors.fontDark}
-                />
-                <Text style={{fontSize: 14, color: Colors.black}}>Add</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={disable}
-                activeOpacity={0.8}
-                onPress={onOpenGallery}>
-                <Icon
-                  name="image-outline"
-                  iconFamily="MaterialCommunityIcons"
-                  size={20}
-                  color={Colors.black}
-                />
-              </TouchableOpacity>
-            </>
-          )}
-          {adding && (
-            <>
+        {adding && (
+          <View style={styles.addCardContainer}>
+            <AddCardInputFooter
+              adding={adding}
+              newTask={newTask}
+              setNewTask={setNewTask}
+            />
+
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => {
                   setAdding(false);
                   setNewTask('');
+                  Keyboard.dismiss();
                 }}>
-                <Text style={{fontSize: 14, color: Colors.lightprimary}}>
-                  Cancle
-                </Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity activeOpacity={0.8} onPress={onCardAdd}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: Colors.lightprimary,
-                    fontWeight: 'bold',
-                  }}>
-                  Add
-                </Text>
+                <Text style={styles.addButtonText}>Add</Text>
               </TouchableOpacity>
-            </>
-          )}
-        </View>
+            </View>
+          </View>
+        )}
+
+        {!adding && (
+          <View style={styles.footerContainer}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.addButton}
+              onPress={() => {
+                if (disable) {
+                  Toast.show({
+                    type: 'info',
+                    text1: 'Access Denied',
+                    text2: 'You cannot add a card in a workspace.',
+                  });
+                  return;
+                }
+                setAdding(true);
+              }}>
+              <Icon
+                name="plus"
+                iconFamily="MaterialCommunityIcons"
+                size={16}
+                color={Colors.fontDark}
+              />
+              <Text style={[styles.addButtonText, {color: Colors.fontDark}]}>
+                Add
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              disabled={disable}
+              activeOpacity={0.8}
+              onPress={onOpenGallery}>
+              <Icon
+                name="image-outline"
+                iconFamily="MaterialCommunityIcons"
+                size={20}
+                color={Colors.black}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -315,12 +306,10 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 20,
   },
-
   card: {
     backgroundColor: '#F3EFFC',
     borderRadius: 4,
     padding: 6,
-    // marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -333,37 +322,32 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: Colors.black,
   },
-  input: {
-    padding: 8,
-    marginBottom: 12,
-    backgroundColor: '#fff',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 1.2,
-    borderRadius: 4,
-    color: Colors.black,
+  addCardContainer: {
+    marginBottom: Platform.OS === 'ios' ? 5 : 0,
   },
-  container: {
-    backgroundColor: DefaultTheme.colors.background,
-    flex: 1,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
   },
-
-  contentContainer: {
-    flex: 1,
+  cancelButtonText: {
+    fontSize: 14,
+    color: Colors.lightprimary,
+    fontWeight: 'bold',
+  },
+  addButtonText: {
+    fontSize: 14,
+    color: Colors.lightprimary,
+    fontWeight: 'bold',
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginVertical: 4,
+  },
+  addButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  deleteBtn: {
-    backgroundColor: '#fff',
-    padding: 8,
-    marginHorizontal: 16,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  deleteBtnText: {
-    color: '#B22222',
   },
 });

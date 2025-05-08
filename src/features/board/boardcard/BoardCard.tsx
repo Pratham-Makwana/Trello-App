@@ -276,7 +276,7 @@ const BoardCard = () => {
             }
           : undefined,
       }));
-  
+
       dispatch(setMembers(sanitizedMembers));
     });
 
@@ -436,24 +436,16 @@ const BoardCard = () => {
                 );
               }}
             />
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 20,
-                left: 0,
-                right: 0,
-                alignItems: 'center',
-              }}>
-              <Pagination.Basic
-                progress={progress}
-                data={taskList}
-                dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
-                size={8}
-                activeDotStyle={{backgroundColor: '#fff'}}
-                containerStyle={{gap: 10, marginTop: 10}}
-                onPress={onPressPagination}
-              />
-            </View>
+
+            <Pagination.Basic
+              progress={progress}
+              data={taskList}
+              dotStyle={{backgroundColor: '#ffffff5c', borderRadius: 40}}
+              size={8}
+              activeDotStyle={{backgroundColor: '#fff'}}
+              containerStyle={{gap: 10, marginTop: 10}}
+              onPress={onPressPagination}
+            />
             <BottomSheetModal
               ref={bottomSheetModalRef}
               index={0}

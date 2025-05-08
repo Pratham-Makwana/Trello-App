@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
 import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
@@ -26,6 +26,7 @@ import {runOnJS} from 'react-native-reanimated';
 import {RFValue} from 'react-native-responsive-fontsize';
 import FilterButton from '@components/global/FilterButton';
 import {useFilter} from '@context/FilterContext';
+import {useFocusEffect} from '@react-navigation/native';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +89,16 @@ const BoardScreen = () => {
     };
     init();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFilters({
+        assignedUserId: null,
+        dueDate: null,
+        status: null,
+      });
+    }, []),
+  );
 
   const ListItem = ({item}: {item: Board}) => {
     const gradientColors =
