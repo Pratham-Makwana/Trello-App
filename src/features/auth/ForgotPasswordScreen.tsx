@@ -85,8 +85,8 @@ const ForgotPasswordScreen = () => {
           ]}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('@assets/images/trello-logo-gradient-white.png')}
-              style={{width: '100%', height: '100%'}}
+              source={require('@assets/images/logo.png')}
+              style={{width: '90%', height: '90%', borderRadius: 50}}
               resizeMode="contain"
             />
           </View>
@@ -135,6 +135,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 300,
     height: 75,
+    marginBottom: 10,
   },
   innerContainer: {
     width: screenWidth * 0.9,

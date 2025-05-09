@@ -56,7 +56,7 @@ export const sendNotificationToOtherUser = async (
       return;
     }
 
-    await fetch('http://192.168.200.98:5000/api/notification/send-token', {
+    await fetch('http://192.168.200.128:5000/api/notification/send-token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

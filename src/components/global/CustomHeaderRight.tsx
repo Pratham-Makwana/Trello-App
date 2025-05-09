@@ -7,15 +7,16 @@ import {useBoard} from '@context/BoardContext';
 interface CustomHeaderRightProps {
   onPress: () => void;
   title: string;
+  isLoading : boolean
 }
 
-const CustomHeaderRight: FC<CustomHeaderRightProps> = ({onPress, title}) => {
+const CustomHeaderRight: FC<CustomHeaderRightProps> = ({onPress, title, isLoading}) => {  
   const {boardName} = useBoard();
   return (
     <View style={styles.btnContainer}>
       <TouchableOpacity
         activeOpacity={0.8}
-        disabled={boardName === ''}
+        disabled={boardName === '' || isLoading}
         onPress={onPress}>
         <Text
           style={boardName === '' ? styles.btnTextDisabled : styles.btnText}>

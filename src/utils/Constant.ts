@@ -73,6 +73,7 @@ export interface Board {
   };
   role?: string;
   mode?: string;
+  position: number;
 }
 
 export interface TaskList {
@@ -92,7 +93,7 @@ export interface Subscription {
   subscriptionType: 'monthly' | 'yearly';
   subscriptionId: string;
   expiryDate: Timestamp | string;
-  isPremium : boolean
+  isPremium: boolean;
 }
 export interface User {
   uid: string;

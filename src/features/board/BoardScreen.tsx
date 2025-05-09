@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   FlatList,
   StatusBar,
   StyleSheet,
@@ -16,7 +17,7 @@ import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {setBoards} from '@store/board/boardSlice';
 import auth from '@react-native-firebase/auth';
-import {listenToUserBoards} from '@config/firebaseRN';
+import {listenToUserBoards, updateUserBoardPositions} from '@config/firebaseRN';
 import BottomSheet, {
   BottomSheetModal,
   BottomSheetView,
@@ -27,6 +28,11 @@ import {RFValue} from 'react-native-responsive-fontsize';
 import FilterButton from '@components/global/FilterButton';
 import {useFilter} from '@context/FilterContext';
 import {useFocusEffect} from '@react-navigation/native';
+import DraggableFlatList, {
+  DragEndParams,
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +46,7 @@ const BoardScreen = () => {
   const [activeFilter, setActiveFilter] = useState<
     'owner' | 'member' | undefined
   >(undefined);
-
+  const [isLocalUpdate, setIsLocalUpdate] = useState(false);
   const {setFilters} = useFilter();
   const snapPoints = useMemo(() => ['30%'], []);
   const onCancleModal = () => {
@@ -67,14 +73,26 @@ const BoardScreen = () => {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    const unsubscribe = listenToUserBoards(user!.uid, activeFilter, boards => {
-      dispatch(setBoards(boards));
-      setIsLoading(false);
-    });
+    if (!isLocalUpdate) {
+      setIsLoading(true);
+      const unsubscribe = listenToUserBoards(
+        user!.uid,
+        activeFilter,
+        boards => {
+          dispatch(setBoards(boards));
+          setIsLoading(false);
+        },
+      );
 
-    return () => unsubscribe();
-  }, [activeFilter]);
+      return () => unsubscribe();
+    }
+
+    return () => {
+      if (isLocalUpdate) {
+        setIsLocalUpdate(false);
+      }
+    };
+  }, [activeFilter, isLocalUpdate, user]);
 
   useEffect(() => {
     const init = async () => {
@@ -100,22 +118,46 @@ const BoardScreen = () => {
     }, []),
   );
 
-  const ListItem = ({item}: {item: Board}) => {
+  const onBoardDrop = async (params: DragEndParams<Board>) => {
+    setIsLocalUpdate(true);
+
+    const newBoardsData = params.data.map((item: Board, index: number) => ({
+      ...item,
+      position: index + 1,
+    }));
+
+    dispatch(setBoards(newBoardsData));
+
+    if (user?.uid) {
+      try {
+        await updateUserBoardPositions(user.uid, newBoardsData);
+      } catch (error) {
+        console.error('Error updating board positions:', error);
+        setIsLocalUpdate(false);
+      }
+    }
+  };
+
+  const BoardsListItem = ({item, drag, isActive}: RenderItemParams<Board>) => {
     const gradientColors =
       item.background.length === 1
         ? [item.background[0], item.background[0]]
         : item.background;
 
     return (
-      <TouchableOpacity
-        style={[styles.boardList]}
-        activeOpacity={0.8}
-        onPress={() =>
-          navigate('BoardCard', {boardDetails: item, boardId: item.boardId})
-        }>
-        <LinearGradient colors={gradientColors} style={styles.colorBlock} />
-        <Text style={styles.titleText}>{item.title}</Text>
-      </TouchableOpacity>
+      <ScaleDecorator>
+        <TouchableOpacity
+          onLongPress={drag}
+          disabled={isActive}
+          style={[styles.boardList]}
+          activeOpacity={0.8}
+          onPress={() =>
+            navigate('BoardCard', {boardDetails: item, boardId: item.boardId})
+          }>
+          <LinearGradient colors={gradientColors} style={styles.colorBlock} />
+          <Text style={styles.titleText}>{item.title}</Text>
+        </TouchableOpacity>
+      </ScaleDecorator>
     );
   };
 
@@ -161,37 +203,74 @@ const BoardScreen = () => {
       </View>
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator size="large" color={Colors.lightprimary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.boardContainer}>
       <StatusBar backgroundColor={Colors.lightprimary} />
-      {isLoading && <CustomModal loading={isLoading} />}
-      {!isLoading && (
-        <FlatList
-          contentContainerStyle={
-            boards && boards.length > 0 ? styles.list : undefined
-          }
-          data={boards}
-          renderItem={ListItem}
-          keyExtractor={item => item.boardId}
-          ListHeaderComponent={() => <ListHeader />}
-          ListEmptyComponent={() => (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                No boards yet. Tap the + button to create one!
-              </Text>
-            </View>
-          )}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: StyleSheet.hairlineWidth,
-                backgroundColor: Colors.grey,
-                marginStart: 50,
-              }}
-            />
-          )}
-        />
-      )}
+
+      <DraggableFlatList
+        contentContainerStyle={
+          boards && boards.length > 0 ? styles.list : undefined
+        }
+        data={boards}
+        renderItem={params => <BoardsListItem {...params} />}
+        onDragEnd={onBoardDrop}
+        keyExtractor={item => item.boardId}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No boards yet. Tap the + button to create one!
+            </Text>
+          </View>
+        )}
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: StyleSheet.hairlineWidth,
+              backgroundColor: Colors.grey,
+              marginStart: 50,
+            }}
+          />
+        )}
+      />
+
+      {/*  
+        // <FlatList
+        //   contentContainerStyle={
+        //     boards && boards.length > 0 ? styles.list : undefined
+        //   }
+        //   data={boards}
+        //   renderItem={BoardsListItem}
+        //   keyExtractor={item => item.boardId}
+        //   ListHeaderComponent={() => <ListHeader />}
+        //   ListEmptyComponent={() => (
+        //     <View style={styles.emptyContainer}>
+        //       <Text style={styles.emptyText}>
+        //         No boards yet. Tap the + button to create one!
+        //       </Text>
+        //     </View>
+        //   )}
+        //   ItemSeparatorComponent={() => (
+        //     <View
+        //       style={{
+        //         height: StyleSheet.hairlineWidth,
+        //         backgroundColor: Colors.grey,
+        //         marginStart: 50,
+        //       }}
+        //     />
+        //   )}
+        // />
+        */}
+
       <BottomSheetModal
         ref={bottomSheetModalRef}
         index={0}

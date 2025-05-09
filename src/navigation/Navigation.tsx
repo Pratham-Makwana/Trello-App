@@ -4,13 +4,12 @@ import LoginScreen from '@features/auth/LoginScreen';
 import OnBoarding from '@features/auth/OnBoarding';
 import SignUpScreen from '@features/auth/SignUpScreen';
 import SplashScreen from '@features/auth/SplashScreen';
-import BGSelect from '@features/board/BGSelect';
+import BGSelect, {DEFAULT_COLOR} from '@features/board/BGSelect';
 import CreateBoard from '@features/board/CreateBoard';
 import VisibilitySelect from '@features/board/VisibilitySelect';
 import UserBottomTab from '@features/tabs/UserBottomTab';
 import BoardCard from '@features/board/boardcard/BoardCard';
 import BoardMenu from '@features/board/boardmenu/BoardMenu';
-// import {createBoard} from '@config/firebase';
 import {useBoard} from '@context/BoardContext';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -20,46 +19,54 @@ import {Platform} from 'react-native';
 import {useEffect, useState} from 'react';
 import auth, {onAuthStateChanged} from '@react-native-firebase/auth';
 import Invite from '@components/board/Invite';
-import {useAppDispatch} from '@store/reduxHook';
 import {useUser} from '@hooks/useUser';
 import {createBoard} from '@config/firebaseRN';
 import ForgotPasswordScreen from '@features/auth/ForgotPasswordScreen';
 import {useNotificationHandlers} from '@config/useNotificationHandlers';
 import SubscriptionScreen from '@features/subscription/SubscriptionScreen';
 
+
 const Stack = createNativeStackNavigator();
 
 const Navigation = () => {
   const {user, setUser} = useUser();
   const [initializing, setInitializing] = useState(true);
-  const [loading, setLoading] = useState(true);
 
   useNotificationHandlers();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth(), async user => {
       if (user) {
-        const isEmailVerified = user.emailVerified;
-        const serializedUser = {
-          uid: user.uid,
-          username: user.displayName || null,
-          email: user.email || null,
-          photoURL: user.photoURL || null,
-        };
+        if (user.displayName && user.photoURL) {
+          const serializedUser = {
+            uid: user.uid,
+            username: user.displayName,
+            email: user.email || null,
+            photoURL: user.photoURL,
+          };
 
-        if (isEmailVerified) {
           setUser(serializedUser);
           setInitializing(false);
         } else {
           setTimeout(() => {
+            const currentUser = auth().currentUser;
+
+            const serializedUser = {
+              uid: user.uid,
+              username: currentUser?.displayName || null,
+              email: currentUser?.email || null,
+              photoURL: currentUser?.photoURL || null,
+            };
+
             setUser(serializedUser);
             setInitializing(false);
-          }, 300);
+          }, 2000);
         }
       } else {
         setInitializing(false);
       }
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -75,14 +82,23 @@ const Navigation = () => {
 };
 
 const MainStack = () => {
-  const dispatch = useAppDispatch();
-  const {boardName, selectedWorkSpace, selectedColor, setBoardName} =
-    useBoard();
+  const {
+    boardName,
+    selectedWorkSpace,
+    selectedColor,
+    setSelectedColor,
+    setSelectedWorkSpace,
+    setBoardName,
+    setLoading,
+    loading,
+  } = useBoard();
 
-  const handleCreateBoard = () => {
+  const handleCreateBoard = async () => {
     if (boardName.length > 0 && boardName !== '') {
-      createBoard(dispatch, boardName, selectedColor, selectedWorkSpace);
+      setLoading(true);
+      await createBoard(boardName, selectedColor, selectedWorkSpace);
       setBoardName('');
+      setLoading(false);
       goBack();
     }
   };
@@ -112,12 +128,21 @@ const MainStack = () => {
               iconName="close"
               iconSize={26}
               iconFamily="Ionicons"
-              onPress={goBack}
+              onPress={() => {
+                setSelectedWorkSpace('Workspace');
+                setSelectedColor(DEFAULT_COLOR);
+                setBoardName('');
+                goBack();
+              }}
             />
           ),
 
           headerRight: () => (
-            <CustomHeaderRight onPress={handleCreateBoard} title="Create" />
+            <CustomHeaderRight
+              onPress={handleCreateBoard}
+              title="Create"
+              isLoading={loading}
+            />
           ),
         }}
       />
@@ -164,7 +189,6 @@ const MainStack = () => {
         options={{
           headerShown: false,
           headerTransparent: true,
-          // header: () => <CustomHeader />,
         }}
       />
       <Stack.Screen

@@ -1,10 +1,4 @@
-import {
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  ActivityIndicator,
-} from 'react-native';
+import {TouchableOpacity, StyleSheet, ViewStyle, TextStyle} from 'react-native';
 import React, {FC} from 'react';
 import CustomText from './CustomText';
 import {Colors} from '@utils/Constant';
@@ -36,8 +30,8 @@ const CustomButton: FC<CustomButtonProps> = ({
       ) : (
         <CustomText
           variant="h3"
-          fontFamily="Montserrat-Regular"
-          style={[textStyles || styles.btnText]}>
+          fontFamily="Montserrat-Medium"
+          style={[styles.btnText, textStyles || {}]}>
           {title}
         </CustomText>
       )}
@@ -49,13 +43,15 @@ export default CustomButton;
 
 const styles = StyleSheet.create({
   btn: {
+    width: '100%',
     backgroundColor: Colors.white,
-    borderRadius: 12,
-    minHeight: 45,
+    borderRadius: 10,
+    height: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   btnText: {
     color: Colors.lightprimary,
+    fontWeight: '600',
   },
 });

@@ -142,12 +142,12 @@ const SubscriptionScreen = () => {
       })
       .catch((error: any) => {
         setIsProcessing(false);
-        if (error.code === 'BAD_REQUEST_ERROR') {
+        if (error.error.code === 'BAD_REQUEST_ERROR') {
           Alert.alert(
             'Payment Failed',
             'You may have cancelled the payment or there was a delay. Please try again.',
           );
-        } else if (error.code === 'UPI_PAYMENT_PENDING') {
+        } else if (error.error.code === 'UPI_PAYMENT_PENDING') {
           Alert.alert(
             'Payment Pending',
             'Your payment is pending. Please check your UPI app for further action.',

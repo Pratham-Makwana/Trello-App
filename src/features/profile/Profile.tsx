@@ -333,7 +333,6 @@ const Profile = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {loading && <CustomModal loading />}
       <View style={styles.profileImageSection}>
         {isUploading ? (
           <View style={[styles.profileImage, styles.loadingContainer]}>
@@ -365,7 +364,13 @@ const Profile = () => {
         <ProfileItem label="E-mail" value={currentUser?.email || '—'} />
       </View>
 
-      {renderSubscriptionSection()}
+      {loading ? (
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <ActivityIndicator size="large" color={Colors.lightprimary} />
+        </View>
+      ) : (
+        renderSubscriptionSection()
+      )}
 
       <TouchableOpacity
         style={styles.logoutButton}

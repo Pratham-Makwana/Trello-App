@@ -6,19 +6,21 @@ interface AddCardInputFooterProps {
   adding: boolean;
   newTask: string;
   setNewTask: (text: string) => void;
+  inputRef?: React.RefObject<TextInput>;
 }
 
 const AddCardInputFooter: FC<AddCardInputFooterProps> = ({
   adding,
   newTask,
   setNewTask,
+  inputRef,
 }) => {
-  const inputRef = useRef<TextInput>(null);
-
+  const localInputRed = useRef<TextInput>(null);
+  const textInputRef = inputRef || localInputRed;
   useEffect(() => {
-    if (adding && inputRef.current) {
+    if (adding && textInputRef.current) {
       setTimeout(() => {
-        inputRef.current?.focus();
+        textInputRef.current?.focus();
       }, 100);
     }
   }, [adding]);
@@ -34,6 +36,10 @@ const AddCardInputFooter: FC<AddCardInputFooterProps> = ({
           autoCapitalize="none"
           placeholder="Add a card..."
           placeholderTextColor={Colors.fontDark}
+          onSubmitEditing={() => {}}
+          returnKeyType="default"
+          multiline={false}
+          blurOnSubmit={false}
         />
       )}
     </View>

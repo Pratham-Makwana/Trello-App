@@ -9,13 +9,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {RenderItemParams} from 'react-native-draggable-flatlist';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
 import {Colors, labelColors, TaskItem} from '@utils/Constant';
 import Animated, {runOnJS} from 'react-native-reanimated';
 import Icon from '@components/global/Icon';
 import {
-  BottomSheetBackdrop,
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetView,
@@ -46,6 +48,8 @@ import DatePickerInput from '@components/ui/DatePickerInput';
 import CustomCloseButton from '@components/ui/CustomCloseButton';
 import AssignMemberListHeader from './AssignMemberListHeader';
 import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
+import RNReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import {hapticOptions} from '@features/board/list/ListCard';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -380,99 +384,107 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
   };
   return (
     <>
-      <AnimatedTouchable
-        onPress={showModal}
-        activeOpacity={1}
-        onLongPress={!disable ? drag : undefined}
-        disabled={isActive}
-        style={[styles.rowItem]}>
-        <>
-          <View style={styles.labelWrapper}>
-            {item?.label?.color && item?.label?.title.length > 0 && (
-              <View style={[styles.label, {backgroundColor: item.label.color}]}>
-                {item.label.title && (
-                  <Text style={styles.labelText}>{item.label.title}</Text>
-                )}
-              </View>
-            )}
-          </View>
-          {item?.imageUrl && (
-            <>
-              {imageLoad && (
-                <View style={styles.loader}>
-                  <ActivityIndicator color={Colors.lightprimary} size="large" />
+      <ScaleDecorator activeScale={1.03}>
+        <AnimatedTouchable
+          onPress={showModal}
+          activeOpacity={1}
+          onLongPress={!disable ? drag : undefined}
+          disabled={isActive}
+          style={[!isActive ? styles.rowItem : styles.rowItemActive]}>
+          <>
+            <View style={[styles.labelWrapper]}>
+              {item?.label?.color && item?.label?.title.length > 0 && (
+                <View
+                  style={[styles.label, {backgroundColor: item.label.color}]}>
+                  {item.label.title && (
+                    <Text style={styles.labelText}>{item.label.title}</Text>
+                  )}
                 </View>
               )}
-              <Image
-                source={{uri: item?.imageUrl}}
-                style={styles.image}
-                onLoadStart={() => {
-                  setImageLoad(prev => !prev);
-                }}
-                onLoadEnd={() => {
-                  setImageLoad(prev => !prev);
-                }}
-              />
-            </>
-          )}
-
-          <View style={styles.taskRow}>
-            <CheckBox
-              value={isDone}
-              onValueChange={onCheckDone}
-              tintColors={{
-                true: '#4CAF50',
-                false: '#aaa',
-              }}
-              boxType="circle"
-              style={styles.checkbox}
-              disabled={
-                currentMember?.mode === 'view' &&
-                !item.assigned_to?.some(user => user.uid === currentMember?.uid)
-              }
-            />
-            <Text
-              style={[
-                styles.taskText,
-                {textDecorationLine: isDone ? 'line-through' : 'none'},
-              ]}>
-              {item.title}
-            </Text>
-            {item.assigned_to.length > 0 && (
-              <Icon
-                name="person-circle-outline"
-                size={18}
-                color={'#000'}
-                iconFamily="Ionicons"
-              />
-            )}
-            <TouchableOpacity disabled={disable} onPress={showCardModal}>
-              <Icon
-                name="resize-outline"
-                iconFamily="Ionicons"
-                size={18}
-                color={Colors.fontDark}
-              />
-            </TouchableOpacity>
-          </View>
-          {item?.startDate && startDate && (
-            <View style={styles.dateChip}>
-              <Icon
-                name="clock-outline"
-                iconFamily="MaterialCommunityIcons"
-                size={16}
-                color={Colors.fontDark}
-              />
-              <View>
-                <Text style={styles.dateText}>
-                  {format(startDate, 'dd MMM yyyy')}
-                  {endDate ? ` - ${format(endDate, 'dd MMM yyyy')}` : ''}
-                </Text>
-              </View>
             </View>
-          )}
-        </>
-      </AnimatedTouchable>
+            {item?.imageUrl && (
+              <>
+                {imageLoad && (
+                  <View style={styles.loader}>
+                    <ActivityIndicator
+                      color={Colors.lightprimary}
+                      size="large"
+                    />
+                  </View>
+                )}
+                <Image
+                  source={{uri: item?.imageUrl}}
+                  style={styles.image}
+                  onLoadStart={() => {
+                    setImageLoad(prev => !prev);
+                  }}
+                  onLoadEnd={() => {
+                    setImageLoad(prev => !prev);
+                  }}
+                />
+              </>
+            )}
+
+            <View style={styles.taskRow}>
+              <CheckBox
+                value={isDone}
+                onValueChange={onCheckDone}
+                tintColors={{
+                  true: '#4CAF50',
+                  false: '#aaa',
+                }}
+                boxType="circle"
+                style={styles.checkbox}
+                disabled={
+                  currentMember?.mode === 'view' &&
+                  !item.assigned_to?.some(
+                    user => user.uid === currentMember?.uid,
+                  )
+                }
+              />
+              <Text
+                style={[
+                  styles.taskText,
+                  {textDecorationLine: isDone ? 'line-through' : 'none'},
+                ]}>
+                {item.title}
+              </Text>
+              {item.assigned_to.length > 0 && (
+                <Icon
+                  name="person-circle-outline"
+                  size={18}
+                  color={'#000'}
+                  iconFamily="Ionicons"
+                />
+              )}
+              <TouchableOpacity disabled={disable} onPress={showCardModal}>
+                <Icon
+                  name="resize-outline"
+                  iconFamily="Ionicons"
+                  size={18}
+                  color={Colors.fontDark}
+                />
+              </TouchableOpacity>
+            </View>
+            {item?.startDate && startDate && (
+              <View style={styles.dateChip}>
+                <Icon
+                  name="clock-outline"
+                  iconFamily="MaterialCommunityIcons"
+                  size={16}
+                  color={Colors.fontDark}
+                />
+                <View>
+                  <Text style={styles.dateText}>
+                    {format(startDate, 'dd MMM yyyy')}
+                    {endDate ? ` - ${format(endDate, 'dd MMM yyyy')}` : ''}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
+        </AnimatedTouchable>
+      </ScaleDecorator>
 
       {/* BottomSheet For the Card  */}
       <BottomSheetModal
@@ -823,12 +835,10 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
             {selectedList && (
               <View style={styles.positionContainer}>
                 <Text style={styles.positionLabel}>Select Position</Text>
-                <FlatList
-                  horizontal
-                  data={availablePositions}
-                  keyExtractor={item => item.toString()}
-                  renderItem={({item: pos}) => (
+                <View style={styles.positionsGrid}>
+                  {availablePositions.map(pos => (
                     <TouchableOpacity
+                      key={pos.toString()}
                       onPress={() => setSelectedPosition(pos)}
                       style={[
                         styles.positionButton,
@@ -844,8 +854,8 @@ const ListItem = ({item, drag, isActive, getIndex, disable}: ListItemProps) => {
                         {pos}
                       </Text>
                     </TouchableOpacity>
-                  )}
-                />
+                  ))}
+                </View>
               </View>
             )}
           </View>
@@ -992,6 +1002,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginVertical: 2,
   },
+  rowItemActive: {
+    padding: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.23,
+    shadowRadius: 2.62,
+    elevation: 4,
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1107,12 +1131,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  positionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
   positionButton: {
     backgroundColor: '#eee',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginRight: 8,
     borderRadius: 6,
+    minWidth: 40,
+    alignItems: 'center',
   },
   positionButtonSelected: {
     backgroundColor: Colors.lightprimary,

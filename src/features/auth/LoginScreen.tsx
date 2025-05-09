@@ -22,6 +22,7 @@ import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
 import {loginUser} from '@config/firebaseRN';
 import {validateEmail} from '@utils/validation';
 import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
+import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
@@ -37,20 +38,23 @@ const LoginScreen = () => {
     setEmailError('');
     setPasswordError('');
 
+    let hasError = false;
+
     if (!validateEmail(form.email)) {
       setEmailError('Please enter a valid email address.');
-    } else {
-      setEmailError('');
-    }
-    if (!form.password) {
-      setPasswordError('Please enter your password.');
+      hasError = true;
     }
 
+    if (!form.password) {
+      setPasswordError('Please enter your password.');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     try {
-      if (validateEmail(form.email) && !passwordError) {
-        setSubmitting(true);
-        await loginUser(form.email, form.password);
-      }
+      setSubmitting(true);
+      await loginUser(form.email, form.password);
     } catch (error: any) {
       const message = firebaseAuthErrorMessage(error.code);
       Toast.show({
@@ -62,6 +66,7 @@ const LoginScreen = () => {
       setSubmitting(false);
     }
   };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -92,9 +97,7 @@ const LoginScreen = () => {
               otherStyles={{marginTop: 28}}
               keyboardType="email-address"
             />
-            {emailError ? (
-              <Text style={styles.errorText}>{emailError}</Text>
-            ) : null}
+            {emailError && <ErrorMessage message={emailError} />}
             <FormField
               title="Password"
               value={form.password}
@@ -102,9 +105,7 @@ const LoginScreen = () => {
               handleChangeText={(e: string) => setForm({...form, password: e})}
               otherStyles={{marginTop: 28}}
             />
-            {passwordError ? (
-              <Text style={styles.errorText}>{passwordError}</Text>
-            ) : null}
+            {passwordError && <ErrorMessage message={passwordError} />}
 
             <TouchableOpacity
               style={styles.forgotPassword}
@@ -129,7 +130,6 @@ const LoginScreen = () => {
             </View>
           </View>
         </ScrollView>
-
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -183,12 +183,6 @@ const styles = StyleSheet.create({
     textDecorationColor: Colors.white,
     fontWeight: '600',
   },
-  errorText: {
-    color: '#8B0000',
-    fontSize: RFValue(12),
-    fontFamily: Fonts.SemiBold,
-    marginTop: 4,
-  },
   forgotPassword: {
     width: screenWidth * 0.9,
     flexDirection: 'row',
@@ -197,7 +191,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: Colors.white,
     fontSize: RFValue(14),
-    fontFamily: Fonts.Regular,
+    fontFamily: Fonts.Medium,
     fontWeight: '500',
     marginTop: 16,
   },

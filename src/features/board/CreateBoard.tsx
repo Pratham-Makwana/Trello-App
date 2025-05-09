@@ -13,11 +13,12 @@ import {useBoard} from '@context/BoardContext';
 import LinearGradient from 'react-native-linear-gradient';
 import {screenWidth} from '@utils/Scaling';
 import {useUser} from '@hooks/useUser';
+import CustomLoading from '@components/global/CustomLoading';
 
 const CreateBoard = () => {
   const {user} = useUser();
 
-  const {selectedWorkSpace, selectedColor, boardName, setBoardName} =
+  const {selectedWorkSpace, selectedColor, boardName, setBoardName, loading} =
     useBoard();
 
   const gradientColors =
@@ -27,6 +28,7 @@ const CreateBoard = () => {
 
   return (
     <View style={styles.container}>
+      {loading && <CustomLoading />}
       <TextInput
         value={boardName}
         onChangeText={text => setBoardName(text)}

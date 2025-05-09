@@ -24,6 +24,7 @@ import {firebaseAuthErrorMessage} from '@utils/exceptions/firebaseErrorHandler';
 import {createUser} from '@config/firebaseRN';
 import {validateEmail, validatePassword} from '@utils/validation';
 import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
+import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const SignupScreen = () => {
   // const [form, setForm] = useState({
@@ -48,45 +49,45 @@ const SignupScreen = () => {
     setEmailError('');
     setPasswordError('');
     setUsernameError('');
+
+    let hasError = false;
+
     if (form.username.length < 3) {
       setUsernameError('Username must be at least 3 characters long.');
-    } else {
-      setUsernameError('');
-    }
-    if (form.username.length > 20) {
+      hasError = true;
+    } else if (form.username.length > 20) {
       setUsernameError('Username must be at most 20 characters long.');
+      hasError = true;
     }
 
     if (!validateEmail(form.email)) {
       setEmailError('Please enter a valid email address.');
-    } else {
-      setEmailError('');
+      hasError = true;
     }
 
-    const passwordError = validatePassword(form.password);
-    if (passwordError) {
-      setPasswordError(passwordError);
-    } else {
-      setPasswordError('');
+    const passwordValidationError = validatePassword(form.password);
+    if (passwordValidationError) {
+      setPasswordError(passwordValidationError);
+      hasError = true;
     }
+
+    if (hasError) return;
 
     try {
-      if (validateEmail(form.email) && !passwordError && !usernameError) {
-        setSubmitting(true);
-        await createUser(form.username, form.email, form.password);
-        setSubmitting(false);
-      }
+      setSubmitting(true);
+      await createUser(form.username, form.email, form.password);
     } catch (error: any) {
       const message = firebaseAuthErrorMessage(error.code);
       Toast.show({
         type: 'error',
-        text1: 'Login Failed',
+        text1: 'Signup Failed',
         text2: message,
       });
     } finally {
       setSubmitting(false);
     }
   };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -117,31 +118,25 @@ const SignupScreen = () => {
               otherStyles={{marginTop: 28}}
               keyboardType="default"
             />
-            {usernameError ? (
-              <Text style={styles.errorText}>{usernameError}</Text>
-            ) : null}
+            {usernameError && <ErrorMessage message={usernameError} />}
             <FormField
               title="Email"
               value={form.email}
               placeholder="Enter your email"
               handleChangeText={(e: string) => setForm({...form, email: e})}
-              otherStyles={{marginTop: 28}}
+              otherStyles={{marginTop: 20}}
               keyboardType="email-address"
             />
-            {emailError ? (
-              <Text style={styles.errorText}>{emailError}</Text>
-            ) : null}
+            {emailError && <ErrorMessage message={emailError} />}
 
             <FormField
               title="Password"
               value={form.password}
               placeholder="Enter your password"
               handleChangeText={(e: string) => setForm({...form, password: e})}
-              otherStyles={{marginTop: 28}}
+              otherStyles={{marginTop: 20}}
             />
-            {passwordError ? (
-              <Text style={styles.errorText}>{passwordError}</Text>
-            ) : null}
+            {passwordError && <ErrorMessage message={passwordError} />}
             <CustomButton
               title="Sign Up"
               handlePress={handleSignup}
@@ -201,23 +196,15 @@ const styles = StyleSheet.create({
   footerTitle: {
     color: Colors.white,
     fontSize: RFValue(14),
-    fontFamily: Fonts.Light,
+    fontFamily: Fonts.Regular,
     fontWeight: '500',
   },
   footerLink: {
     color: Colors.white,
     fontSize: RFValue(16),
-    fontFamily: Fonts.Regular,
+    fontFamily: Fonts.Medium,
     textDecorationLine: 'underline',
     textDecorationColor: Colors.white,
     fontWeight: '600',
-  },
-  errorText: {
-    color: '#8B0000',
-    fontSize: RFValue(12),
-
-    fontWeight: '500',
-    paddingHorizontal: 5,
-    marginTop: 6,
   },
 });

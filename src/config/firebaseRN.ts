@@ -130,7 +130,6 @@ export const listenToCurrentUserInfo = (
 // ================ Board ==================
 
 export const createBoard = async (
-  dispatch: any,
   boardName: string,
   selectedColor: string[],
   workspace: string,
@@ -141,6 +140,13 @@ export const createBoard = async (
 
     const docRef = boardRef.doc();
 
+    // Fetch all boards the user has access to
+    const userBoardsSnapshot = await userBoardRef
+      .where('userId', '==', user.uid)
+      .get();
+
+    const position = userBoardsSnapshot.size + 1; // new board goes at the end
+
     const boardData = {
       boardId: docRef.id,
       title: boardName.trim(),
@@ -149,16 +155,35 @@ export const createBoard = async (
       created_at: new Date().toISOString(),
       last_edit: new Date().toISOString(),
       createdBy: user.uid,
+      position, // ← new field
     };
 
     await docRef.set(boardData);
 
-    await addUserToBoard(docRef.id, user.uid, 'creator', 'edit');
+    await addUserToBoard(docRef.id, user.uid, 'creator', 'edit', position);
 
     // dispatch(addBoard(boardData));
   } catch (error) {
     console.error('Error creating board: ', error);
   }
+};
+
+export const updateUserBoardPositions = async (
+  userId: string,
+  boards: Board[],
+) => {
+  const batch = db.batch();
+
+
+    boards.forEach(board => {
+      const userBoardDocRef = userBoardRef.doc(`${userId}_${board.boardId}`);
+      batch.update(userBoardDocRef, {
+        position: board.position,
+      });
+    });
+
+    await batch.commit();
+ 
 };
 
 export const getBoardInfo = async (boardId: string, userId: string) => {
@@ -212,6 +237,83 @@ export const getBoardInfo = async (boardId: string, userId: string) => {
     console.error('Error fetching board data: ', error);
     return null;
   }
+};
+
+export const listenToUserBoards = (
+  userId: string,
+  filterType: 'owner' | 'member' | undefined,
+  callback: (boards: Board[]) => void,
+) => {
+  const queryRef = userBoardRef.where('userId', '==', userId);
+
+  let boardUnsubscribes: (() => void)[] = [];
+
+  const unsubscribe = queryRef.onSnapshot(snapshot => {
+    if (!snapshot || snapshot.empty) {
+      boardUnsubscribes.forEach(unsub => unsub());
+      boardUnsubscribes = [];
+      callback([]);
+      return;
+    }
+
+    boardUnsubscribes.forEach(unsub => unsub());
+    boardUnsubscribes = [];
+
+    const filteredDocs = snapshot.docs
+      .map(doc => doc.data())
+      .filter(data => {
+        const role = data.role;
+        return (
+          (filterType === 'owner' && role === 'creator') ||
+          (filterType === 'member' && role !== 'creator') ||
+          filterType === undefined
+        );
+      })
+      .filter(data => typeof data.position === 'number')
+      .sort((a, b) => a.position - b.position);
+
+    const boards: Board[] = [];
+
+    if (filteredDocs.length === 0) {
+      callback([]);
+      return;
+    }
+
+    filteredDocs.forEach(data => {
+      const boardId = data.boardId;
+      const boardDocRef = boardRef.doc(boardId);
+
+      const unsub = boardDocRef.onSnapshot(boardSnapshot => {
+        if (boardSnapshot.exists) {
+          const boardData = boardSnapshot.data() as Board;
+
+          const index = boards.findIndex(b => b.boardId === boardId);
+          if (index !== -1) {
+            boards[index] = {...boardData};
+          } else {
+            boards.push({...boardData});
+          }
+
+          const sorted = boards.slice().sort((a, b) => {
+            const aPos =
+              filteredDocs.find(d => d.boardId === a.boardId)?.position ?? 0;
+            const bPos =
+              filteredDocs.find(d => d.boardId === b.boardId)?.position ?? 0;
+            return aPos - bPos;
+          });
+
+          callback(sorted);
+        }
+      });
+
+      boardUnsubscribes.push(unsub);
+    });
+  });
+
+  return () => {
+    unsubscribe();
+    boardUnsubscribes.forEach(unsub => unsub());
+  };
 };
 
 export const listenToUpdateBoardInfo = (
@@ -282,8 +384,26 @@ export const deleteBoard = async (boardId: string) => {
     const userBoardQuery = userBoardRef.where('boardId', '==', boardId);
     const querySnapshot = await userBoardQuery.get();
 
+    const affectedUserIds = querySnapshot.docs.map(doc => doc.data().userId);
+
     const deletePromises = querySnapshot.docs.map(doc => doc.ref.delete());
     await Promise.all(deletePromises);
+
+    for (const userId of affectedUserIds) {
+      const userBoardsSnapshot = await userBoardRef
+        .where('userId', '==', userId)
+        .get();
+
+      const sortedDocs = userBoardsSnapshot.docs
+        .map(doc => ({ref: doc.ref, data: doc.data()}))
+        .sort((a, b) => (a.data.position ?? 0) - (b.data.position ?? 0));
+
+      const updatePromises = sortedDocs.map((item, index) =>
+        item.ref.update({position: index + 1}),
+      );
+
+      await Promise.all(updatePromises);
+    }
   } catch (error) {
     console.log('Error deleting board:', error);
   }
@@ -342,6 +462,7 @@ export const addUserToBoard = async (
   userId: string,
   role: string,
   mode: string,
+  position: number = 0,
 ) => {
   try {
     const joinId = `${userId}_${boardId}`;
@@ -359,80 +480,12 @@ export const addUserToBoard = async (
       userId,
       role,
       mode,
+      position,
       addedAt: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Error adding user to board:', error);
   }
-};
-
-export const listenToUserBoards = (
-  userId: string,
-  filterType: 'owner' | 'member' | undefined,
-  callback: (boards: Board[]) => void,
-) => {
-  const queryRef = userBoardRef.where('userId', '==', userId);
-
-  let boardUnsubscribes: (() => void)[] = [];
-
-  const unsubscribe = queryRef.onSnapshot(snapshot => {
-    if (snapshot.empty) {
-      boardUnsubscribes.forEach(unsub => unsub());
-      boardUnsubscribes = [];
-      callback([]);
-      return;
-    }
-
-    boardUnsubscribes.forEach(unsub => unsub());
-    boardUnsubscribes = [];
-
-    const filteredBoardIds: string[] = [];
-
-    snapshot.docs.forEach(doc => {
-      const data = doc.data();
-      const role = data.role;
-
-      if (
-        (filterType === 'owner' && role === 'creator') ||
-        (filterType === 'member' && role !== 'creator') ||
-        filterType === undefined
-      ) {
-        filteredBoardIds.push(data.boardId);
-      }
-    });
-
-    const boards: Board[] = [];
-
-    if (filteredBoardIds.length === 0) {
-      callback([]);
-      return;
-    }
-
-    filteredBoardIds.forEach(boardId => {
-      const boardDocRef = boardRef.doc(boardId);
-
-      const unsub = boardDocRef.onSnapshot(boardSnapshot => {
-        if (boardSnapshot.exists) {
-          const boardData = boardSnapshot.data() as Board;
-
-          const index = boards.findIndex(b => b.boardId === boardId);
-          if (index !== -1) {
-            boards[index] = {...boardData};
-          } else {
-            boards.push({...boardData});
-          }
-          callback([...boards]);
-        }
-      });
-
-      boardUnsubscribes.push(unsub);
-    });
-  });
-
-  return () => {
-    unsubscribe();
-    boardUnsubscribes.forEach(unsub => unsub());
-  };
 };
 
 //  =================== Board List ==========================
@@ -607,12 +660,14 @@ export const addCardList = async (
   listId: string,
   boardId: string,
   title: string,
-  position: number = 0,
   imageUrl: any = null,
   done: boolean = false,
 ) => {
   try {
     const cardCollectionRef = listRef.doc(listId).collection('cards');
+
+    const snapshot = await cardCollectionRef.orderBy('position', 'asc').get();
+    const position = snapshot.size + 1;
 
     const newCard = {
       board_id: boardId,
@@ -905,10 +960,16 @@ export const acceptInvite = async (
     await boardInvitationRef.doc(inviteId).update({
       status: 'accepted',
     });
+
+    const userBoardsSnapshot = await userBoardRef
+      .where('userId', '==', userId)
+      .get();
+    const position = userBoardsSnapshot.size + 1;
+
     if (visibility == 'Workspace') {
-      await addUserToBoard(boardId, userId, 'member', 'edit');
+      await addUserToBoard(boardId, userId, 'member', 'edit', position);
     } else {
-      await addUserToBoard(boardId, userId, 'member', 'view');
+      await addUserToBoard(boardId, userId, 'member', 'view', position);
     }
 
     await db.collection('board_invitations').doc(inviteId).delete();
