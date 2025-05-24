@@ -96,6 +96,15 @@ const LoginScreen = () => {
               handleChangeText={(e: string) => setForm({...form, email: e})}
               otherStyles={{marginTop: 28}}
               keyboardType="email-address"
+              onFocusChange={focused => {
+                if (!focused) {
+                  if (!validateEmail(form.email)) {
+                    setEmailError('Please enter a valid email address.');
+                  } else {
+                    setEmailError('');
+                  }
+                }
+              }}
             />
             {emailError && <ErrorMessage message={emailError} />}
             <FormField
@@ -104,6 +113,15 @@ const LoginScreen = () => {
               placeholder="Enter your password"
               handleChangeText={(e: string) => setForm({...form, password: e})}
               otherStyles={{marginTop: 28}}
+              onFocusChange={focused => {
+                if (!focused) {
+                  if (!form.password) {
+                    setPasswordError('Please enter your password.');
+                  } else {
+                    setPasswordError('');
+                  }
+                }
+              }}
             />
             {passwordError && <ErrorMessage message={passwordError} />}
 

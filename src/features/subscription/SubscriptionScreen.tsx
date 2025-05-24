@@ -147,6 +147,7 @@ const SubscriptionScreen = () => {
             'Payment Failed',
             'You may have cancelled the payment or there was a delay. Please try again.',
           );
+
         } else if (error.error.code === 'UPI_PAYMENT_PENDING') {
           Alert.alert(
             'Payment Pending',
@@ -159,7 +160,7 @@ const SubscriptionScreen = () => {
           );
         }
 
-        console.log(`Error: ${error.code} | ${error.description}`);
+        // console.log(`Error: ${error.code} | ${error.description}`);
       })
       .finally(() => {
         setIsProcessing(false);

@@ -117,6 +117,21 @@ const SignupScreen = () => {
               handleChangeText={(e: string) => setForm({...form, username: e})}
               otherStyles={{marginTop: 28}}
               keyboardType="default"
+              onFocusChange={focused => {
+                if (!focused) {
+                  if (form.username.length < 3) {
+                    setUsernameError(
+                      'Username must be at least 3 characters long.',
+                    );
+                  } else if (form.username.length > 20) {
+                    setUsernameError(
+                      'Username must be at most 20 characters long.',
+                    );
+                  } else {
+                    setUsernameError('');
+                  }
+                }
+              }}
             />
             {usernameError && <ErrorMessage message={usernameError} />}
             <FormField
@@ -126,6 +141,15 @@ const SignupScreen = () => {
               handleChangeText={(e: string) => setForm({...form, email: e})}
               otherStyles={{marginTop: 20}}
               keyboardType="email-address"
+              onFocusChange={focused => {
+                if (!focused) {
+                  if (!validateEmail(form.email)) {
+                    setEmailError('Please enter a valid email address.');
+                  } else {
+                    setEmailError('');
+                  }
+                }
+              }}
             />
             {emailError && <ErrorMessage message={emailError} />}
 
@@ -135,6 +159,18 @@ const SignupScreen = () => {
               placeholder="Enter your password"
               handleChangeText={(e: string) => setForm({...form, password: e})}
               otherStyles={{marginTop: 20}}
+              onFocusChange={focused => {
+                if (!focused) {
+                  const passwordValidationError = validatePassword(
+                    form.password,
+                  );
+                  if (passwordValidationError) {
+                    setPasswordError(passwordValidationError);
+                  } else {
+                    setPasswordError('');
+                  }
+                }
+              }}
             />
             {passwordError && <ErrorMessage message={passwordError} />}
             <CustomButton

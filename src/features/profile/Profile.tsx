@@ -77,18 +77,18 @@ const Profile = () => {
 
   const confirmCloseAccount = () => {
     Alert.alert(
-      'Close Account',
-      'Are you sure you want to close your account? This action will sign you out.',
+      'Log Out',
+      'Are you sure you want to log out?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes, Close',
-          style: 'destructive',
-          onPress: () => handleCloseAccount(),
-        },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => handleCloseAccount(),
+      },
       ],
       {cancelable: true},
     );
@@ -176,32 +176,6 @@ const Profile = () => {
       },
     );
   };
-
-  useEffect(() => {
-    setLoading(true);
-    const unsubscribe = listenToCurrentUserInfo(
-      async updatedUser => {
-        setUser(updatedUser);
-        setLoading(false);
-
-        const subscription = updatedUser.subscription;
-        if (!subscription || !subscription.isPremium) return;
-
-        if (
-          updatedUser.subscription?.isPremium &&
-          isSubscriptionExpired(updatedUser?.subscription?.expiryDate)
-        ) {
-          await updateIsPremiumStatus(updatedUser.uid);
-        }
-      },
-      error => {
-        console.log('Realtime user subscription error:', error);
-        setLoading(false);
-      },
-    );
-
-    return () => unsubscribe();
-  }, []);
 
   const renderSubscriptionSection = () => {
     if (!hasSubscription) {
@@ -333,6 +307,7 @@ const Profile = () => {
 
   return (
     <ScrollView style={styles.container}>
+      {loading && <CustomLoading />}
       <View style={styles.profileImageSection}>
         {isUploading ? (
           <View style={[styles.profileImage, styles.loadingContainer]}>
@@ -364,13 +339,7 @@ const Profile = () => {
         <ProfileItem label="E-mail" value={currentUser?.email || '—'} />
       </View>
 
-      {loading ? (
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-          <ActivityIndicator size="large" color={Colors.lightprimary} />
-        </View>
-      ) : (
-        renderSubscriptionSection()
-      )}
+      {renderSubscriptionSection()}
 
       <TouchableOpacity
         style={styles.logoutButton}

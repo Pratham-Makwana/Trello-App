@@ -1,5 +1,6 @@
 import {userRef} from '@config/firebaseRN';
 import {Timestamp} from '@react-native-firebase/firestore';
+import {User} from '@utils/Constant';
 
 export const formatSubscriptionType = (type: string) => {
   if (!type) return '';
@@ -52,4 +53,27 @@ export const updateIsPremiumStatus = async (userId: string) => {
   await userRef.doc(userId).update({
     'subscription.isPremium': false,
   });
+};
+
+export const hasActivePremiumSubscription = (user: User): boolean => {
+  const subscription = user.subscription;
+
+  if (!subscription) return false;
+
+  let expiryDateStr: string | undefined;
+
+  if (typeof subscription.expiryDate === 'string') {
+    expiryDateStr = subscription.expiryDate;
+  } else if (
+    subscription.expiryDate &&
+    typeof (subscription.expiryDate as Timestamp).toDate === 'function'
+  ) {
+    expiryDateStr = (subscription.expiryDate as Timestamp)
+      .toDate()
+      .toISOString();
+  }
+
+  const isExpired = isSubscriptionExpired(expiryDateStr);
+
+  return subscription.isPremium === true && !isExpired;
 };

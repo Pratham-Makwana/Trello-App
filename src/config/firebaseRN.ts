@@ -664,6 +664,7 @@ export const addCardList = async (
   done: boolean = false,
 ) => {
   try {
+    
     const cardCollectionRef = listRef.doc(listId).collection('cards');
 
     const snapshot = await cardCollectionRef.orderBy('position', 'asc').get();

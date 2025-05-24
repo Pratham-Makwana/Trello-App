@@ -1,6 +1,8 @@
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from '@components/global/Icon';
+import FilterButton from '@components/global/FilterButton';
 import {
   ActivityIndicator,
-  FlatList,
   StatusBar,
   StyleSheet,
   Text,
@@ -9,23 +11,19 @@ import {
 } from 'react-native';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Board, Colors} from '@utils/Constant';
-import LinearGradient from 'react-native-linear-gradient';
 import {navigate} from '@utils/NavigationUtils';
-import Icon from '@components/global/Icon';
-import CustomModal from '@components/global/CustomModal';
 import {useUser} from '@hooks/useUser';
 import {useAppDispatch, useAppSelector} from '@store/reduxHook';
 import {setBoards} from '@store/board/boardSlice';
-import auth from '@react-native-firebase/auth';
-import {listenToUserBoards, updateUserBoardPositions} from '@config/firebaseRN';
-import BottomSheet, {
-  BottomSheetModal,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
+import {
+  listenToCurrentUserInfo,
+  listenToUserBoards,
+  updateUserBoardPositions,
+} from '@config/firebaseRN';
+import {BottomSheetModal, BottomSheetView} from '@gorhom/bottom-sheet';
 import {createBackdropRenderer} from '@components/global/CreateBackdropRenderer';
 import {runOnJS} from 'react-native-reanimated';
 import {RFValue} from 'react-native-responsive-fontsize';
-import FilterButton from '@components/global/FilterButton';
 import {useFilter} from '@context/FilterContext';
 import {useFocusEffect} from '@react-navigation/native';
 import DraggableFlatList, {
@@ -33,6 +31,11 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
+import {
+  hasActivePremiumSubscription,
+  isSubscriptionExpired,
+  updateIsPremiumStatus,
+} from '@utils/subscription/SubscriptionUtils';
 
 const BoardScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +75,8 @@ const BoardScreen = () => {
     bottomSheetModalRef.current?.close();
   };
 
+  const isPremiumUser = user ? hasActivePremiumSubscription(user) : false;
+
   useEffect(() => {
     if (!isLocalUpdate) {
       setIsLoading(true);
@@ -95,17 +100,26 @@ const BoardScreen = () => {
   }, [activeFilter, isLocalUpdate, user]);
 
   useEffect(() => {
-    const init = async () => {
-      await auth().currentUser?.reload();
-      const user = auth().currentUser;
-      setUser({
-        uid: user?.uid,
-        username: user?.displayName || null,
-        email: user?.email || null,
-        photoURL: user?.photoURL || null,
-      });
-    };
-    init();
+    const unsubscribe = listenToCurrentUserInfo(
+      async updatedUser => {
+        setUser(updatedUser);
+
+        const subscription = updatedUser.subscription;
+        if (!subscription || !subscription.isPremium) return;
+
+        if (
+          updatedUser.subscription?.isPremium &&
+          isSubscriptionExpired(updatedUser?.subscription?.expiryDate)
+        ) {
+          await updateIsPremiumStatus(updatedUser.uid);
+        }
+      },
+      error => {
+        console.log('Realtime user subscription error:', error);
+      },
+    );
+
+    return () => unsubscribe();
   }, []);
 
   useFocusEffect(
@@ -138,7 +152,11 @@ const BoardScreen = () => {
     }
   };
 
-  const BoardsListItem = ({item, drag, isActive}: RenderItemParams<Board>) => {
+  const BoardsListItem = ({
+    item,
+    drag,
+    isActive,
+  }: RenderItemParams<Board> & {isPremiumUser: boolean}) => {
     const gradientColors =
       item.background.length === 1
         ? [item.background[0], item.background[0]]
@@ -147,13 +165,23 @@ const BoardScreen = () => {
     return (
       <ScaleDecorator>
         <TouchableOpacity
-          onLongPress={drag}
+          onLongPress={isPremiumUser ? drag : undefined}
           disabled={isActive}
           style={[styles.boardList]}
           activeOpacity={0.8}
           onPress={() =>
             navigate('BoardCard', {boardDetails: item, boardId: item.boardId})
           }>
+          {isPremiumUser && (
+            <TouchableOpacity onLongPress={drag} disabled={isActive}>
+              <Icon
+                name="reorder-four"
+                iconFamily="Ionicons"
+                size={22}
+                color={Colors.fontDark}
+              />
+            </TouchableOpacity>
+          )}
           <LinearGradient colors={gradientColors} style={styles.colorBlock} />
           <Text style={styles.titleText}>{item.title}</Text>
         </TouchableOpacity>
@@ -207,6 +235,7 @@ const BoardScreen = () => {
   if (isLoading) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <StatusBar backgroundColor={Colors.lightprimary} />
         <ActivityIndicator size="large" color={Colors.lightprimary} />
       </View>
     );
@@ -221,7 +250,9 @@ const BoardScreen = () => {
           boards && boards.length > 0 ? styles.list : undefined
         }
         data={boards}
-        renderItem={params => <BoardsListItem {...params} />}
+        renderItem={params => (
+          <BoardsListItem {...params} isPremiumUser={isPremiumUser} />
+        )}
         onDragEnd={onBoardDrop}
         keyExtractor={item => item.boardId}
         ListHeaderComponent={ListHeader}
@@ -242,35 +273,6 @@ const BoardScreen = () => {
           />
         )}
       />
-
-      {/*  
-        // <FlatList
-        //   contentContainerStyle={
-        //     boards && boards.length > 0 ? styles.list : undefined
-        //   }
-        //   data={boards}
-        //   renderItem={BoardsListItem}
-        //   keyExtractor={item => item.boardId}
-        //   ListHeaderComponent={() => <ListHeader />}
-        //   ListEmptyComponent={() => (
-        //     <View style={styles.emptyContainer}>
-        //       <Text style={styles.emptyText}>
-        //         No boards yet. Tap the + button to create one!
-        //       </Text>
-        //     </View>
-        //   )}
-        //   ItemSeparatorComponent={() => (
-        //     <View
-        //       style={{
-        //         height: StyleSheet.hairlineWidth,
-        //         backgroundColor: Colors.grey,
-        //         marginStart: 50,
-        //       }}
-        //     />
-        //   )}
-        // />
-        */}
-
       <BottomSheetModal
         ref={bottomSheetModalRef}
         index={0}

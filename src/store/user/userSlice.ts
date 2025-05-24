@@ -1,12 +1,7 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {RootState} from '../store';
+import {User} from '@utils/Constant';
 
-export interface User {
-  uid: string;
-  username: string | null;
-  email: string | null;
-  photoURL: string | null;
-}
 interface UserState {
   currentUser: User | null;
 }

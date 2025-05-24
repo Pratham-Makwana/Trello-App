@@ -18,6 +18,7 @@ import {checkUserExists} from '@config/firebaseRN';
 import {validateEmail} from '@utils/validation';
 import {goBack, navigate} from '@utils/NavigationUtils';
 import {screenWidth} from '@utils/Scaling';
+import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('user@gmail.com');
@@ -28,11 +29,6 @@ const ForgotPasswordScreen = () => {
     setEmailError('');
     if (!email) {
       setEmailError('Please enter email address.');
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Please enter your email address.',
-      });
       return;
     }
 
@@ -43,11 +39,7 @@ const ForgotPasswordScreen = () => {
     const userExist = await checkUserExists(email);
 
     if (!userExist) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Email address not found.',
-      });
+      setEmailError('No user found with that email address.');
       return;
     }
 
@@ -96,17 +88,25 @@ const ForgotPasswordScreen = () => {
               Enter your email to receive reset instructions
             </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor="#888"
-              value={email}
-              onChangeText={setEmail}
-            />
-            {emailError ? (
-              <Text style={{color: 'red', marginBottom: 20}}>{emailError}</Text>
-            ) : null}
-
+            <View style={{width: '100%', marginBottom: 20}}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor="#888"
+                value={email}
+                onChangeText={setEmail}
+                onBlur={() => {
+                  if (!email) {
+                    setEmailError('Please enter email address.');
+                  } else if (!validateEmail(email)) {
+                    setEmailError('Invalid email address');
+                  } else {
+                    setEmailError('');
+                  }
+                }}
+              />
+              {emailError && <ErrorMessage message={emailError} />}
+            </View>
             <TouchableOpacity style={styles.button} onPress={handleSubmit}>
               <Text style={styles.buttonText}>Submit</Text>
             </TouchableOpacity>
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     paddingLeft: 15,
-    marginBottom: 20,
+    // marginBottom: 20,
     fontSize: 16,
     color: '#333',
     borderWidth: 1,

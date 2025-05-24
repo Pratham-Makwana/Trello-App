@@ -45,6 +45,9 @@ const FormField: FC<
           placeholder={placeholder}
           placeholderTextColor="#fff"
           onChangeText={handleChangeText}
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)} 
+          selectionColor="#FFF" 
           secureTextEntry={title === 'Password' && !showPassword}
           autoCapitalize="none"
           style={styles.textInput}
@@ -78,7 +81,6 @@ const styles = StyleSheet.create({
   },
 
   formInput: {
-
     width: screenWidth * 0.9,
     height: 50,
     borderWidth: 1.5,
@@ -91,7 +93,6 @@ const styles = StyleSheet.create({
   },
   textInput: {
     color: Colors.white,
-
     flex: 1,
   },
   showPassword : {

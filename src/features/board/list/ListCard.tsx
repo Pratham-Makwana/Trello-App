@@ -11,32 +11,31 @@ import {
   Animated,
   TouchableWithoutFeedback,
   BackHandler,
+  TextInput,
 } from 'react-native';
-import {RFValue} from 'react-native-responsive-fontsize';
+import Toast from 'react-native-toast-message';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import Icon from '@components/global/Icon';
+import CustomModal from '@components/global/CustomModal';
+import {RFValue} from 'react-native-responsive-fontsize';
+import ListItem from '@components/board/card/ListItem';
+import AddCardInputFooter from '@components/board/card/AddCardInputFooter';
+import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
 import DraggableFlatList, {
   DragEndParams,
-  DraggableFlatListProps,
 } from 'react-native-draggable-flatlist';
-import Toast from 'react-native-toast-message';
 import {Colors, FakeTaskList, TaskItem, TaskList} from '@utils/Constant';
 import {useFilter} from '@context/FilterContext';
-import CustomModal from '@components/global/CustomModal';
-import Icon from '@components/global/Icon';
-import ListItem from '@components/board/card/ListItem';
 import {
   addCardList,
   listenToCardsList,
   updateCart,
   uploadToCloudinary,
 } from '@config/firebaseRN';
-import AddCardInputFooter from '@components/board/card/AddCardInputFooter';
 import {
   ImagePickerResponse,
   launchImageLibrary,
 } from 'react-native-image-picker';
-import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
-import {TextInput} from 'react-native-gesture-handler';
 
 export const hapticOptions = {
   enableVibrateFallback: true,
