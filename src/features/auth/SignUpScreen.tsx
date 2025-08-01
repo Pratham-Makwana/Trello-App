@@ -27,16 +27,10 @@ import useKeyboardOffsetHeight from '@utils/useKeyboardOffsetHeight';
 import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const SignupScreen = () => {
-  // const [form, setForm] = useState({
-  //   username: 'user',
-  //   email: 'user@gmail.com',
-  //   password: 'Test1234',
-  // });
-
   const [form, setForm] = useState({
-    username: 'user',
-    email: 'user@gmail.com',
-    password: 'Test@1234',
+    username: '',
+    email: '',
+    password: '',
   });
   const keyBoardOffsetHeight = useKeyboardOffsetHeight();
 

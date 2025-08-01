@@ -21,7 +21,7 @@ import {screenWidth} from '@utils/Scaling';
 import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const ForgotPasswordScreen = () => {
-  const [email, setEmail] = useState('user@gmail.com');
+  const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string>('');
   const keyBoardOffsetHeight = useKeyboardOffsetHeight();
 

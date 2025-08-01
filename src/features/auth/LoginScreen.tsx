@@ -26,8 +26,8 @@ import ErrorMessage from '@utils/exceptions/ErrorMessage';
 
 const LoginScreen = () => {
   const [form, setForm] = useState({
-    email: 'makwanapratham13@gmail.com',
-    password: 'User@123',
+    email: '',
+    password: '',
   });
   const [isSubmitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState<string>('');
